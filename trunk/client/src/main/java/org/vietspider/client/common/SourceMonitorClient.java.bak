@@ -1,0 +1,151 @@
+package org.vietspider.client.common;
+
+import java.io.BufferedReader;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+
+import org.vietspider.bean.SourceMonitor;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.user.AccessChecker;
+
+class SourceMonitorClient extends SourceMonitorHandler {
+
+  private int size = 20;
+
+  public SourceMonitorClient(String folder, String[] dates) {
+    super(folder, dates);
+  }
+
+  public SourceMonitorClient(String folder, String[] dates, int size) {
+    super(folder, dates);
+    this.size = size;
+  }
+
+  public Object[] download(MonitorFilter filter, boolean update) throws Exception {
+    int totalLink  = 0; 
+    int totalData = 0;
+    long totalDownloaded = 0;
+    
+    File file = ClientConnector2.getCacheFolder(actionFolder);//UtilFile.getFolder(folder);
+    if(update) {
+      UtilFile.deleteFolder(file, false);
+    } else {
+      File [] files = file.listFiles();
+      for(int i = 0; i < files.length; i++) {
+        if(files[i].getName().endsWith(".tmp")) continue;
+        if(files[i].isDirectory()) {
+          UtilFile.deleteFolder(files[i], false);
+        } else {
+          files[i].delete();
+        }
+      }
+    }
+
+    if(dates == null || dates.length < 1) {
+      return new Object[]{totalLink, totalData, totalDownloaded};
+    }
+
+    File tmpFile  = readFromServer(update);
+    if(tmpFile == null) {
+      return new Object[]{totalLink, totalData, totalDownloaded};
+    }
+
+    BufferedReader reader = null;
+    FileOutputStream outputStream = null;
+    try { 
+      FileInputStream fileInputStream = new FileInputStream(tmpFile);
+      InputStreamReader streamReader = new InputStreamReader(fileInputStream, "utf-8");
+      reader = new BufferedReader(streamReader);
+
+      String line = null;
+      int fileCounter = 0;
+      int lineCounter = 0;
+      File folder  = ClientConnector2.getCacheFolder(actionFolder + "/" + dateFolder);
+      file = new File(folder, "data0");
+      outputStream = new FileOutputStream(file);
+      
+//      String [] userCategories = new DataClientHandler().loadUserCategories();
+      AccessChecker accessChecker = new OrganizationClientHandler().loadAccessChecker();
+
+      StringBuilder builder = new StringBuilder();
+      while((line = reader.readLine()) != null) {
+        builder.setLength(0);
+        if(line.trim().isEmpty()) continue;
+        
+        if(lineCounter >= size) {
+          fileCounter++;
+          file = UtilFile.getFile(folder, "data"+String.valueOf(fileCounter));
+          if(outputStream != null) outputStream.close();
+          outputStream = new FileOutputStream(file);
+          lineCounter = 0;
+        }
+        
+        String [] elements = line.split("/");
+        if(elements.length < 5) continue;
+        
+        String sourceName  = elements[0];
+        int crawlTime  = Integer.parseInt(elements[1]);
+        int link  = Integer.parseInt(elements[2]);
+        int data = Integer.parseInt(elements[3]);
+//        long totalDownload  = Long.parseLong(elements[4]);
+        long lastAccess = Long.parseLong(elements[4]);
+        
+        SourceMonitor sourceMonitor = new SourceMonitor();
+        sourceMonitor.setSource(sourceName);
+        sourceMonitor.setCrawlTime(crawlTime);
+        sourceMonitor.setLinkCounter(link);
+        sourceMonitor.setDataCounter(data);
+//        sourceMonitor.setDownloaded(totalDownload);
+        sourceMonitor.setLastAccess(lastAccess);
+        
+        if(validate(sourceMonitor, filter) && accessChecker.isPermitAccess(line, false) ) {
+          builder.append(line).append('\n');
+          
+          totalLink +=  sourceMonitor.getLinkCounter();
+          totalData += sourceMonitor.getDataCounter();
+//          totalDownloaded += sourceMonitor.getDownloaded();
+        }
+
+        if(builder.length() > 0) {
+          if(lineCounter > 0) outputStream.write("\n".getBytes());
+          outputStream.write(builder.toString().getBytes(Application.CHARSET));
+          lineCounter++;
+        }
+      }
+      outputStream.close();
+    } catch (EOFException e) {
+//    e.printStackTrace();
+    } catch (Exception e) {
+      ClientLog.getInstance().setException(e);
+    } finally {
+      try {
+        if(outputStream != null) outputStream.close(); 
+      } catch (Exception e) {
+        ClientLog.getInstance().setException(e);
+      }
+      
+      try {
+        if(reader != null) reader.close(); 
+      } catch (Exception e) {
+        ClientLog.getInstance().setException(e);
+      }
+    }
+    
+    return new Object[]{totalLink, totalData, totalDownloaded};
+  }
+  
+  public int totalPage() {
+    File file = ClientConnector2.getCacheFolder(actionFolder + "/" + dateFolder);
+    // UtilFile.getFolder(folder);
+    return file.list().length;
+  }
+
+  public void setWorker(ZipRatioWorker worker) { this.worker = worker; }
+
+
+
+}
