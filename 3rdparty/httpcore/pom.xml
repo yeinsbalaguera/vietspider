@@ -1,0 +1,15 @@
+<project>
+  <parent>
+    <groupId>org.vietspider</groupId>
+    <artifactId>vietspider</artifactId>
+    <version>3.x</version>
+    <relativePath>../../</relativePath>
+  </parent> 
+
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>vietspider.httpcore</artifactId>
+  <packaging>jar</packaging>
+  <version>4.1.4</version>
+  <url>vietspider.org</url>
+  <description>Http Core</description>
+</project>

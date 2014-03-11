@@ -1,0 +1,24 @@
+<project>
+  <parent>
+    <groupId>org.vietspider</groupId>
+    <artifactId>vietspider</artifactId>
+    <version>3.x</version>
+    <relativePath>../../</relativePath>
+  </parent> 
+
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>vietspider.httpcore-nio</artifactId>
+  <packaging>jar</packaging>
+  <version>4.1.4</version>
+  <name>vietspider.httpcore-nio</name>
+  <url>vietspider.org</url>
+  <description>Http Core NIO</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.vietspider</groupId>
+      <artifactId>vietspider.httpcore</artifactId>
+	  <version>4.1.4</version>
+	</dependency>
+  </dependencies>
+</project>

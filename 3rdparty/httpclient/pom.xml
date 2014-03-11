@@ -1,0 +1,49 @@
+<project>
+  <parent>
+    <groupId>org.vietspider</groupId>
+    <artifactId>vietspider</artifactId>
+    <version>3.x</version>
+    <relativePath>../../</relativePath>
+  </parent> 
+
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>vietspider.httpclient</artifactId>
+  <packaging>jar</packaging>
+  <version>4.1.2</version>
+  <name>vietspider.httpclient</name>
+  <url>vietspider.org</url>
+  <description>Http Client</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.vietspider</groupId>
+      <artifactId>vietspider.httpcore</artifactId>
+	  <version>4.1.4</version>
+	  <scope>compile</scope>
+	</dependency>
+
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+    
+     <dependency>
+        <groupId>net.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>1.0</version>
+        <!-- 
+            Annotations are only _required_ during a build
+            They are not needed at run-time
+            Provided means that the dependency is not transitive.
+         -->
+        <scope>provided</scope>
+    </dependency>
+  </dependencies>
+</project>

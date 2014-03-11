@@ -1,0 +1,22 @@
+<project>
+  <parent>
+    <groupId>org.vietspider</groupId>
+    <artifactId>vietspider</artifactId>
+    <version>3.x</version>
+	<relativePath>../</relativePath>
+  </parent> 
+
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>vietspider.3rdparty</artifactId>
+  <version>3.x</version>
+  <name>vietspider.3rdparty</name>
+  <description>Third Party  Modules</description>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>httpcore</module>
+    <module>httpcore-nio</module>    
+    <module>httpclient</module>
+    <module>httpmime</module>
+  </modules>
+</project>
