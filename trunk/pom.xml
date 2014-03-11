@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.vietspider</groupId>
+  <artifactId>vietspider</artifactId>
+  <name>VietSpider Module</name>
+  <version>3.x</version>
+  <packaging>pom</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.4</version>
+      <scope>test</scope>
+    </dependency>  
+  </dependencies>   
+
+  <modules>  	
+    <!--<module>startup</module>-->
+    <module>common</module>        
+    <module>htmlparser</module>   
+    <module>vietspiderdb</module> 
+    <!--<module>solr</module>
+	<module>solr-indexing</module>-->
+	 <module>solr3</module>
+	<module>solr3-searcher</module>
+    <module>embededb</module>
+    <!--<module>rt</module>-->
+    <module>model</module>
+    <module>offices</module>
+    <module>io</module>
+    <module>crawler</module>    
+		<module>server-plugin</module>
+    <module>httpserver2</module>    
+    
+    <module>client</module>
+    <module>widget</module>
+    <module>htmlexplorer</module>
+		<module>client-plugin</module>
+    <module>gui</module>    
+  </modules>
+  
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.properties</include>
+          <include>**/*.js</include>
+          <include>**/*.jstmpl</include>
+          <include>**/*.xml</include>          
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/java</directory>
+        <includes>
+          <include>**/*.properties</include>
+          <include>**/*.xml</include>
+          <include>**/*.js</include>
+          <include>**/*.jstmpl</include>
+        </includes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+          <optimize>true</optimize>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+          <useFile>false</useFile>
+          <forkMode>pertest</forkMode>
+          <testFailureIgnore>false</testFailureIgnore>
+          <includes>
+            <include implementation="java.lang.String">**/${test.classes}*.java</include>
+          </includes>
+          <systemProperties>
+            <property>
+              <name>application.home</name><value>target/appHome</value>
+            </property>
+          </systemProperties>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build> 
+
+  <!--<profiles>
+    <profile>
+      <id>VietSpider</id>  
+      <activation>
+        <property><name>VietSpider</name></property>
+        <activeByDefault>true</activeByDefault>
+      </activation> 	  
+    </profile>	 		
+  </profiles>-->
+  
+  
+</project>
