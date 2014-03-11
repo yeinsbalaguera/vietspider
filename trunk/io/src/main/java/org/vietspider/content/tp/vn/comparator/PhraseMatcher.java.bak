@@ -1,0 +1,177 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.vn.comparator;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.TreeSet;
+
+import org.vietspider.content.tp.model.Node;
+import org.vietspider.content.tp.model.TpWordIndex2;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 30, 2009  
+ */
+public class PhraseMatcher {
+  
+  public double compare(TpWordIndex2 wordIndex1, TpWordIndex2 wordIndex2){
+    List<Node> nodes = new ArrayList<Node>();
+    match(nodes, wordIndex1, wordIndex2);
+    return compareNumber(nodes, wordIndex1, wordIndex2);
+  }
+
+  public double compareNumber( List<Node> nodes, TpWordIndex2 wordIndex1, TpWordIndex2 wordIndex2){
+    double time1  = getTime1(nodes);
+    double time2  = getTime2(nodes);
+//    System.out.println("++++++ time 1 "+ time1+ " /  time2 " + time2);
+    double total1 = wordIndex1.getTotalWord(0);//getList(wordIndex1);
+    double total2 = wordIndex2.getTotalWord(0);//getList(wordIndex2);
+//    System.out.println("++++++ total 1 "+ total1 + " /  total2 " + total2);
+    
+    double rate1 = (time1/total1)*100;
+    double rate2 = (time2/total2)*100;
+//    System.out.println("++++++ rate 1 "+ rate1 + " /  rate2 " + rate2);
+    
+    return (rate1+rate2)/2 /*- rate3*/;
+  }
+  
+  private double getTime1(List<Node> nodes) {
+   double score = 0;
+   for(int i = 0; i < nodes.size(); i++) {
+     Node node = nodes.get(i);
+     score += getScore(node.getTotal1(), node.getTime1());
+//     System.out.println("=== > "+ score);
+   }
+   return score;
+  }
+  
+  private double getTime2(List<Node> nodes) {
+    double score = 0;
+    for(int i = 0; i < nodes.size(); i++) {
+      Node node = nodes.get(i);
+      score += getScore(node.getTotal2(), node.getTime2());
+    }
+    return score;
+   }
+   
+  private double getScore(int total, int time) {
+    double score = 1;
+    if(total == 1) {
+//      score += 0.2f*time;
+    } else if(total == 2) {
+      score += 0.5f*time;
+    } else if(total == 3) {
+      score += 4.0f*time;
+    } else if(total == 4) {
+//      System.out.println(" cai ni ne");
+      score += 4.5f*time;
+    } else if(total >= 5 && total < 10) {
+      score += 30f*time;
+    } else if(total >= 10) {
+      score += 50f*time;
+    }
+    
+    return score;
+  }
+  
+  public void match(List<Node> nodes, TpWordIndex2 index1, TpWordIndex2 index2) {
+    TreeSet<TpWordIndex2> children1 = index1.getChildren();
+    Iterator<TpWordIndex2> iterator = children1.iterator();
+    while(iterator.hasNext()) {
+      TpWordIndex2 child1 = iterator.next();
+      TreeSet<TpWordIndex2> children2 = index2.getChildren();
+      TpWordIndex2 child2 = children2.ceiling(child1) ;
+      
+      if(child2 != null 
+          && child1.getCode() == child2.getCode()) {
+        match1(nodes, child1, child2) ;
+      }
+    }
+  }
+  
+  private void match1(List<Node>nodes, TpWordIndex2 index1, TpWordIndex2 index2) {
+    /*if(index1.getCode() == 0 && index2.getCode() == 0) {
+      TpWordIndex zero1 = (TpWordIndex)index1;
+      TpWordIndex zero2 = (TpWordIndex)index2;
+      int total1 = zero1.getTotal();
+      int total2 = zero2.getTotal();
+      if(total1 < 2 || total2 < 2) return;
+      nodes.add(new Node(total1, total2, zero1.getTime(), zero2.getTime()));
+      return;
+    }*/
+    
+    if(index1.getCode() == 0 && index2.getCode() == 0) {
+//      System.out.println("o hay " + index1.getCode()+ " : "+ index2.getCode());
+//      System.out.println(zero1.getTotal() + " shdash: "+ zero2.getTotal());
+      nodes.add(new Node(index1.getTotal(), index1.getTime(), index2.getTime()));
+      return;
+    }
+    
+    Iterator<TpWordIndex2> iterator = index1.getChildren().iterator();
+    while(iterator.hasNext()) {
+      TpWordIndex2 child1 = iterator.next();
+      TpWordIndex2 child2 = index2.getChildren().ceiling(child1) ;
+      
+//      System.out.println("check 2 children " + child1.getCode()+ " : "+ (child2 != null ? child2.getCode() : "null"));
+//      if(child2 == null) {
+//        System.out.println("yes, because child2 null " + child1.getCode()
+//            + " ---  "+ index2.getCode() + "  / "+ index2.hashCode()
+//            + " : "+ index2.getChildren().size());
+//      }
+      
+      if(child2 != null 
+          && child1.getCode() == child2.getCode()) {
+        match1(nodes, child1, child2) ;
+        continue;
+      } 
+      
+      if(child1.getCode() == 0) {
+        TpWordIndex2 zero1 = child1;
+        int total1 = zero1.getTotal();
+        if(total1 < 2) continue;
+        goEnd2(nodes, child1, index2);
+        continue;
+      }
+      
+      TpWordIndex2 zero2 = index2.getChildren().ceiling(new TpWordIndex2(0));
+      if(zero2 == null) continue;
+//      System.out.println(" tai day "+ index2.getCode() +  " : " );
+      goEnd1(nodes, index1, zero2);
+    }
+  }
+  
+  private void goEnd2(List<Node>nodes, TpWordIndex2 zero, TpWordIndex2 index2) {
+    Iterator<TpWordIndex2> iterator = index2.getChildren().iterator();
+    while(iterator.hasNext()) {
+      TpWordIndex2 zero2 = iterator.next();
+      if(zero2.getCode() == 0) {
+        int total2 = zero2.getTotal();
+        if(total2 < 2) continue;
+        nodes.add(new Node(zero.getTotal(), total2, zero.getTime(), zero2.getTime()));
+        continue;
+      }
+      goEnd2(nodes, zero, zero2);
+    }
+  }
+  
+  private void goEnd1(List<Node>nodes, TpWordIndex2 index1, TpWordIndex2 zero2) {
+    Iterator<TpWordIndex2> iterator = index1.getChildren().iterator();
+//    System.out.println(" index1  yes "+ index1.getCode());
+    while(iterator.hasNext()) {
+      TpWordIndex2 zero1 = iterator.next();
+//      System.out.println(" co thay  "+ zero1.getCode());
+      if(zero1.getCode() == 0) {
+        int total1 = zero1.getTotal();
+        if(total1 < 2) continue;
+        nodes.add(new Node(total1, zero2.getTotal(), zero1.getTime(), zero2.getTime()));
+        continue;
+      }
+      if(zero2.getTotal() > 1) goEnd1(nodes, zero1, zero2);
+    }
+  }
+  
+}

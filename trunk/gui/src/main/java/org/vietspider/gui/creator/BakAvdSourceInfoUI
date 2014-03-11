@@ -1,0 +1,153 @@
+ cboNameRegion = factory.createCombo(SWT.DROP_DOWN | SWT.READ_ONLY);
+    cboNameRegion.setFont(UIDATA.FONT_10);
+    gridData = new GridData();
+    gridData.widthHint = 100;
+    cboNameRegion.setLayoutData(gridData);
+    cboNameRegion.addFocusListener(new FocusListener() {
+      @SuppressWarnings("unused")
+      public void focusGained(FocusEvent arg0) {
+        int selectedRegion = cboNameRegion.getSelectionIndex();
+        if(selectedRegion < 0) return;
+        List<Region> regions = getProcessRegions();
+        regions.get(selectedRegion).setPaths(cboDataRegion.getItems());
+      }
+      @SuppressWarnings("unused")
+      public void focusLost(FocusEvent arg0) {
+      }
+    });
+    
+    cboNameRegion.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        int idx = cboNameRegion.getSelectionIndex();
+        cboDataRegion.removeAll();
+        
+        List<Region> regions = getProcessRegions();
+        Region region = regions.get(idx);
+         
+        if(region.getPaths() == null) return;
+        cboDataRegion.setItems(region.getPaths());
+        if(cboDataRegion.getItemCount() > 0) cboDataRegion.select(0);
+      }      
+    });
+
+    menu = new Menu(getShell(), SWT.POP_UP);
+    factory.createMenuItem(menu, "menuChangeName", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        new ChangeRegionNameDialog(getShell(), getGroup(), cboNameRegion);
+      }
+    });
+    cboNameRegion.setMenu(menu);
+    
+    factory.setComposite(compExtractOption);
+    cboDataRegion = uiUtils.createCombo(factory);
+    uiUtils.initMenu(factory, cboDataRegion);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    cboDataRegion.setLayoutData(gridData);
+    cboDataRegion.setVisibleItemCount(5);
+    cboDataRegion.setFont(UIDATA.FONT_8V);
+
+//########################################## extract region data ###############################
+    
+    abstUI.createComposite(factory, uiGroupPattern, 3);
+    factory.createLabel("lblExtractData"); 
+    cboExtractRegion = abstUI.createCombo(factory);
+    cboExtractRegion.setFont(UIDATA.FONT_8V);
+    cboExtractRegion.setVisibleItemCount(5);
+    
+    gridData = new GridData();
+    gridData.heightHint = 26;
+    factory.createIcon("butSelectBlock", new HyperlinkAdapter(){  
+      public void linkActivated(HyperlinkEvent evt) {
+        Control control = (Control)evt.widget;
+        new SelectExtractBlock(AdvSourceInfoUI.this, control).execute();
+      }
+    }).setLayoutData(gridData);
+    abstUI.initMenu(factory, cboExtractRegion);
+    
+    abstUI.createComposite(factory, uiGroupPattern, 4);
+    factory.createLabel("lblRemove"); 
+    cboRemoveRegion = abstUI.createCombo(factory);
+    cboRemoveRegion.setFont(UIDATA.FONT_8V);
+    cboRemoveRegion.setVisibleItemCount(5);
+    butAllowRemoveFrom = factory.createButton("butAllowRemoveFrom", SWT.CHECK, null);
+    abstUI.initMenu(factory, cboRemoveRegion);
+    
+    gridData = new GridData();
+    gridData.heightHint = 26;
+    factory.createIcon("butSelectBlock", new HyperlinkAdapter(){  
+      public void linkActivated(HyperlinkEvent evt) {
+        Control control = (Control)evt.widget;
+        new SelectRemoveBlock(AdvSourceInfoUI.this, control).execute();
+      }
+    }).setLayoutData(gridData);
+
+ //########################################## select update region ##########################
+    
+//    factory.setComposite(this);
+//    createComposite(factory, 3, gridData);
+    abstUI.createComposite(factory, uiGroupHome, 3);
+    factory.createLabel("lblVisitRegion");
+//    createGroup(factory, "groupRegion", 2);
+    cboUpdateRegion = abstUI.createCombo(factory);
+    cboUpdateRegion.setFont(UIDATA.FONT_8V);
+    cboUpdateRegion.setVisibleItemCount(5);
+
+    gridData = new GridData();
+    gridData.heightHint = 26;
+    factory.createIcon("butSelectBlock", new HyperlinkAdapter(){  
+      public void linkActivated(HyperlinkEvent evt) {
+        Control control = (Control)evt.widget;
+        new SelectUpdateBlock(AdvSourceInfoUI.this, control).execute();
+      }
+    }).setLayoutData(gridData);
+    
+    abstUI.initMenu(factory, cboUpdateRegion);
+
+
+/* abstUI.createComposite(factory, 2, null);
+    factory.createLabel("lblSourceType");    
+    cboSourceType = factory.createCombo(SWT.NONE | SWT.READ_ONLY , new String[]{});
+    cboSourceType.setVisibleItemCount(10);
+    gridData = new GridData();   
+    gridData.widthHint = 80;
+    cboSourceType.setLayoutData(gridData);  
+    cboSourceType.setItems(factory.getLabel("sourceType").split(","));
+    cboSourceType.select(0);
+    cboSourceType.addSelectionListener(new SelectionAdapter() {
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent event) {
+        setTemplate();
+//        if(butSaveAndLoad == null) return;
+//        butSaveAndLoad.setEnabled(cboSourceType.getSelectionIndex() != 1);
+      }
+    });*/
+    
+   /* menu = new Menu(getShell(), SWT.POP_UP);
+    miEditTemplate = factory.createMenuItem(menu, "menuEditTemplate");
+    miEditTemplate.addListener(SWT.Selection, new Listener() {
+      @SuppressWarnings("unused")
+      public void handleEvent (Event e) {
+        new EditTemplate((AdvSourceInfoUI.this)).execute();
+      }
+    });
+    miEditTemplate.setAccelerator(SWT.MOD1 + 'e');
+    
+    factory.createMenuItem(menu, SWT.SEPARATOR);
+
+    miDeleteTemplate = factory.createMenuItem(menu, "menuDeleteTemplate", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        new DeleteTemplate(AdvSourceInfoUI.this).execute();
+      }
+    });
+    menu.addMenuListener(new MenuAdapter(){
+      @SuppressWarnings("unused")
+      public void menuShown(MenuEvent e){
+        int idx = cboSourceType.getSelectionIndex();
+        miEditTemplate.setEnabled(idx > 1);
+        miDeleteTemplate.setEnabled(idx > 1);
+      }
+    });
+    cboSourceType.setMenu(menu);*/

@@ -1,0 +1,268 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.search.util;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeSet;
+
+import org.headvances.vietspider.content.ArticleDatabases;
+import org.headvances.vietspider.database.DatabaseService;
+import org.headvances.vietspider.database.MetaList;
+import org.headvances.vietspider.paging.Entry;
+import org.headvances.vietspider.paging.PageIO;
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Meta;
+import org.vietspider.bean.MetaRelation;
+import org.vietspider.bean.Relation;
+import org.vietspider.common.io.LogService;
+import org.vietspider.content.index3.ArticleHandler2;
+import org.vietspider.content.index3.ContentIndex;
+import org.vietspider.content.index3.HighlightBuilder;
+import org.vietspider.content.tp.db.TpDatabases;
+import org.vietspider.index.DbIndexers;
+import org.vietspider.index.IIndexEntry;
+import org.vietspider.index.result.DocEntry;
+import org.vietspider.index.result.IdSearchIO;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 25, 2009  
+ */
+public class ClassifiedArticleHandler implements ArticleHandler2 {
+
+  //http://moom.vn:4529/site/search/3/?query=BlackBerry
+  private HighlightBuilder descBuilder;
+//  private ArticleLoader articleLoader;
+  private IdSearchIO  pageIO;
+  
+  private List<Relation> saveRelations = new ArrayList<Relation>();
+  private List<ContentIndex> removeContents = new ArrayList<ContentIndex>();
+
+  private WordComparator comparator = new WordComparator();
+
+  public IdSearchIO getPageIO() { return pageIO; }
+  
+  public ClassifiedArticleHandler(HighlightBuilder descBuilder) {
+//    this.articleLoader = loader;
+    this.descBuilder = descBuilder;
+  }
+
+  public void loadArticles(MetaList metas, PageIO<DocEntry> _pageIO) {
+    pageIO = (IdSearchIO)_pageIO;
+    metas.setTotalPage(pageIO.getTotalPage(DatabaseService.PAGE_SIZE));
+
+    List<Article> articles = new ArrayList<Article>(DatabaseService.PAGE_SIZE);
+//    if(entries.size() < 1) {
+//      metas.setData(articles);
+//      return ;
+//    }
+
+    List<TreeSet<String>> titles = new ArrayList<TreeSet<String>>(); 
+    List<TreeSet<String>> descs = new ArrayList<TreeSet<String>>(); 
+    int page = metas.getCurrentPage();
+    
+//    Connection connection = null;
+//    try {
+//      connection = JdbcConnection.get();
+//    } catch (Exception e) {
+//      LogService.getInstance().setThrowable(e);
+//    }
+    
+//    if(connection == null) {
+//      metas.setData(articles);
+//      return;
+//    }
+    
+//    ClassifiedJdbcGetter jdbc = new ClassifiedJdbcGetter();
+    
+    while(articles.size() < DatabaseService.PAGE_SIZE) {
+      List<DocEntry> entries = pageIO.loadPageByAsc(page, DatabaseService.PAGE_SIZE, null);
+      if(entries.size() < 1) break;
+      List<ArticleEntry> articleEntries = null;
+      try {
+        articleEntries = loadArticles(entries);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+        break;
+      }
+      
+      for(int i = 0; i < articleEntries.size(); i++) {
+        Article article = articleEntries.get(i).getArticle();
+        if(article == null) continue;
+//        String metaId = article.getMeta().getId();
+        DocEntry entry = articleEntries.get(i).getEntry();
+        descBuilder.build(article);
+        
+//        List<MetaRelation> metaRelations = jdbc.loadMetaRelation(connection, metaId);
+//        article.setMetaRelation(metaRelations);
+
+        if(add(articles, titles, descs, article)) {
+//          System.out.println(entry.getMetaId()+ " : " + entry.getStatus());
+          entry.setType(Entry.UPDATE);
+          entry.setStatus(-1);
+          pageIO.write(entry);
+        }
+        
+        List<MetaRelation> metaRelations = article.getMetaRelation();
+        for(int z = 0; z < Math.min(2, metaRelations.size()); z++) {
+          MetaRelation metaRelation = metaRelations.get(z);
+          metaRelation.setTitle(descBuilder.buildTitle(metaRelation.getTitle()));
+        }
+        
+        article.getMeta().setTitle(article.getMeta().getTitle()+ " ( "+entry.getStatus()+")");
+
+        if(articles.size() >= DatabaseService.PAGE_SIZE) break;
+      }
+      page++;
+    }
+    
+//    JdbcConnection.release(connection);
+    
+    commit();
+
+    if(pageIO.isFromFile()) pageIO.commit();
+    metas.setData(articles);
+  }
+  
+ /* private DocEntry search(List<DocEntry> entries, long id) {
+    for(int i = 0; i < entries.size(); i++) {
+      if(entries.get(i).getMetaId() == id) return entries.get(i);
+    }
+    return null;
+  }*/
+
+  private boolean add(List<Article> articles,
+      List<TreeSet<String>> titles,
+      List<TreeSet<String>> descs, Article article) {
+    Meta meta = article.getMeta();
+    if(meta == null || meta.getTitle() == null ) return true;
+
+    TreeSet<String> titleWords = comparator.split(meta.getTitle().toLowerCase());
+    TreeSet<String> descWords = comparator.split(meta.getDesc().toLowerCase());
+    for(int i = 0; i < descs.size(); i++) {
+      int compare = comparator.compare(titleWords, titles.get(i));
+      if(compare > 2) continue;
+      int compare2 = comparator.compare(descWords, descs.get(i));
+      if(compare2 > 5) continue;
+//      System.out.println(meta.getTitle() + " ==== > " + compare);
+//      System.out.println(meta.getTitle() + " 2 ==== > " + compare2);
+//      System.out.println(meta.getDesc());
+//      System.out.println(" == > "+ articles.get(i).getMeta().getDesc());
+//      System.out.println("=============== "+meta.getId() +"=====================");
+      saveDuplicate(articles.get(i), article, compare);
+      return true;
+    }
+    
+    titles.add(titleWords);
+    descs.add(descWords);
+    articles.add(article);
+    return false;
+  }
+
+  private void saveDuplicate(Article mainArticle, Article article, int counter) {
+    Meta meta = article.getMeta();
+    String id = meta.getId();
+    
+    ContentIndex contentIndex = new ContentIndex();
+    contentIndex.setStatus(IIndexEntry.DELETE);
+    contentIndex.setId(id);
+    removeContents.add(contentIndex);
+    
+    List<MetaRelation> relations = mainArticle.getMetaRelation();
+    for(int i = 0; i < relations.size(); i++) {
+      if(relations.get(i).getId().equalsIgnoreCase(id)) {
+        return;
+      }
+    }
+  
+    //    System.out.println(mainArticle.getMeta().getTitle());
+    //    System.out.println(meta.getTitle());
+    //    System.out.println(mainArticle.getMeta().getId()+ " : "+ meta.getId() + " : "+ counter);
+    Relation relation = new Relation();
+    relation.setMeta(mainArticle.getMeta().getId());
+    relation.setRelation(id);
+    relation.setPercent(counter == 0 ? 100 : (counter == 1 ? 98 : 95));
+    saveRelations.add(relation);
+    //    mainArticle.getRelations().add(relation);
+
+    MetaRelation metaRelation = new MetaRelation();
+    metaRelation.setId(id);
+    metaRelation.setDate(meta.getTime());
+    metaRelation.setDes(meta.getDesc());
+    metaRelation.setImage(meta.getImage());
+    metaRelation.setName(meta.getSource());
+    metaRelation.setPercent(relation.getPercent());
+    metaRelation.setTitle(meta.getTitle());
+    metaRelation.setTime(meta.getTime());
+    mainArticle.getMetaRelation().add(metaRelation);
+    
+    /*new Thread() {
+      public void run() {
+        try {
+          DatabaseService.getSaver().save(relation);
+        } catch (Exception e) {
+          LogService.getInstance().setThrowable(e);
+        }
+
+        ContentIndex contentIndex = new ContentIndex();
+        contentIndex.setStatus(IIndexEntry.DELETE);
+        contentIndex.setId(id);
+        System.out.println(" call lenh xoa "+ id);
+
+        TpDatabases tpDatabases = TpDatabases.getInstance();
+        if(tpDatabases != null) {
+          tpDatabases.getDbIndexers().index(contentIndex);  
+        } else {
+          DbIndexers.getInstance().index(contentIndex);
+        }
+
+      }
+    }.start();*/
+
+  }
+  
+  private void commit() {
+    if(saveRelations.size() < 1 && removeContents.size() < 1) return;
+    
+    new Thread() {
+      public void run() {
+        try {
+          DatabaseService.getSaver().save(saveRelations);
+        } catch (Exception e) {
+          LogService.getInstance().setThrowable(e);
+        }
+
+
+        TpDatabases tpDatabases = TpDatabases.getInstance();
+        for(int i = 0; i < removeContents.size(); i++) {
+          ContentIndex contentIndex = removeContents.get(i);
+          if(tpDatabases != null) {
+            tpDatabases.getDbIndexers().index(contentIndex);  
+          } else {
+            DbIndexers.getInstance().index(contentIndex);
+          }
+        }
+      }
+    }.start();
+  }
+  
+  public List<ArticleEntry> loadArticles(List<DocEntry> entries) throws Exception {
+    List<ArticleEntry> articleEntries = new ArrayList<ArticleEntry>();
+    for(int i = 0; i < entries.size(); i++) {
+      DocEntry entry = entries.get(i);
+      if(entry.getStatus() == -1) continue;
+      long longId = entry.getMetaId();
+      String metaId = String.valueOf(longId);
+      Article article = ArticleDatabases.getInstance().loadArticle(metaId);
+      if(article == null) continue;
+      ArticleEntry articleEntry = new ArticleEntry(entry, article);
+      articleEntries.add(articleEntry);
+    }
+    return articleEntries;
+    
+  }
+
+}

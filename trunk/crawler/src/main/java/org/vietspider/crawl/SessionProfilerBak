@@ -1,0 +1,113 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import java.util.Comparator;
+import java.util.concurrent.ConcurrentSkipListSet;
+
+import org.vietspider.crawl.link.SourceResource;
+import org.vietspider.crawl.test.SourceError;
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 8, 2008  
+ */
+public class SessionProfilerBak {
+  
+  private volatile long sessionExpire ;//5*60*1000;//1*60*60*1000;
+  
+  protected volatile long sessionStart = -1;
+  
+  private volatile int queueCounter = 0;
+  private volatile int dataCounter = 0;
+  private volatile int visitedCounter = 0;
+  private volatile int visitedDataCounter = 0;
+  
+  private volatile boolean checkVisitDataLink = true;
+  
+  private volatile ConcurrentSkipListSet<SourceError> errors;
+  
+  public void resetSession() {
+    sessionStart = -1;
+    
+    errors = null;
+    
+    queueCounter = 0;
+    dataCounter = 0;
+    visitedCounter = 0;
+    visitedDataCounter = 0;
+  }
+  
+  public void newSession(Source source, SourceResource resource) {
+    sessionStart = System.currentTimeMillis();
+    
+    //max priority for depth source
+    int depth = source.getDepth();
+    
+//    if(resource.isNotTest()) {
+//      sessionExpire = 5*60*60*1000;
+//      maxCheckedData = 10*1000*1000;
+//    } else {
+//      if(depth >= 10 && source.getPriority() < 1)  {
+//        maxCheckedData = 1000*1000;
+//      } else {
+//        maxCheckedData = (int)Math.pow(10, depth);
+//      }
+      sessionExpire = calExpireSession(depth)*60*60*1000;
+    
+//    if(!resource.isTest()) return;
+    
+    errors = new ConcurrentSkipListSet<SourceError>(new Comparator<SourceError>() {
+      public int compare(SourceError sourceError1, SourceError sourceError2) {
+        return sourceError1.compare(sourceError2);
+      }
+    });
+  }
+  
+  public synchronized void increQueueCounter() { queueCounter++; }
+  
+  public synchronized void decreQueueCounter() { queueCounter--; }
+  
+  public synchronized void increDataCounter(int value) { dataCounter += value; }
+  
+  public synchronized void increVisitedDataCounter() { visitedDataCounter++; }
+  
+  public synchronized void increVisitedCounter() { visitedCounter++; }
+  
+  public synchronized int getVisitedCounter() { return visitedCounter; }
+  
+  public long getSessionStart() { return sessionStart; }
+  
+  public int getDataCounter() { return dataCounter;  }
+  
+  public boolean isTimeout() {
+    return sessionStart > 0 
+        && System.currentTimeMillis() - sessionStart >= sessionExpire; 
+  }
+  
+  public boolean isErrorSource() {
+    return dataCounter < 1 && visitedDataCounter > 100;
+  }
+
+  public synchronized int getQueueCounter() { return queueCounter; }
+
+  public ConcurrentSkipListSet<SourceError> getErrors() { return errors;  }
+  
+  synchronized void addError(SourceError error) { 
+    if(errors == null) return;
+    errors.add(error); 
+  }
+  
+  private int calExpireSession(int depth) {
+    if(depth < 10) return 1;
+    if(depth >= 10 && depth < 20) return 5;
+    if(depth >= 20 && depth < 50) return 10;
+    if(depth >= 50 && depth < 100) return 20;
+    if(depth >= 100 && depth < 500) return 24;
+    return 5*24;
+  }
+
+}

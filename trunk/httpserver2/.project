@@ -1,0 +1,25 @@
+<projectDescription>
+  <name>org.vietspider.httpserver2</name>
+  <comment>Crawler Component. NO_M2ECLIPSE_SUPPORT: Project files created with the maven-eclipse-plugin are not supported in M2Eclipse.</comment>
+  <projects>
+    <project>org.vietspider.common</project>
+    <project>org.vietspider.crawler</project>
+    <project>org.vietspider.embededb</project>
+    <project>org.vietspider.htmlparser</project>
+    <project>org.vietspider.io</project>
+    <project>org.vietspider.model</project>
+    <project>org.vietspider.offices</project>
+    <project>org.vietspider.server-plugin</project>
+    <project>org.vietspider.solr3</project>
+    <project>org.vietspider.solr3-searcher</project>
+    <project>org.vietspider.vietspiderdb</project>
+  </projects>
+  <buildSpec>
+    <buildCommand>
+      <name>org.eclipse.jdt.core.javabuilder</name>
+    </buildCommand>
+  </buildSpec>
+  <natures>
+    <nature>org.eclipse.jdt.core.javanature</nature>
+  </natures>
+</projectDescription>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<database>
+  <driver>
+    oracle.jdbc.driver.OracleDriver
+  </driver>
+  <connection>
+    jdbc:oracle:thin:@localhost:1521:crawler1
+  </connection>
+  <user>sys</user>
+  <password>thuan123</password>
+  <inited>false</inited>
+  <scripts>
+    <script>
+      DROP TABLE META CASCADE CONSTRAINTS
+    </script>
+    <script>
+      DROP TABLE RELATION CASCADE CONSTRAINTS
+    </script>
+    <script>
+      DROP TABLE DOMAIN CASCADE CONSTRAINTS
+    </script>
+    <script>
+      DROP TABLE IMAGE CASCADE CONSTRAINTS
+    </script>
+    <script>
+      DROP TABLE CONTENT CASCADE CONSTRAINTS
+    </script>
+    
+    <script>
+      CREATE TABLE DOMAIN (
+      	 ID  						NUMERIC NOT NULL  PRIMARY KEY , 
+      	 &#34;DATE&#34; VARCHAR(128), 
+      	 CATEGORY 			VARCHAR2(512), 
+      	 NAME 					VARCHAR2(512)
+      )
+    </script>
+    <script>
+      CREATE TABLE META (
+				 ID 						NUMERIC NOT NULL  PRIMARY KEY,
+				 DOMAIN_ID			NUMERIC NOT NULL,
+				 TITLE 		    	VARCHAR2(1024) NOT NULL,
+				 DES	      		VARCHAR2(4000),
+				 IMAGE        	VARCHAR2(1024),
+				 TIME 					DATE NOT NULL,
+				 URL 		    		VARCHAR(1024) NOT NULL,
+				 SOURCE_TIME 		VARCHAR(512),
+				 CONSTRAINT META_FK FOREIGN KEY (DOMAIN_ID) REFERENCES DOMAIN (ID)
+		  )
+    </script>
+    <script>
+			CREATE TABLE CONTENT(
+				META_ID   			NUMERIC NOT NULL PRIMARY KEY, 
+				&#34;DATE&#34;  VARCHAR(512), 
+				CONTENT 				CLOB,
+				CONSTRAINT CONTENT_FK FOREIGN KEY (META_ID) REFERENCES META(ID)
+			)
+    </script>
+    <script>
+      CREATE TABLE RELATION (
+			 	META_ID 				NUMERIC  NOT NULL,
+			 	RELATION_ID 		NUMERIC  NOT NULL,		  
+			 	PERCENT		    	NUMBER,
+			 	CONSTRAINT META_ID_FK FOREIGN KEY (META_ID) REFERENCES META(ID),
+        CONSTRAINT RELATION_ID_FK FOREIGN KEY (RELATION_ID) REFERENCES META(ID)
+		  )
+    </script>
+    <script>
+      CREATE TABLE IMAGE(
+		    ID 							VARCHAR(128)  PRIMARY KEY,
+		    META_ID					NUMERIC  NOT NULL, 
+		    CONTENT_TYPE 		VARCHAR(128), 
+		    NAME 						VARCHAR(500), 
+		    IMAGE 					BLOB
+      )
+    </script>    
+  </scripts>
+</database>

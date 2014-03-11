@@ -1,0 +1,393 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.gui.monitor;
+
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.TableItem;
+import org.vietspider.client.common.ClientConnector2;
+import org.vietspider.client.common.CrawlerClientHandler;
+import org.vietspider.client.common.DataClientHandler;
+import org.vietspider.client.common.SourceMonitorClient;
+import org.vietspider.client.common.ZipRatioWorker;
+import org.vietspider.client.common.SourceMonitorHandler.MonitorFilter;
+import org.vietspider.client.util.ClientProperties;
+import org.vietspider.common.util.Worker;
+import org.vietspider.gui.creator.SourceEditor;
+import org.vietspider.gui.workspace.Workspace;
+import org.vietspider.monitor.CategoryInfo;
+import org.vietspider.monitor.MenuInfo;
+import org.vietspider.monitor.SourceInfo;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.services.ClientRM;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.waiter.ProgressExecutor;
+import org.vietspider.ui.widget.waiter.WaitLoading;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Nov 2, 2006
+ */
+public class SourceMonitor extends UISourceMonitor {
+  
+  private SourceMonitorClient client;
+  private Color color1 = new Color(getDisplay(), 0, 0, 0);
+  private Color color2 = new Color(getDisplay(), 255, 0, 0);
+  private short localeType = 0;
+  private DateFormat timeFormat;
+  private DateFormat dateFormat;
+  
+  public SourceMonitor(Composite parent, Workspace workspace) {
+    super(parent, workspace);
+    ClientProperties clientProperties = ClientProperties.getInstance();
+    if("en".equals(clientProperties.getValue("locale"))) {
+      localeType = SourceEditor.ENGLISH;
+    } else if("vn".equals(clientProperties.getValue("locale"))) {
+      localeType = SourceEditor.VIETNAM;
+    } else {
+      localeType = SourceEditor.ENGLISH;
+    }
+    
+    if(localeType == 1) {
+      dateFormat = DateFormat.getDateInstance(DateFormat.SHORT, new Locale("vi"));
+      timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT, new Locale("vi"));
+    } else {
+      dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
+      timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT);
+    }
+  }
+  
+  void loadMonitorData(int currentPage) {
+    tableData.removeAll();
+    if(client  == null || currentPage < 1) return ;
+    createUI(client.loadPage(currentPage-1));
+  }
+  
+  void loadDataFromServer(final boolean update) {
+    final String[] dates = listDate.getSelection();
+    if(dates == null || dates.length < 1) return ;
+    
+    client = new SourceMonitorClient("monitor", dates, 100);
+    
+    ClientRM resources = new ClientRM("Monitor");
+    final String labelPage = " "+ resources.getLabel("page");
+    final String labelTotal = resources.getLabel("source.monitor.summary");
+    
+    ZipRatioWorker worker = new ZipRatioWorker () {
+      
+      private boolean finished = false;
+      private String name;
+      private String data;
+      private String link;
+      
+      private Object[] total = {0,0,0}; 
+
+      @Override
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      @Override
+      public void before() {
+        butGo.setEnabled(false);
+        listDate.setEnabled(false);
+        
+        name = cboName.getText();
+        data = cboData.getText();
+        link = cboLink.getText();
+        
+        spinPage.setMaximum(0);
+        spinPage.setMinimum(0);
+        spinPage.setSelection(0);
+        
+        final int time = 1000;
+        Runnable timer = new Runnable () {
+          public void run () {
+            if(finished || spinPage.isDisposed()) return;
+            int totalPage = client.totalPage();
+            setDataPage(totalPage, labelPage);
+            getDisplay().timerExec(time, this);
+          }
+        };
+        getDisplay().timerExec(time, timer);
+      }
+
+      @Override
+      public void execute() {
+//        loadLastAccess(this, update);
+        try {
+          if(dates != null && dates.length > 0) {
+            MonitorFilter filter = client.createFilter(name, data, link);
+            total = client.download(filter, update);
+          }
+        } catch (Exception e) {
+          ClientLog.getInstance().setException(null, e);
+        }
+      }
+
+      @Override
+      public void after() {
+        if(butGo.isDisposed()) return;
+        butGo.setEnabled(true);
+        listDate.setEnabled(true);
+        finished = true;
+        
+        int totalPage = client.totalPage();
+        setDataPage(totalPage, labelPage);
+        
+        int totalData = ((Integer)total[1]).intValue();
+        int totalLink = ((Integer)total[0]).intValue();
+        long totalDownloaded = ((Long)total[2]).longValue();
+        String message = labelTotal.replaceAll("\\{1\\}", String.valueOf(totalData));
+        message = message.replaceAll("\\{2\\}", String.valueOf(totalLink));
+        message = message.replaceAll("\\{4\\}", String.valueOf(convert(totalDownloaded)));
+        int ratio = totalLink > 0 ? ((totalData*100)/totalLink) : 0;
+        message = message.replaceAll("\\{3\\}", String.valueOf(ratio));
+        statusBar.setMessage(message);
+      }
+    };
+    client.setWorker(worker);
+    statusBar.showProgressBar();
+    ProgressExecutor loading = new ProgressExecutor(statusBar.getProgressBar(), worker);
+    loading.open();
+  }
+  
+  void loadSourceMessage() {
+    final String date = getSelectedDate();
+    ZipRatioWorker worker = new ZipRatioWorker () {
+      
+      private String[] names;
+      private TableItem [] items; 
+      
+      @Override
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      @Override
+      public void before() {
+        items = tableData.getItems();
+        names = new String[items.length];
+        for(int i = 0; i <  names.length; i++) {
+          names[i] = items[i].getText(1);
+        }
+      }
+
+      @Override
+      public void execute() {
+        DataClientHandler handler = new DataClientHandler();
+        for(int i = 0; i < names.length; i++) {
+          try {
+            names[i] = handler.loadSourceLogMessage(date, names[i]);
+          } catch (Exception e) {
+            ClientLog.getInstance().setMessage(null, e);
+          }
+        }
+      }
+
+      @Override
+      public void after() {
+        if(butGo.isDisposed()) return;
+        Color bgcolor = new Color(getDisplay(), 245, 245, 245);
+        for(int i = 0; i< items.length; i++) {
+          if(items[i].isDisposed()) continue;
+          if(i%2 == 1) {
+           items[i].setBackground(bgcolor); 
+          }
+          if(names[i].trim().isEmpty()) continue;
+//          names[i] = names[i].replaceAll("\n", ",");
+          items[i].setText(5, names[i]);
+        }
+//        for (int i = 0; i < 7; i++) {
+//          tableData.getColumn(i).pack();
+//        }
+
+//        tableData.pack();
+
+      }
+    };
+    client.setWorker(worker);
+    statusBar.showProgressBar();
+    ProgressExecutor loading = new ProgressExecutor(statusBar.getProgressBar(), worker);
+    loading.open();
+  }
+  
+  private void setDataPage(int total, String labelPage) {
+    total = total - 1;
+//    if(total < 1) return;
+    spinPage.setMaximum(total);
+    if(total > 1) {
+      spinPage.setMinimum(1);
+      spinPage.setToolTipText(String.valueOf(total) + labelPage);
+    }
+    if(spinPage.getSelection() > 1) return;
+    spinPage.setSelection(1);
+  }
+
+  private void createUI(MenuInfo menuInfo) {
+    List<CategoryInfo> categories = menuInfo.getCategories();
+    List<String> list = new ArrayList<String>();
+    int index = (spinPage.getSelection()-1)*100;
+//    DateFormat format = CalendarUtils.getDateTimeFormat();
+    for(CategoryInfo categoryInfo : categories) {
+      List<SourceInfo> sources = categoryInfo.getSources();
+      for(SourceInfo sourceInfo : sources) {
+        TableItem item = new TableItem(tableData, SWT.NONE);
+        item.setFont(UIDATA.FONT_8V);
+        String name = sourceInfo.getName() + "." + categoryInfo.getCategory();
+        list.add(name);
+        item.setText(0, String.valueOf(index+1));
+        item.setText(1, name);
+        item.setText(2, String.valueOf(sourceInfo.getVisit()));
+        item.setText(3, String.valueOf(sourceInfo.getData()));
+        item.setText(4, String.valueOf(sourceInfo.getLink()));
+        
+        long lastModified = sourceInfo.getLastAccess();
+        if(lastModified > 0) {
+          Calendar calendar = Calendar.getInstance();
+          calendar.setTimeInMillis(lastModified);
+          item.setText(6, 
+              dateFormat.format(calendar.getTime()) 
+              + " " + timeFormat.format(calendar.getTime()));
+        }
+        
+//        item.setText(7, convert(sourceInfo.getDownloaded()));
+        
+        int data = sourceInfo.getData();
+        int link  = sourceInfo.getVisit();
+        if(data < 1 || (link  > 1000 && data < 10)) {
+          item.setForeground(1, color2);
+//          if(sourceInfo.getDownloaded() > 0) {
+//            item.setFont(1, UIDATA.FONT_8VB);
+//            item.setForeground(3, color2);
+//          }
+        } else {
+          item.setForeground(3, color1);
+        }
+        
+//        long lastAccess = sourceInfo.getLastAccess();
+//        if(lastAccess > 0) {
+//          Calendar calendar = Calendar.getInstance();
+//          calendar.setTimeInMillis(lastAccess);
+//          item.setText(6, format.format(calendar.getTime()));
+//        } else {
+        item.setText(5, "");
+//        }
+        index++;
+      }
+    }
+    loadSourceMessage();
+  }
+
+  String [] getSelectedSource() {
+    TableItem[] items = tableData.getSelection();
+    if(items == null || items.length < 1) return null;
+    String text = items[0].getText(1);
+    String [] elements = text.split("\\.");
+    return new String[]{elements[1], elements[2], elements[0]};
+  }
+  
+  void removeSourcesFromCrawler() {
+    final TableItem [] selectedItems = tableData.getSelection();
+    if(selectedItems == null || selectedItems.length < 1) return ;
+
+    Worker excutor = new Worker() {
+
+      StringBuilder builder = new StringBuilder();
+      
+      @Override
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      @Override
+      public void before() {
+        for(TableItem item : selectedItems) {
+          if(builder.length() > 0) builder.append('\n');
+          builder.append(item.getText(1));
+        }
+      }
+
+      @Override
+      public void execute() {
+        try {
+          new CrawlerClientHandler().removeCrawlSource(builder.toString().trim());
+        }catch (Exception e) {
+          ClientLog.getInstance().setException(null, e);
+        }
+      }
+
+      @Override
+      public void after() {
+      }
+    };
+    WaitLoading loading = new WaitLoading(cboName, excutor);
+    loading.open();
+  }
+  
+  private String convert(long downloaded) {
+    if(downloaded < 1024) {
+      return String.valueOf(downloaded) +" Bytes";
+    } else if(downloaded >= 1024 && downloaded < 1024*1024l) {
+      String value = String.valueOf((double)downloaded/1024); 
+      int idx = value.indexOf('.');
+      value = value.substring(0, Math.min(idx+3, value.length()));
+      return  value +" KB";
+    } else if(downloaded >= 1024*1024 && downloaded < 1024*1024*1024l) {
+      String value = String.valueOf((double)downloaded/(1024*1024l)); 
+      int idx = value.indexOf('.');
+      value = value.substring(0, Math.min(idx+3, value.length()));
+      return value + " MB";
+    } else {
+      String value = String.valueOf((double)downloaded/(1024*1024*1024l)); 
+      int idx = value.indexOf('.');
+      value = value.substring(0, Math.min(idx+3, value.length()));
+      return value+" GB";
+    }
+  }
+
+  @Override
+  public String getNameIcon() { return "small.monitor.png";  }
+  
+  void searchIdByUrl() {
+    String date = getSelectedDate();
+    String url = txtSearchUrl.getText();
+    
+//    if(date == null || date.trim().isEmpty()) {
+//      txtSearchUrl.setText("Not found! Select a date.");
+//      return;
+//    }
+    if(url == null || url.trim().isEmpty()) return;
+    
+    
+    DataClientHandler handler = new DataClientHandler();
+    try {
+      String metaId = handler.loadIdByURL(date, url);
+      if(metaId.trim().startsWith("Not found")) {
+        txtSearchUrl.setText(metaId);
+        return;
+      }
+      
+      StringBuilder builder = new StringBuilder();
+      ClientConnector2 connecter = ClientConnector2.currentInstance();
+      builder.append(connecter.getRemoteURL()).append('/');
+      builder.append(connecter.getApplication()).append("/DETAIL/").append(metaId);
+      txtSearchUrl.setText(builder.toString());
+      butBrowseContent.setEnabled(true);
+    } catch (Exception e) {
+      ClientLog.getInstance().setThrowable(getShell(), e);
+    }
+    
+  }
+  
+}

@@ -1,0 +1,146 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.miming.vn;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import junit.framework.Assert;
+import junit.framework.TestCase;
+
+import org.junit.Test;
+import org.vietspider.content.tp.model.Node;
+import org.vietspider.content.tp.model.TpWordIndex2;
+import org.vietspider.content.tp.vn.comparator.PhraseMatcher;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 29, 2009  
+ */
+public class TestPhraseMatchSearcher extends TestCase {
+  
+  @Test
+  public void testTreeMap() throws Exception {
+    TpWordIndex2 wordIndex1 = new TpWordIndex2(0);
+    TpWordIndex2 wordIndex2 = new TpWordIndex2(0);
+    
+    wordIndex1.add("chia sẻ");
+    wordIndex1.add("sẻ chia");
+   
+    wordIndex2.add("chia sẻ quan");
+    wordIndex2.add("cuộc sống");
+    
+    PhraseMatcher phraseMatcherUtils = new PhraseMatcher();
+    List<Node> nodes = new ArrayList<Node>();
+    phraseMatcherUtils.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 1);
+    
+    wordIndex2.add("sẻ chia");
+    nodes.clear();
+    phraseMatcherUtils.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 2);
+    
+    wordIndex1.add("sẻ");
+    wordIndex2.add("sẻ");
+    nodes.clear();
+    phraseMatcherUtils.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 3);
+    
+    wordIndex1.add("anh đi");
+    wordIndex2.add("anh đi chẳng trở về");
+    nodes.clear();
+    phraseMatcherUtils.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 4);
+    
+    wordIndex1.add("người ấy và tôi");
+    wordIndex1.add("chuyên chính vô sản");
+    wordIndex2.add("người ấy");
+    nodes.clear();
+    phraseMatcherUtils.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 5);
+    
+    wordIndex2.add("chuyên");
+//    System.out.println(" chuyên code: "+ "chuyên".hashCode());
+    nodes.clear();
+    phraseMatcherUtils.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 5);
+    
+    wordIndex1.add("bạo");
+    wordIndex2.add("bạo miệng quá");
+    //  System.out.println(" chuyên code: "+ "chuyên".hashCode());
+    nodes.clear();
+    phraseMatcherUtils.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 5);
+    
+//    wordIndex2.add("chia sẻ");
+//    wordIndex2.add("chuyên chính vô sản");
+//    nodes.clear();
+//    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+//    Assert.assertEquals(nodes.size(), 1);
+//    Assert.assertEquals(nodes.get(0).getTotal1(), 2);
+//    Assert.assertEquals(nodes.get(0).getTime1(), 1);
+//    Assert.assertEquals(nodes.get(0).getTime2(), 2);
+//    
+//    wordIndex1.add("chia");
+//    wordIndex1.add("chia");
+//    wordIndex1.add("chia");
+//    wordIndex1.add("chia");
+//    wordIndex1.add("chuyên chính luận");
+//    
+//    Assert.assertEquals(wordIndex1.contains("chia"), true);
+//    
+//    wordIndex2.add("đường về");
+//    wordIndex2.add("chia");
+//    wordIndex2.add("chia");
+//    
+////    System.out.println(" code chia "+ ("chia".hashCode()));
+//    nodes.clear();
+//    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+//    Assert.assertEquals(nodes.size(), 2);
+//    Assert.assertEquals(nodes.get(1).getTotal1(), 1);
+//    Assert.assertEquals(nodes.get(1).getTime1(), 4);
+//    Assert.assertEquals(nodes.get(1).getTime2(), 2);
+//    
+//    wordIndex1.add("chuyên chính vô sản");
+//    wordIndex1.add("chuyên chính");
+//    wordIndex1.add("chuyên chính");
+//    wordIndex1.add("chuyên chính");
+//    wordIndex1.add("hào hứng");
+//    
+//    
+//    wordIndex2.add("chuyên chính vô sản");
+//    wordIndex2.add("su hào");
+//    
+//    nodes.clear();
+//    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+//    Assert.assertEquals(nodes.size(), 3);
+//    Assert.assertEquals(nodes.get(2).getTotal1(), 4);
+//    Assert.assertEquals(nodes.get(2).getTime2(), 2);
+    
+    
+//    wordIndex1.add("chuyên chính");
+//    wordIndex1.add("chính luận");
+//    wordIndex1.add("hay");
+//    wordIndex1.add("hào hứng");
+//    wordIndex1.add("su hào");
+//    wordIndex1.add("chuyên chính vô sản");
+//    wordIndex1.add("chuyên chở");
+//    wordIndex1.add("tuôn tràn");
+//    
+//    wordIndex2.add("chia sẻ lợi nhuận");
+//    wordIndex2.add("cuộc sống");
+//    wordIndex2.add("bình dị");
+//    wordIndex2.add("chuyên");
+//    wordIndex2.add("chuyên chở");
+//    wordIndex2.add("đi chùa");
+//    wordIndex2.add("thiên mụ");
+//    wordIndex2.add("trầm lắng nguôn");
+//    wordIndex2.add("câu hò");
+  
+    
+    
+  }
+
+}

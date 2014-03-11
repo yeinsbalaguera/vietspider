@@ -1,0 +1,38 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.cms.vtemplate;
+
+import java.io.File;
+import java.net.URL;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 24, 2011  
+ */
+public class TestContentCleanerByFile {
+  
+  public static void main(String[] args) throws Exception {
+    URL url = TestContentCleanerByFile.class.getResource(".");
+    File folder = new File(url.toURI());
+    File file = new File(folder, "content.cleaner.test6.html");
+    System.out.println(file.getAbsolutePath());
+  
+    String text = new String(RWData.getInstance().load(file), "utf8");
+    
+    ContentCleaner cleaner = new ContentCleaner();
+    StringBuilder builder = new StringBuilder();
+    builder.append("<meta http-equiv=\"content-type\" content=\"text/head; charset=utf-8\">");
+    cleaner.buildContent(builder, text, "test");
+    
+    File newfile = new File(folder,  file.getName() + ".new.html");
+    if(!newfile.exists()) newfile.createNewFile();
+    new DataWriter().save(newfile, builder.toString().getBytes("utf8"));
+    
+//    System.out.println(newfile.getAbsolutePath());
+//    
+//    System.exit(0);
+  }
+}

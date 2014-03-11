@@ -1,0 +1,277 @@
+package org.vietspider.ui.htmlexplorer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeItem;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.Name;
+import org.vietspider.html.path2.INode;
+import org.vietspider.html.path2.Node;
+import org.vietspider.html.path2.NodeExp;
+import org.vietspider.html.path2.NodeMatcher;
+import org.vietspider.html.path2.NodePath;
+import org.vietspider.html.path2.NodePathParser;
+import org.vietspider.token.attribute.Attribute;
+import org.vietspider.token.attribute.AttributeParser;
+
+/**
+ * @by thuannd (nhudinhthuan@yahoo.com)
+ * Jun 29, 2005
+ */
+public class TreeHandler {
+//  
+  private TreeFactory treeFactory = new TreeFactory();
+  
+  private List<TreeItem> selectedItems = new ArrayList<TreeItem>();
+  
+  public final static int NONE = 0, SELECT = 1, MARK = -1, REMOVE = -2;
+  
+  public String getConfig(TreeItem item){
+    String [] split = item.getText().split("-");    
+    String txt = split[0]+"["+split[1]+"]";
+    while( item != null){                     
+      item = item.getParentItem();
+      if( item == null) break;      
+      split = item.getText().split("-");    
+      txt = split[0]+"["+split[1]+"]"+"."+txt; 
+    }  
+    return txt;
+  }
+  
+  public void resetTree(Tree tree){
+    selectedItems.clear();
+    TreeItem [] items = tree.getItems();
+    if(items == null) return ;
+    for(TreeItem ele : items) resetTreeItem(ele);
+  }
+  
+  private void resetTreeItem(TreeItem item){
+    item.setBackground(new Color( item.getDisplay(), 255, 255, 255));
+    TreeItem [] items = item.getItems();
+    if(items == null) return ;
+    for(TreeItem ele : items) resetTreeItem(ele);
+  }
+  
+  public void traverseTree(HtmlExplorerListener explorer,
+      Tree tree, String path, int style, short type) throws Exception {
+    NodePath nodePath = new NodePathParser().toPath(path);
+    traverseTree(explorer, tree, nodePath, path, style, type);
+  }
+  
+  public boolean traverseTree(HtmlExplorerListener explorer,  
+      Tree tree, NodePath nodePath, int style, short type) {
+    String path = nodePath.toString();
+    return traverseTree(explorer, tree, nodePath, path, style, type);
+  }
+  
+  
+  public boolean traverseTree(HtmlExplorerListener explorer,
+      Tree tree, NodePath nodePath, String path, int style, short type) {
+    if(nodePath.getNodes().length < 1) return true;
+    List<TreeItem> items = selectNode(nodePath.getNodes()[0], tree.getItems());
+    List<TreeItem> values = new ArrayList<TreeItem>();
+    
+    if(items.size() < 1) {
+      explorer.addErrorPath(path);
+      return false;
+//      if(explorer.isErrorPath(path)) {
+//        explorer.showErrorPath(path);
+//        return PathConfirmDialog.NO;
+//      } 
+//      if(type == PathConfirmDialog.NO_TO_ALL) {
+//        explorer.addErrorPath(path);
+//        return PathConfirmDialog.NO_TO_ALL;
+//      }
+//      if(type == PathConfirmDialog.YES_TO_ALL) return PathConfirmDialog.YES_TO_ALL;
+//      PathConfirmDialog dialog = new PathConfirmDialog(tree.getShell());
+//      explorer.addErrorPath(path);
+//      return dialog.open(path);
+      
+////      PathConfirmDialog dialog = new PathConfirmDialog(path);
+//      PathConfirmDialogs.notify(tree.getShell(), path);
+//      return 0;
+    }
+    
+//    new Exception().printStackTrace();
+    
+    for(int i = 1; i < nodePath.getNodes().length; i++) {
+      if(items.size() < 1) {
+        explorer.addErrorPath(path);
+        return false;
+//        if(explorer.isErrorPath(path)) {
+//          explorer.showErrorPath(path);
+//          return PathConfirmDialog.NO;
+//        } 
+//        if(type == PathConfirmDialog.NO_TO_ALL) {
+//          explorer.addErrorPath(path);
+//          return PathConfirmDialog.NO_TO_ALL;
+//        }
+//        if(type == PathConfirmDialog.YES_TO_ALL) return PathConfirmDialog.YES_TO_ALL;
+//        explorer.addErrorPath(path);
+//        PathConfirmDialog dialog = new PathConfirmDialog(tree.getShell());
+//        return dialog.open(path);
+      }
+      
+      values.clear();
+      for(TreeItem item : items) {
+        values.addAll(selectNode(nodePath.getNodes()[i], item.getItems()));
+      }
+      items.clear();
+      items.addAll(values);
+    }
+    
+    explorer.showErrorPath(null);
+    
+    TreeItem item  = items.get(0);
+    if(style == SELECT) {
+      item.setBackground(new Color(item.getDisplay(), 255, 150, 150));
+      Color color = new Color(item.getDisplay(), 255, 255, 111);
+      for(int i = 1; i < items.size(); i++) {
+        items.get(i).setBackground(color);
+      }
+      selectedItems.addAll(items);
+    } else if(style == MARK){
+      item.setBackground(new Color(item.getDisplay(), 180, 255, 255)); 
+    } else if(style  == REMOVE) {
+      Color color = new Color(item.getDisplay(), 255, 255, 255);
+      for(int i = 0; i < items.size(); i++) {
+        items.get(i).setBackground(color);
+      }
+      return true;
+    }
+    tree.setSelection(new TreeItem[] {item});
+    tree.setFocus();
+    return true;
+  }
+  
+  private List<TreeItem> selectNode(INode inode, TreeItem [] items){
+    String name  = inode.getName()+"-";
+    List<TreeItem>  list = new ArrayList<TreeItem>();
+    NodeMatcher expMatcher = new NodeMatcher();
+    for(TreeItem item : items){
+      if(item.getText().startsWith(name)){
+        String indexValue = item.getText().substring(name.length());
+        int index = Integer.parseInt(indexValue);
+        
+        if(inode instanceof NodeExp) {
+          NodeExp nodeExp = (NodeExp)inode;
+          if(expMatcher.match(nodeExp.getPattern(), index)) {
+            Attribute [] attrs = nodeExp.getAttributes(); 
+            if(attrs == null || attrs.length < 1) {
+              list.add(item);
+            } else {
+              String data = (String)item.getData();
+              int idx = data.indexOf(' ');
+              if(idx > 0) data = data.substring(idx+1);
+              if(contains(AttributeParser.parse(data), attrs)) list.add(item); 
+            }
+          }
+          continue;
+        }
+
+        Node node = (Node)inode;
+        if(node.getIndex() != index) continue;
+        Attribute [] attrs = inode.getAttributes(); 
+        if(attrs == null || attrs.length < 1) {
+          list.add(item);
+        } else {
+          String data = (String)item.getData();
+          int idx = data.indexOf(' ');
+          if(idx > 0) data = data.substring(idx+1);
+          if(contains(AttributeParser.parse(data), attrs)) list.add(item); 
+        }
+
+      }
+    }
+    return list;
+  }
+  
+  private boolean contains(Attribute [] n_attributes, Attribute [] template_attrs) {
+    for(Attribute attr : template_attrs) {
+      if(!contains(n_attributes, attr))  return false;
+//      Attribute attr1 = null;
+//      for(Attribute attr2 : n_attributes) {
+//        if(attr2.getName().equalsIgnoreCase(attr.getName())) {
+//          attr1 = attr2;
+//          break;
+//        }
+//      }
+//      if(attr1 == null || 
+//          !attr.getValue().equalsIgnoreCase(attr1.getValue())) return false;
+    }
+    return true;
+  }
+  
+  private boolean contains(Attribute [] attributes, Attribute attribute) {
+    for(Attribute attr : attributes) {
+      String name1 = attr.getName();
+      String name2 = attribute.getName();
+//      System.out.println(name1 + " : "+ name2);
+      String value1 = attr.getValue();
+      String value2 = attribute.getValue();
+      
+//      System.out.println(value1 + " : "+ value2);
+//      System.out.println("=======================================");
+      if(name1.equalsIgnoreCase(name2) && value1.equalsIgnoreCase(value2)) return true;
+    }
+    return false;
+  }
+  
+  public void createTreeItem(Tree tree, HTMLDocument doc){
+    if(doc == null) return ;
+    selectedItems.clear();
+    HTMLNode node = doc.getRoot();
+    createItem(tree, node);
+  }
+  
+  private void createItem(Object parent, HTMLNode node){
+    List<HTMLNode> children = node.getChildren();
+    if(children == null) return;
+    for(int i=0; i< children.size(); i++){
+      HTMLNode child  = children.get( i);      
+      TreeItem item;
+      if(parent instanceof Tree) {
+        item = treeFactory.get((Tree)parent, child.getName(), getIndex(children, child) , getStyle(child));
+        item.setData(new String(child.getValue()));
+      } else {
+        item = treeFactory.get((TreeItem)parent, child.getName(), getIndex(children, child) , getStyle(child));
+        item.setData(new String(child.getValue()));
+      }
+      createItem(item, child);
+    }   
+  }
+  
+  private int getIndex(List<HTMLNode> children, HTMLNode element){
+    int count = 0;
+    for(int i = 0; i < children.size(); i++){
+      if(children.get(i).isNode(element.getName())){
+        if(children.get(i) == element) return count;
+        count++;
+      }
+    }
+    return count;
+  }
+  
+  private int getStyle(HTMLNode element){
+    Name name = element.getConfig().name();
+    if(name == Name.CONTENT) return -2;
+    if(name == Name.COMMENT || name == Name.CODE_CONTENT) return -1;
+    return sizeOfContent(element);
+  }
+  
+  private int sizeOfContent(HTMLNode node){
+    int s = node.getValue().length;
+    List<HTMLNode> children = node.getChildrenNode();
+    for(HTMLNode child : children) {
+      s += sizeOfContent(child);
+    }
+    return s;
+  }
+
+  public List<TreeItem> getSelectedItems() { return selectedItems; }
+  
+}

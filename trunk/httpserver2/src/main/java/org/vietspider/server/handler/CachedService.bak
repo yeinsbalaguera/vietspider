@@ -1,0 +1,230 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.server.handler;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Content;
+import org.vietspider.bean.Domain;
+import org.vietspider.bean.Meta;
+import org.vietspider.bean.MetaRelation;
+import org.vietspider.bean.MetaRelations;
+import org.vietspider.bean.Relation;
+import org.vietspider.bean.Relations;
+import org.vietspider.common.io.LogService;
+import org.vietspider.db.database.DatabaseService;
+import org.vietspider.index.SearchResponse;
+import org.vietspider.index.SearchResultCollection;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 30, 2010  
+ */
+public class CachedService extends Thread {
+  
+  private static CachedService INSTANCE ;
+  
+  public static final synchronized CachedService getInstance() {
+    if(INSTANCE == null) INSTANCE = new CachedService();
+    return INSTANCE;
+  }
+  
+  private final static long EXPIRE = 30*1000l;
+  private ConcurrentHashMap<String, Data> container;
+  
+  private CachedService() {
+    container = new ConcurrentHashMap<String, Data>();
+    this.start();
+  }
+  
+  public void put(String id, Object value) {
+    container.put(id, new Data(value));
+  }
+  
+  public SearchResponse loadSearchResponse(SearchResponse response) throws Exception {
+    SearchResponse oldValue = get(response.getId());
+    if(oldValue != null) return oldValue;
+    
+    SearchResponse newValue = DatabaseService.getLoader().search(response);
+    if(newValue == null) return null;
+    container.put(newValue.getId(), new Data(newValue));
+    
+    return newValue;
+  }
+  
+  public String loadSearchResponseForCached(SearchResponse response) throws Exception {
+    String id = "cached." + response.getId();
+    String xml = get(id);
+    if(xml != null) return xml;
+    
+    xml = DatabaseService.getLoader().searchForCached(response);
+    if(xml == null) return "";
+    container.put(id, new Data(xml));
+    
+    return xml;
+  }
+  
+  public String loadArticles(SearchResultCollection collection) throws Exception {
+    String xml = get(collection.getId());
+    if(xml != null) return xml;
+    
+    xml = DatabaseService.getLoader().loadArticleForSearch(collection);
+    if(xml == null) return "";
+    container.put(collection.getId(), new Data(xml));
+    
+    return xml;
+  }
+  
+  
+  public Article loadArticle(short mode, String id) throws Exception {
+    StringBuilder keyBuilder = new StringBuilder("article");
+    keyBuilder.append('.').append(mode).append('.').append(id);
+    String key  = keyBuilder.toString();
+    
+    Article article = get(key);
+    if(article != null) return article;
+    
+    article = DatabaseService.getLoader().loadArticle(id, mode);
+    if(article == null) return null;
+    
+    container.put(key, new Data(article));
+    
+    return article;
+  }
+  
+  public Relations loadRelations(String id) throws Exception {
+    StringBuilder keyBuilder = new StringBuilder("relations");
+    keyBuilder.append('.').append(id);
+    String key  = keyBuilder.toString();
+    
+    Relations relations = get(key);
+    if(relations != null) return relations;
+    
+    List<Relation> list = DatabaseService.getLoader().loadRelation(id);
+    if(list == null) return null;
+    relations = new Relations(id);
+    relations.setRelations(list);
+    
+    container.put(key, new Data(relations));
+    return relations;
+  }
+  
+  public Meta loadMeta(String id) throws Exception {
+    StringBuilder keyBuilder = new StringBuilder("meta");
+    keyBuilder.append('.').append(id);
+    String key  = keyBuilder.toString();
+    
+    Meta meta = get(key);
+    if(meta != null) return meta;
+    
+    meta = DatabaseService.getLoader().loadMeta(id);
+    if(meta == null) return null;
+    container.put(key, new Data(meta));
+    
+    return meta;
+  }
+  
+  public Content loadContent(String id) throws Exception {
+    StringBuilder keyBuilder = new StringBuilder("content");
+    keyBuilder.append('.').append(id);
+    String key  = keyBuilder.toString();
+    
+    Content content = get(key);
+    if(content != null) return content;
+    
+    content = DatabaseService.getLoader().loadContent(id);
+    if(content == null) return null;
+    container.put(key, new Data(content));
+    
+    return content;
+  }
+  
+  public Domain loadDomain(String id) throws Exception {
+    StringBuilder keyBuilder = new StringBuilder("domain");
+    keyBuilder.append('.').append(id);
+    String key  = keyBuilder.toString();
+    
+    Domain domain = get(key);
+    if(domain != null) return domain;
+    
+    domain = DatabaseService.getLoader().loadDomainById(id);
+    if(domain == null) return null;
+    container.put(key, new Data(domain));
+    
+    return domain;
+  }
+  
+  public MetaRelations loadMetaRelations(String id) throws Exception {
+    StringBuilder keyBuilder = new StringBuilder("meta-relations");
+    keyBuilder.append('.').append(id);
+    String key  = keyBuilder.toString();
+    
+    MetaRelations relations = get(key);
+    if(relations != null) return relations;
+    
+    List<MetaRelation> list = DatabaseService.getLoader().loadArticle(id).getMetaRelations();
+    if(list == null) return null;
+    
+    relations = new MetaRelations(id);
+    relations.setMetaRelations(list);
+    
+    container.put(key, new Data(relations));
+    
+    return relations;
+  }
+  
+  
+  @SuppressWarnings("unchecked")
+  public <T> T get(String id) {
+    Data data = container.get(id);
+    if(data == null || data.isExpire()) return null;
+    return (T)data.value;
+  }
+  
+  public void run() {
+    while(true) {
+      cleanExpire();
+      System.out.println(" chay thu cached service "+ container.size());
+      try {
+        Thread.sleep(5*1000l);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+  }
+  
+  private void cleanExpire() {
+    Iterator<Map.Entry<String, Data>> iterator = container.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<String, Data> entry = iterator.next();
+      Data data = entry.getValue();
+      if(data.isExpire())  {
+//        System.out.println(" expire " + entry.getKey());
+        iterator.remove();
+      }
+    }
+  }
+  
+  private static class Data {
+    
+    private long createdTime = System.currentTimeMillis();
+    private Object value;
+    
+    private Data(Object value) {
+      this.value = value;  
+    }
+    
+    private boolean isExpire() {
+      return System.currentTimeMillis() - createdTime >= EXPIRE;
+    }
+    
+    
+  }
+
+}

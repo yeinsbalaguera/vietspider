@@ -1,0 +1,147 @@
+<div class="menu">
+	<strong>
+		<dfn>&nbsp;›&nbsp;
+		</dfn>
+		Khu vực
+	</strong>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;region=">&nbsp;&nbsp;&nbsp;Tất
+		cả
+	</a>
+</div>
+<div class="menu">
+	<a class="menu"
+		href="/site/search/1/?query=long+bien&amp;region=th%C3%A0nh+ph%E1%BB%91+h%E1%BB%93+ch%C3%AD+minh">&nbsp;&nbsp;&nbsp;Tp
+		Hồ Chí Minh
+	</a>
+</div>
+<div class="menu">
+	<a class="menu"
+		href="/site/search/1/?query=long+bien&amp;region=h%C3%A0+n%E1%BB%99i">&nbsp;&nbsp;&nbsp;Hà
+		Nội
+	</a>
+</div>
+<div class="menu">
+	<a class="menu"
+		href="/site/search/1/?query=long+bien&amp;region=%C4%91%C3%A0+n%E1%BA%B5ng">&nbsp;&nbsp;&nbsp;Đà
+		Nẵng
+	</a>
+</div>
+<div class="menu">
+	<a class="menu"
+		href="/site/search/1/?query=long+bien&amp;region=c%E1%BA%A7n+th%C6%A1">&nbsp;&nbsp;&nbsp;Cần
+		Thơ
+	</a>
+</div>
+<div class="menu">
+	<a class="menu"
+		href="/site/search/1/?query=long+bien&amp;region=h%E1%BA%A3i+ph%C3%B2ng">&nbsp;&nbsp;&nbsp;Hải
+		Phòng
+	</a>
+</div>
+<div class="menu">
+	<a class="menu"
+		href="/site/search/1/?query=long+bien&amp;region=b%C3%ACnh+d%C6%B0%C6%A1ng">&nbsp;&nbsp;&nbsp;Bình
+		Dương
+	</a>
+</div>&nbsp;&nbsp;&nbsp;
+<select style="visibility: visible;"
+	onchange="window.location = this.options[this.selectedIndex].value;"
+	id="boxmenu" class="boxmenu" name="select">
+	<option selected="selected" value="#">Vùng khác</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=th%C3%A0nh+ph%E1%BB%91+h%E1%BB%93+ch%C3%AD+minh">Tp HCM</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=h%C3%A0+n%E1%BB%99i">Hà Nội</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=h%E1%BA%A3i+ph%C3%B2ng">Hải Phòng</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=c%E1%BA%A7n+th%C6%A1">Cần Thơ</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=%C4%91%C3%A0+n%E1%BA%B5ng">Đà Nẵng</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=an+giang">An Giang</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=b%C3%A0+r%E1%BB%8Ba-v%C5%A9ng+t%C3%A0u">BR-VT</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=b%E1%BA%A1c+li%C3%AAu">Bạc Liêu</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=b%E1%BA%AFc+k%E1%BA%A1n">Bắc Kạn</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=b%E1%BA%AFc+giang">Bắc Giang</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=b%E1%BA%AFc+ninh">Bắc Ninh</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=b%E1%BA%BFn+tre">Bến Tre</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=b%C3%ACnh+d%C6%B0%C6%A1ng">Bình Dương</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=b%C3%ACnh+%C4%91%E1%BB%8Bnh">Bình Định</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=b%C3%ACnh+ph%C6%B0%E1%BB%9Bc">Bình Phước</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=b%C3%ACnh+thu%E1%BA%ADn">Bình Thuận</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=c%C3%A0+mau">Cà Mau</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=cao+b%E1%BA%B1ng">Cao Bằng</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=%C4%91%E1%BA%AFc+l%E1%BA%AFk">Đắc Lắk</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=%C4%91%E1%BA%AFc+n%C3%B4ng">Đắc Nông</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=%C4%91i%E1%BB%87n+bi%C3%AAn">Điện Biên</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=%C4%91%E1%BB%93ng+nai">Đồng Nai</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=%C4%91%E1%BB%93ng+th%C3%A1p">Đồng Tháp</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=gia+lai">Gia Lai</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=h%C3%A0+giang">Hà Giang</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=h%C3%A0+nam">Hà Nam</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=h%C3%A0+t%C4%A9nh">Hà Tĩnh</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=h%E1%BA%A3i+d%C6%B0%C6%A1ng">Hải Dương</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=h%E1%BA%ADu+giang">Hậu Giang</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=h%C3%B2a+b%C3%ACnh">Hòa Bình</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=h%C6%B0ng+y%C3%AAn">Hưng Yên</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=kh%C3%A1nh+h%C3%B2a">Khánh Hòa</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=ki%C3%AAn+giang">Kiên Giang</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=kon+tum">Kon Tum</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=lai+ch%C3%A2u">Lai Châu</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=l%C3%A2m+%C4%91%E1%BB%93ng">Lâm Đồng</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=l%E1%BA%A1ng+s%C6%A1n">Lạng Sơn</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=l%C3%A0o+cai">Lào Cai</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=long+an">Long An</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=nam+%C4%91%E1%BB%8Bnh">Nam Định</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=ngh%E1%BB%87+an">Nghệ An</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=ninh+b%C3%ACnh">Ninh Bình</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=ninh+thu%E1%BA%ADn">Ninh Thuận</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=ph%C3%BA+th%E1%BB%8D">Phú Thọ</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=ph%C3%BA+y%C3%AAn">Phú Yên</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=qu%E1%BA%A3ng+b%C3%ACnh">Quảng Bình</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=qu%E1%BA%A3ng+nam">Quảng Nam</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=qu%E1%BA%A3ng+ng%C3%A3i">Quảng Ngãi</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=qu%E1%BA%A3ng+ninh">Quảng Ninh</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=qu%E1%BA%A3ng+tr%E1%BB%8B">Quảng Trị</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=s%C3%B3c+tr%C4%83ng">Sóc Trăng</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=s%C6%A1n+la">Sơn La</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=t%C3%A2y+ninh">Tây Ninh</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=th%C3%A1i+b%C3%ACnh">Thái Bình</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=th%C3%A1i+nguy%C3%AAn">Thái Nguyên</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=thanh+h%C3%B3a">Thanh Hóa</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=th%E1%BB%ABa+thi%C3%AAn-hu%E1%BA%BF">TT-Huế</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=ti%E1%BB%81n+giang">Tiền Giang</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=tr%C3%A0+vinh">Trà Vinh</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=tuy%C3%AAn+quang">Tuyên Quang</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=v%C4%A9nh+long">Vĩnh Long</option>
+	<option
+		value="/site/search/1/?query=long+bien&amp;region=v%C4%A9nh+ph%C3%BAc">Vĩnh Phúc</option>
+	<option value="/site/search/1/?query=long+bien&amp;region=y%C3%AAn+b%C3%A1i">Yên Bái</option>
+</select>

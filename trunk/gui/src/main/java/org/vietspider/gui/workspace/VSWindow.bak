@@ -1,0 +1,213 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.gui.workspace;
+
+import java.io.File;
+import java.net.URL;
+import java.util.prefs.Preferences;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.ShellAdapter;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.forms.events.HyperlinkAdapter;
+import org.eclipse.ui.forms.events.HyperlinkEvent;
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.gui.module.UIControl;
+import org.vietspider.gui.module.UINews;
+import org.vietspider.ui.XPWidgetTheme;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.ShellSetter;
+import org.vietspider.ui.widget.vtab.impl.VTab;
+import org.vietspider.ui.widget.vtab.impl.VTabHideEvent;
+import org.vietspider.ui.widget.vtab.impl.VTabHideListener;
+import org.vietspider.ui.widget.vtab.outlookbar.OutlookBarPane;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Oct 26, 2006
+ */
+public class VSWindow {
+  
+  private Shell shell;
+//  private VTab bar;
+  private SashForm sash;
+  private Workspace workspace;
+  
+  private int[] weights;  
+  
+  public VSWindow(String title) {    
+    ApplicationFactory factory = new ApplicationFactory("VietSpider", getClass() , 800, 520);
+    shell = (Shell) factory.getComposite(); 
+    shell.setLayout(new FillLayout());   
+    shell.setText(title+shell.getText());
+    
+    sash = new SashForm(shell, SWT.HORIZONTAL);  
+    
+//    GridData gridData = new GridData(GridData.FILL_BOTH);        
+//    gridData.horizontalSpan = 1;    
+//    bar = factory.createVTab(sash);     
+//    bar.setLayoutData(gridData);  
+//    bar.addHideListener(new VTabHideListener(){
+//      @SuppressWarnings("unused")
+//      public void hide(VTabHideEvent evt){
+//        hideMenu(null); 
+//      }
+//      @SuppressWarnings("unused")
+//      public void show(VTabHideEvent evt){
+//        showMenu();       
+//      }
+//    });   
+    
+    workspace = new Workspace(factory, sash, SWT.NONE); 
+    
+//    final UINews uiNews = new UINews(factory, workspace);
+//    final Composite datePanel = factory.createVTabCompositeItem(bar, "sectionNews");
+//    datePanel.setBackground(bar.getBackground());
+//    uiNews.setDataPanel(factory, datePanel);
+//    final Composite buttonPanel = factory.createVTabCompositeItem(bar, "sectionNews");
+//    buttonPanel.setBackground(bar.getBackground());
+//    uiNews.setPagePanel(factory, buttonPanel);
+//    factory.setComposite(shell);
+//    uiNews.setExpand(factory.createExpandMenu(bar, "sectionNews"));
+//    
+////    if(ClientConnector.currentInstance().getPermission() != User.DATA_READ_ONLY) {
+//    OutlookBarPane outlookControl = factory.createOutlookBarItem(bar, "sectionConfig");
+//    new UIControl(factory, outlookControl, workspace);
+////    }
+//    
+//    Preferences prefs = Preferences.userNodeForPackage(getClass());   
+//    String prop;
+//    int sltItem = 0;
+//    prop = prefs.get("item_menu", "");
+//    if(prop != null && prop.trim().length() > 0) sltItem = Integer.parseInt(prop);
+//    bar.setSelectGroup(sltItem);
+//    
+//    factory.setClassName(bar.getClass().getName());
+//    
+//    Image imgConnect = factory.loadImage("butConnect.png");
+//    
+//    if(Application.LICENSE  != Install.PERSONAL) {
+//      String tipConnect = factory.getLabel("itemConnectAnother");
+//      bar.createIcon(imgConnect, tipConnect, new HyperlinkAdapter() {
+//        @SuppressWarnings("unused")
+//        public void linkActivated(HyperlinkEvent e) {
+//          VietSpiderClient.connect(false);
+//        }
+//      });
+//    }
+//    
+//    Image imgHelp = factory.loadImage("butHelp.png");
+//    String tipHelp  = factory.getLabel("itemHelp");
+//    bar.createIcon(imgHelp, tipHelp, new HyperlinkAdapter() {
+//      @SuppressWarnings("unused")
+//      public void linkActivated(HyperlinkEvent e) {
+//        try {
+//          DataReader reader =  new DataReader();
+//          File folder = UtilFile.getFolder("system");
+//          File file = new File(folder, "help.htm");
+//          byte [] bytes = new byte[0];
+//          if(file.exists()) {
+//            bytes = reader.load(file);
+//          } else {
+//            String url = UINews.class.getResource("").toString()+"help.htm";
+//            bytes = reader.loadInputStream(new URL(url).openStream()).toByteArray();
+//          }
+//          String text  = new String(bytes, Application.CHARSET);
+//          workspace.getTab().createItem().setText(text);
+//        } catch (Exception exp) {
+//          ClientLog.getInstance().setException(getShell(), exp);
+//        }
+//        
+//      }
+//    });
+//    
+//    Image imgAbout = factory.loadImage("butAbout.png");
+//    String tipAbout  = factory.getLabel("itemAbout");
+//    bar.createIcon(imgAbout, tipAbout, new HyperlinkAdapter() {
+//      @SuppressWarnings("unused")
+//      public void linkActivated(HyperlinkEvent e) {
+//        DataReader reader =  new DataReader();
+//        try {
+//          byte [] bytes = new byte[0];
+//          File folder = UtilFile.getFolder("system");
+//          File file = new File(folder, "about.htm");
+//          if(file.exists()) {
+//            bytes = reader.load(file);
+//          } else {
+//            String url = UINews.class.getResource("").toString()+"about.htm";
+//            bytes = reader.loadInputStream(new URL(url).openStream()).toByteArray();
+//          }
+//          String text  = new String(bytes, Application.CHARSET);
+//          text = text.replaceAll("@LICENSE@", Application.LICENSE.toString());
+//          workspace.getTab().createItem().setText(text);
+//        } catch (Exception exp) {
+//          ClientLog.getInstance().setException(getShell(), exp);
+//        }
+//      }
+//    });
+    
+//    prop = prefs.get("sash_form", ""); 
+//    if(prop.length() > 0) {
+//      String com[]=prop.split(",");
+//      if(com.length>1) weights = new int[]{ Integer.parseInt(com[0]), Integer.parseInt(com[1])};
+//    }else{
+//      weights = new int[]{150, 600};
+//    }
+    
+//    showMenu();
+    
+    shell.addShellListener(new ShellAdapter(){       
+      @SuppressWarnings("unused")
+      public void shellClosed(ShellEvent e){
+        new ShellSetter(getClass(), shell);
+//        closeShell();  
+        VietSpiderClient.dispose();
+      }     
+    });
+    
+    XPWidgetTheme.setWin32Theme(shell);
+    shell.open();
+  }
+  
+//  public void closeShell(){
+//    new ShellSetter(getClass(), shell);
+//    Preferences pre = Preferences.userNodeForPackage(this.getClass());        
+//    if(bar.isVisible()) weights = sash.getWeights();        
+//    String properties = String.valueOf(weights[0])+","+String.valueOf( weights[1]);
+//    pre.put("sash_form", properties);
+//    properties = String.valueOf(bar.getSelectGroup());
+//    pre.put("item_menu", properties);
+//  }
+  
+//  private void hideMenu(Preferences prefs){
+//    if(prefs == null) weights = sash.getWeights();
+//    sash.setWeights(new int[]{15, 600}); 
+//    bar.layout();
+//    if(prefs != null) bar.setVisible(false);    
+//  }
+//  
+//  private void showMenu(){   
+//    sash.setWeights(weights);  
+//    bar.layout();
+//    bar.setVisible(true);
+//  }
+  
+  public Workspace getWorkspace() { return workspace; }
+
+  public Shell getShell() { return shell; }
+  
+  
+}

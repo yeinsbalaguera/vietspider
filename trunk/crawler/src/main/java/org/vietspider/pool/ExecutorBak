@@ -1,0 +1,132 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.pool;
+
+import org.vietspider.common.io.LogService;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Mar 15, 2007
+ */
+public abstract class ExecutorBak<T, V, E extends Status> extends Container implements Runnable {
+  
+  protected volatile boolean pause = false;
+  protected int id;
+  
+  private int size;
+  
+  protected Thread[] threads;
+  protected Worker<V,E> [] workers;
+  
+  protected V value;
+  protected volatile T tKey;
+  
+  private volatile boolean execute = true;
+  
+  public ExecutorBak(int index) {
+    this.id = index;
+  }
+  
+  @SuppressWarnings("unchecked")
+  public void init(int size_, long timeout, Class...classes) throws Exception {
+    this.size = size_;
+    
+    threads = new Thread[size];
+    workers = new Worker[size];
+    
+    init(timeout, classes);
+  }
+  
+  protected void init(long timeout, Class<Task<E>>...classes) throws Exception {
+    Reque<Task<E>> tasks = createQueue(classes);
+    workers[0] = new Worker<V,E>(this, 0, tasks, timeout);
+    setWorkerResources(workers[0]);
+    
+    for(int i = 1; i < workers.length; i++){
+      workers[i] = new Worker<V,E>(this, i, tasks.clone(), timeout);
+      setWorkerResources(workers[i]);
+    }
+  }
+  
+  abstract public void setWorkerResources (Worker<V,E> worker);
+  
+  private Reque<Task<E>> createQueue(Class<Task<E>>...classes) throws Exception {
+    Reque<Task<E>> tasks = new Reque<Task<E>>();
+    for(Class<Task<E>> clazz : classes) {  
+      tasks.push(clazz.newInstance());
+    }
+    return tasks;
+  }
+  
+  public void run() { 
+    while(execute){
+      if(pause) {
+        try {
+          Thread.sleep(3000);
+        }catch (Exception exp) {
+          LogService.getInstance().setException(exp);
+        }    
+      } else {
+        monitor();
+        try {
+          Thread.sleep(500);
+        }catch (Exception exp) {
+          LogService.getInstance().setException(exp);
+        }
+      }
+    }
+  }
+
+  protected void monitor() {
+    for(int i=0; i < workers.length; i++){    
+      if(threads[i] == null 
+          || !threads[i].isAlive()
+          || threads[i].isInterrupted() ) {
+        threads[i] = new Thread(workers[i]);
+        threads[i].start();
+      } else if(workers[i].isTimeout()) {
+        workers[i].abort();
+        threads[i].interrupt();
+      }
+    }
+  }
+  
+//*********************************** setter getter data********************************************
+  
+  public int getId() { return id; }
+  
+  public String getStatus(int wIdx) {
+    return workers[wIdx] == null ? null : workers[wIdx].getStatus(id);
+  }
+  
+  public Worker<V,E> getWorker(int idx) { return workers[idx]; }
+  
+  public void setPause(boolean value){ pause = value; }
+  
+  public boolean isPause(){ return pause; }
+
+  public int size() { return size; }
+  
+  protected V getValue() { return value; } 
+  
+  public abstract void newSession(T t, V v) ;
+  
+  public abstract boolean isEndSession();
+  
+  public abstract void abortSession(); 
+  
+  public abstract void endSession() ;
+  
+  public abstract E nextElement();
+  
+  public T getKey() { return tKey; }
+  
+  public void destroy() {
+    execute = false;
+    abortSession();
+  }
+
+}

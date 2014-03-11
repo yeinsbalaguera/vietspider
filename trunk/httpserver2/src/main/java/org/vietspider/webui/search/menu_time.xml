@@ -1,0 +1,44 @@
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien">
+		<strong>
+			<dfn>&nbsp;›&nbsp;
+			</dfn>
+			Toàn bộ kết quả
+		</strong>
+	</a>
+	<strong></strong>
+</div>
+<div class="menu">
+	<strong>
+		<dfn>&nbsp;›&nbsp;
+		</dfn>
+		Thời điểm lưu trữ
+	</strong>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=-1">&nbsp;&nbsp;&nbsp;Tất	cả</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=1">&nbsp;&nbsp;&nbsp;Hôm nay</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=2">&nbsp;&nbsp;&nbsp;Hai ngày</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=3">&nbsp;&nbsp;&nbsp;Ba	ngày</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=7">&nbsp;&nbsp;&nbsp;Một tuần</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=30">&nbsp;&nbsp;&nbsp;Một tháng</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=90">&nbsp;&nbsp;&nbsp;Ba tháng</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=180">&nbsp;&nbsp;&nbsp;Sáu tháng</a>
+</div>
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=long+bien&amp;sdate=365">&nbsp;&nbsp;&nbsp;Một năm</a>
+</div>

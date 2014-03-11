@@ -1,0 +1,304 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import static org.vietspider.common.Application.LAST_DOWNLOAD_SOURCE;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.common.io.LogService;
+import org.vietspider.crawl.io.access.SourceTrackerService;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.io.SystemProperties;
+import org.vietspider.model.Source;
+import org.vietspider.pool.Executor;
+import org.vietspider.pool.ThreadPool;
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Mar 2, 2008  
+ */
+public final class CrawlPoolBak extends ThreadPool<Source, Link> {
+  
+  private SourceQueue sourceReader;
+//  private CrawlQueueEntryBak queueEntry;
+  private ConcurrentLinkedQueue<Executor<Source, Link>> starting;
+  
+  public CrawlPoolBak() {
+    CrawlerPoolPing.createInstance();
+    
+    /*if(Application.LICENSE == Install.PERSONAL) {
+//      sleep = 5*1000;
+      queueEntry = new CrawlSimpleQueueEntry();
+    } else if(Application.LICENSE == Install.PROFESSIONAL) {
+//      sleep = 3*1000;
+      queueEntry = new CrawlSimpleQueueEntry();
+    } else if(Application.LICENSE == Install.ENTERPRISE) {
+//      sleep = 2*1000;
+      queueEntry = new CrawlFullQueueEntry();
+    } else if(Application.LICENSE == Install.SEARCH_SYSTEM) {
+//      sleep = 500;
+      queueEntry = new CrawlSimpleQueueEntry();
+    }*/
+    
+    starting = new ConcurrentLinkedQueue<Executor<Source, Link>>();
+    sourceReader = new SourceQueue();
+  }
+  
+  public void execute() throws Throwable {
+    for(int i = 0; i < executors.size(); i++) {
+      try {
+        Executor<Source, Link> executor = executors.get(i);
+        if(!executor.isEndSession() || starting.contains(executor)) continue;
+        starting.add(executor);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+    
+    Iterator<Executor<Source, Link>> iterator = starting.iterator();
+    while(iterator.hasNext()){
+      final Executor<Source, Link> executor = iterator.next();
+      
+      if(!executor.isEndSession()) {
+        iterator.remove();
+        continue;
+      }
+      
+      new Thread(){ 
+        public void run() {
+          try {
+            /*if(executor.canResetSession()) {
+              executor.resetSession(); 
+            } else {*/
+            executor.endSession();
+            newSession(executor);
+//            }
+          } catch (Exception e) {
+            LogService.getInstance().setThrowable(executor.getValue(), e);
+          }
+          starting.remove(executor);
+        }
+      }.start();
+      /* if(executor.canResetSession()) {
+          executor.resetSession(); 
+        } else {
+          executor.endSession();
+          newSession(executor);
+        }*/
+    }
+  }
+  
+  
+  public void nextElement(String key, Object...params) {
+    CrawlSessionEntry [] entries = sourceReader.next(key);
+    if(entries == null || entries.length < 1) return;
+    
+    boolean redown = false;
+    if(params.length > 0) redown = (Boolean)params[0];
+    int index = 0;
+    for(Executor<Source, Link> executor : executors) {
+      if(executor.isEndSession()) {
+        entries[index].getSource().setRedown(redown);
+        try {
+          executor.newSession(entries[index].getSource());
+        } catch (Throwable e) {
+          LogService.getInstance().setThrowable(e);
+        }
+        index++;
+        if(index >= entries.length) return;
+      }
+    }
+    
+    if(index >= entries.length) return;
+
+    for(Executor<Source, Link> executor : executors) {
+      executor.abortSession();
+      entries[index].getSource().setRedown(redown);
+      try {
+        executor.newSession(entries[index].getSource());
+      } catch (Throwable e) {
+        LogService.getInstance().setThrowable(e);
+      }
+      index++;
+      if(index >= entries.length) return;
+    }
+  }
+  
+  public void removeElement(String key) {
+    queueEntry.removeElement(key);
+    
+    for(Executor<Source, Link> executor : executors) {
+      Source value = executor.getValue();
+      if(value == null) continue;
+      if(key.equals(value.getFullName())) {
+        executor.abortSession();
+      }
+    }
+  }
+  
+  public void newSession(Executor<Source, Link> executor) {
+    if(pause) return;
+    
+    CrawlSessionEntry entry = queueEntry.nextEntry();
+    if(executors == null || entry == null || isExecuting(entry)) return;
+//        || isExecuting(entry) /*|| entry.getPingStatus() == CrawlSessionEntry.DEAD*/) return;
+    
+    if(!entry.isValidated()) {
+      SourceTrackerService tracker = SourceTrackerService.getInstance();
+      long accessCode = tracker.search(entry.getSource().getFullName().hashCode());
+      SourceQueueValidator validator = SourceQueueValidator.getInstance();
+      if(!validator.validate(entry.getSource(), accessCode)) return;
+    }
+    
+    try {
+      executor.newSession(entry.getSource());
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(entry.getSource(), e);
+    }
+    SystemProperties systemProperties = SystemProperties.getInstance();
+    systemProperties.putValue(LAST_DOWNLOAD_SOURCE, String.valueOf(entry.getPointer()));
+  }
+  
+  public void continueExecutors() {
+    if(pause) {
+      super.setPause(false);
+    } else if(sourceReader.isSleep()) {
+      sourceReader.wake();
+    }
+  }
+  
+  public boolean isPause() {
+    if(super.isPause()) return true;
+    return queueEntry.isEmpty() && sourceReader.isSleep();
+  }
+  
+  private boolean isExecuting(CrawlSessionEntry entry) {
+    Source source = entry.getSource();
+    if(source == null) return true;
+    String [] addresses = source.getHome();
+    
+    for(Executor<Source, Link> executor : executors) {
+      if(executor.isEndSession()) continue; 
+      Source value = executor.getValue();
+      if(value == null) continue;
+      if(!source.getFullName().equals(value.getFullName())) continue;
+
+      Source source1 = executor.getValue();
+      if(source1 == null) continue;
+
+      String [] addresses1 = source1.getHome();
+      if(addresses.length != addresses1.length) continue;
+      if(compare(addresses, addresses1)) return true;
+    }
+    return false;
+  }
+  
+  private boolean compare(String [] addresses1, String [] addresses2) {
+    for(int i = 0; i < addresses1.length; i++) {
+      if(addresses1[i] == null) {
+        if(addresses2[i] == null) continue;
+        if(addresses2[i] != null) return false; 
+      }
+      if(!addresses1[i].equals(addresses2[i])) return false;
+    }  
+    return true;
+  }
+
+  SourceQueue getSourceReader() { return sourceReader; }
+
+  public CrawlQueueEntry getQueueEntry()  { return queueEntry; }
+  
+//  @Override()
+  public void setExecutors(List<Executor<Source, Link>> executors) {
+    this.executors = executors;
+    if(this.executors == null) return;
+//    if(executors.size() > 15) sleep = 3*1000;
+    queueEntry.setCapacity(executors.size()+10);
+  }
+  
+  
+}
+
+
+
+
+
+
+  
+  /*static class CrawlFullQueueEntry extends QueueEntry<Source> {
+
+    @SuppressWarnings("unchecked")
+    public CrawlSessionEntry nextEntry() {
+      Iterator<SessionEntry<Source>> iterator = queue.iterator();
+      CrawlSessionEntry entry = null;
+      //search hight priority
+      long waitTime = 2*60*1000;
+      long current  = System.currentTimeMillis();
+      while(iterator.hasNext()) {
+        CrawlSessionEntry tempEntry = (CrawlSessionEntry)iterator.next();
+        
+        if(tempEntry == null || tempEntry.getSource() == null) {
+          iterator.remove();
+          continue;
+        }
+        
+        if(tempEntry.getSource().getPriority() != 0 
+            || (current - tempEntry.getLoadTime() < waitTime)) continue;
+        entry = tempEntry;
+        iterator.remove();
+        break;
+      }
+      //not found hight priority entry
+      if(entry == null) {
+        iterator = queue.iterator();
+        //search hight priority
+        while(iterator.hasNext()) {
+          CrawlSessionEntry tempEntry = (CrawlSessionEntry)iterator.next();
+          iterator.remove();
+          return tempEntry;
+        }
+        
+        return (CrawlSessionEntry) queue.pollFirst();
+      }
+      
+      String fullname = entry.getSource().getFullName();
+      while(iterator.hasNext()) {
+        CrawlSessionEntry tempEntry = (CrawlSessionEntry)iterator.next();
+        String tempFullname = tempEntry.getSource().getFullName();
+        if(fullname.equals(tempFullname)) iterator.remove();
+      }
+      return entry ;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public CrawlSessionEntry [] toArray() {
+      return queue.toArray(new CrawlSessionEntry[queue.size()]);
+    }
+
+  }
+  
+  static class CrawlSimpleQueueEntry extends QueueEntry<Source> {
+
+    @SuppressWarnings("unchecked")
+    public CrawlSessionEntry nextEntry() {
+      Iterator<SessionEntry<Source>> iterator = queue.iterator();
+      if(iterator.hasNext()) {
+        CrawlSessionEntry tempEntry = (CrawlSessionEntry)iterator.next();
+        iterator.remove();
+        return tempEntry;
+      }
+      return null ;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public CrawlSessionEntry [] toArray() {
+      return queue.toArray(new CrawlSessionEntry[queue.size()]);
+    }
+
+  }*/

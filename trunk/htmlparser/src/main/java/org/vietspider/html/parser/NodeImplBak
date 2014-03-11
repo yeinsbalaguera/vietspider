@@ -1,0 +1,101 @@
+/* public void buildTokens(List<HTMLNode> tokens) {
+    tokens.add(this);
+    if(children != null) {
+      for(int i = 0; i < children.size(); i++) {
+        children.get(i).buildTokens(tokens);
+      }
+    }
+    if(type != TypeToken.TAG) return;
+    char [] c_values = name.toString().toCharArray(); 
+    tokens.add(new NodeImpl(c_values, name, TypeToken.CLOSE));
+  }*/
+  
+  /*public void buildCharTokens(CharsToken tokens) {
+    tokens.push(this);
+    if(children != null) {
+      for(int i = 0; i < children.size(); i++) {
+        NodeImpl nodeImpl = (NodeImpl) children.get(i);
+        nodeImpl.buildCharTokens(tokens);
+      }
+    }
+    if(type != TypeToken.TAG) return;
+    char [] c_values = name.toString().toCharArray(); 
+    tokens.push(new NodeImpl(c_values, name, TypeToken.CLOSE));
+  }*/
+  
+  
+  public static class NodeIteratorImpl implements NodeIterator {
+    
+    private NodeImpl node;
+    private int level;
+    private boolean first = true;
+    
+    public NodeIteratorImpl(NodeImpl impl) {
+      this.node = impl;
+      this.level = impl.level;
+    }
+    
+    public boolean hasNext() {
+      if(first) return node != null;
+      return node != null && node.level > level;
+    }
+    
+    public HTMLNode next() {
+      if(first) first = false;
+      HTMLNode value  = node;
+      node = node.nextNode;
+      return value;
+    }
+    
+    
+}
+    
+    public static class NodeIteratorImpl implements NodeIterator {
+    
+    private NodeImpl [] values ;
+    private int index = 0;
+    private int total = 0;
+    
+    public NodeIteratorImpl(NodeImpl impl) {
+      if(impl.queue == null 
+          || impl.queue.isModify()) {
+        NodeQueue.build(impl);
+      }
+      
+      this.values = impl.queue.getValues();
+      this.index = impl.queueIndex;
+      this.total= index + impl.totalOfChildren() + 1;
+    }
+    
+    public boolean hasNext() {
+      return index < total;
+    }
+    
+    public HTMLNode next() {
+      HTMLNode node = values[index];
+      index++;
+      return node;
+    }
+    
+  }
+  
+  
+  
+  
+   NodeImpl nextUp() {
+    if(children == null || children.size() < 1)  return null;
+    return ((NodeImpl)children.get(children.size()-1)).nextNode;
+  }
+  
+  void setNext(NodeImpl next) {
+    if(children == null 
+        || children.size() < 1) {
+      nextNode = next;
+      return;
+    }
+    nextNode = (NodeImpl)children.get(0);
+    for(int i = 0; i < children.size()-1; i++) {
+      ((NodeImpl)children.get(i)).setNext((NodeImpl)children.get(i+1));
+    }
+    ((NodeImpl)children.get(children.size()-1)).setNext(next);
+  }

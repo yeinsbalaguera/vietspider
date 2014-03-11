@@ -1,0 +1,38 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.je.codes;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 31, 2009  
+ */
+class Md5UrlCacheds {
+
+  private final static Md5UrlCacheds instance = new Md5UrlCacheds();
+  
+  static Md5UrlCacheds getInstance() { return instance; }
+  
+  protected volatile SimpleCache cachedData;
+  
+  Md5UrlCacheds() {
+    cachedData = new SimpleCache(4*60*60l);
+  }
+  
+  synchronized void put(Md5UrlCached cached) {
+//    System.out.println(" chuan bi dat vao "+cached.getFolder().getAbsolutePath()+" : "+ cached);
+    cachedData.put(cached.getFolder().getAbsolutePath(), cached);
+  }
+  
+  synchronized Md5UrlCached getCached(String path) {
+    Md5UrlCached cached = cachedData.get(path);
+//    System.out.println(" chuan bi get ra "+path+" : "+ cached);
+    if(cached == null) return null;
+    cached.reopen();
+//    System.out.println(" chuan bi get ra "+ cached.hashCode());
+    return cached;
+  }
+  
+}

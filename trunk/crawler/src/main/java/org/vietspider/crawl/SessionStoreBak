@@ -1,0 +1,276 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import java.net.SocketException;
+import java.net.URL;
+import java.util.List;
+import java.util.Properties;
+
+import org.apache.http.MalformedChunkCodingException;
+import org.vietspider.chars.URLEncoder;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.util.IntBinaryTree;
+import org.vietspider.crawl.io.HttpSession;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.LinkIO;
+import org.vietspider.crawl.link.LinkQueue;
+import org.vietspider.crawl.link.LinkReader;
+import org.vietspider.crawl.link.SourceResource;
+import org.vietspider.link.LinkPatterns;
+import org.vietspider.model.Source;
+import org.vietspider.model.SourcePropertyKey;
+import org.vietspider.net.client.WebClient;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 7, 2007  
+ */
+public class SessionStoreBak implements Runnable {
+  
+  protected URLEncoder encoder; 
+  
+  private volatile IntBinaryTree codes;
+  
+  protected volatile LinkQueue<Link> stores;
+  private SourceResource sourceResource;
+  
+  SessionStoreBak() {
+    this.encoder = new URLEncoder(); 
+    
+    this.stores = new LinkQueue<Link>();
+    this.codes = new IntBinaryTree();
+    
+    new Thread(this).start();
+  }
+  
+  public void run() {
+    while(true) {
+      
+      try {
+        Thread.sleep(1000);
+      } catch (Exception e) {
+        // TODO: handle exception
+      }
+    }
+  }
+  
+  LinkQueue<Link> add(WebClient webClient, List<String> list, Link referer) {
+    LinkQueue<Link> newStores = new LinkQueue<Link>();
+    
+    int level = referer.getLevel()+1;
+    Source source = referer.getSource();
+    
+    LinkPatterns dataTempl = sourceResource.getDataPatterns();
+    LinkPatterns visitTempl = sourceResource.getVisitPatterns();
+    
+    boolean save = stores.size() > LinkIO.MAX_SIZE_LINK;
+//    URL referURL = createReferURL(source, referer.getAddress());
+    boolean notDetectWeb = !CrawlService.getInstance().isDetectWebsite();
+    
+    for(int i = list.size() - 1; i > -1; i--) {
+//      String url = list.get(i);
+//      if(ignoreHost.match(url)) continue; 
+//      System.out.println("step 1 "+list.get(i));
+      
+      Link link = sourceResource.createLink(webClient, source, list.get(i), level);
+      if(link == null || codes.contains(link.getAddressCode())) continue;
+      
+      String address = link.getAddress();
+      link.setIsLink(visitTempl == null || visitTempl.match(address));
+//      link.setIsData(generators != null ?  false : dataTempl == null || dataTempl.match(address));
+      link.setIsData(dataTempl == null || dataTempl.match(address));
+      if(!link.isLink() && !link.isData() && notDetectWeb) continue;
+      
+//      if(isIrnoge(link, referURL, generators != null)) continue;
+//      System.out.println("step 3 "+link.getAddress());
+//      System.out.println(" ====  >" + " : "+ link.isData()+ " : "+ link.isLink());
+      
+      link.setReferer(referer.getAddress());
+      
+      newStores.add(link);
+      if(save) continue;
+      codes.insert(link.getAddressCode());
+    }
+    
+    if(save) return newStores;
+    if(newStores.isEmpty())  return null;
+    stores.appendFirst(newStores);
+    return null;
+  }
+
+  
+  LinkQueue<Link> add(List<Link> list) {
+    LinkQueue<Link> newStores = new LinkQueue<Link>();
+    
+    boolean save = stores.size() > LinkIO.MAX_SIZE_LINK;
+    
+    for(int i = list.size() - 1; i > -1; i--) {
+      Link link = list.get(i);
+      if(codes.contains(link.getAddressCode())) continue;
+      newStores.add(link);
+      if(save) continue;
+      
+      codes.insert(link.getAddressCode());
+    }
+
+    if(save) return newStores;
+    if(newStores.isEmpty())  return null;
+    stores.appendFirst(newStores);
+    return null;
+  }
+  
+  void addWebsiteNext(WebClient webClient, List<String> list, Link referer) {
+    if(stores.size() > LinkIO.MAX_SIZE_LINK) return;
+    
+    LinkQueue<Link> newStores = new LinkQueue<Link>();
+    
+    int level = referer.getLevel();
+    Source source = referer.getSource();
+    
+    for(int i = list.size() - 1; i > -1; i--) {
+//      String url = list.get(i);
+//      if(ignoreHost.match(url)) continue;
+      Link link = sourceResource.createLink(webClient, source, list.get(i), level);
+      if(link == null || codes.contains(link.getAddressCode())) continue;
+
+      link.setIsData(false);
+      link.setIsLink(false);
+      link.setReferer(referer.getAddress());
+
+      newStores.add(link);
+      codes.insert(link.getAddressCode());
+    }
+    
+    if(newStores.size() > 0) stores.appendFirst(newStores);
+  }
+  
+  void newSession(CrawlExecutor executor) {
+    codes.clear();
+    stores.clear();
+    
+    Source source = executor.getValue();
+    this.sourceResource = executor.getResource(SourceResource.class);
+    if(source == null || sourceResource == null) return;
+    WebClient webClient = executor.getResource(WebClient.class);
+    Properties properties = source.getProperties();
+    
+    String referer = "";
+    if(properties.containsKey(SourcePropertyKey.REFERER_NAME)) {
+      referer = properties.getProperty(SourcePropertyKey.REFERER_NAME).trim();
+    }
+    
+    String userAgent = null;
+    if(properties.containsKey(SourcePropertyKey.USER_AGENT)) {
+      userAgent = properties.getProperty(SourcePropertyKey.USER_AGENT).trim();
+      if(userAgent != null && userAgent.trim().isEmpty()) userAgent = null;
+    }
+    webClient.setUserAgent(userAgent);
+    
+    String [] addresses = source.getHome();
+    if(addresses == null || addresses.length < 1) return;
+    
+    URL url = null; 
+    try {
+      url = new URL(addresses[0]);
+    } catch (Exception e) {
+      LogService.getInstance().setException(source, e);
+    }
+
+    if(url == null) return;
+    try {
+      webClient.setURL(referer, url);
+    } catch (MalformedChunkCodingException e) {
+      LogService.getInstance().setMessage(source, addresses[0] + " " + e.toString());
+      return;
+    } catch (IllegalStateException e) {
+      LogService.getInstance().setMessage(source, addresses[0] + " " + e.toString());
+      return;
+    } catch (SocketException e) {
+      LogService.getInstance().setMessage(source, addresses[0] + " " + e.toString());
+      return;
+    } catch (Exception e) {
+      LogService.getInstance().setMessage(source, addresses[0] + " " + e.toString());
+      return;
+    }
+    
+    //set proxy and login
+    HttpSession httpSession = new HttpSession(webClient);
+    httpSession.setProxy(source, properties);
+    httpSession.login(source, properties);
+    
+    URLGenerator urlGenerator = sourceResource.getURLGenerator();
+    if(urlGenerator != null) {
+      Link link = sourceResource.createLink(webClient, source, addresses[0], 0);
+      urlGenerator.start(executor, this, link);
+      loadFile(source);
+      return;
+    }
+    
+    loadFile(source);
+    if(stores.size() > LinkIO.MAX_SIZE_LINK) return;
+    addHomepages(webClient, source, referer, addresses);
+  }
+  
+  void clear() {
+    stores.clear();
+    codes.clear();
+  }
+  
+  void loadFile(Source source) {
+    if(source == null) return;
+    LinkReader reader = new LinkReader(source);
+    List<Link> list = reader.load();
+    
+    if(list.size() < 1 || sourceResource == null) return;
+    
+    LinkPatterns dataTempl = sourceResource.getDataPatterns();
+    LinkPatterns visitTempl = sourceResource.getVisitPatterns();
+    
+    for(int i = 0; i< list.size(); i++) {
+      Link link  = list.get(i);
+      if(link.isTest()) continue;
+      
+      link.setIsData(dataTempl == null || dataTempl.match(link.getAddress()));
+      link.setIsLink(visitTempl == null || visitTempl.match(link.getAddress()));
+      
+      if(!link.isData() && !link.isLink())  continue;
+      
+      codes.insert(link.getAddressCode());
+      stores.add(link);
+    }
+  }
+  
+  private void addHomepages(WebClient webClient, Source source, String refer, String [] addresses) {
+//    boolean hasGenerator = sourceResource.getLinkGenerators() != null;
+    
+    LinkPatterns dataTempl = sourceResource.getDataPatterns();
+    for(String address : addresses) {
+      address = encoder.encodeURL(address);
+      Link link = sourceResource.createLink(webClient, source, address, 0);
+      if(link == null) continue;
+      
+      link.setIsLink(true);
+      link.setIsTest(false);
+      link.setReferer(refer);
+//      link.setIsData(hasGenerator ? false : dataTempl == null || dataTempl.match(link.getAddress()));
+      link.setIsData(dataTempl == null || dataTempl.match(link.getAddress()));
+      
+      codes.insert(link.getAddressCode());
+      stores.add(link);
+    }
+  }
+  
+  LinkQueue<Link> getQueue() { return stores; }
+
+  IntBinaryTree getCodes() { return codes; }
+  
+//  synchronized SourceResource getSourceResource() { return sourceResource; }
+
+//  void setIgnoreHost(HostPatterns ignoreHost) { this.ignoreHost = ignoreHost; }
+//
+//  public HostPatterns getIgnoreHost() { return ignoreHost; }
+
+}

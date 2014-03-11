@@ -1,0 +1,527 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.gui.monitor;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Text;
+import org.vietspider.client.common.source.SimpleSourceClientHandler;
+import org.vietspider.common.util.Worker;
+import org.vietspider.gui.browser.BrowserWidget;
+import org.vietspider.gui.browser.StatusBar;
+import org.vietspider.gui.creator.Creator;
+import org.vietspider.gui.workspace.Workspace;
+import org.vietspider.model.Group;
+import org.vietspider.notifier.notifier.NotificationEvent;
+import org.vietspider.notifier.notifier.NotificationListener;
+import org.vietspider.notifier.notifier.Notifier;
+import org.vietspider.notifier.notifier.NotifierDialogs;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.action.HyperlinkAdapter;
+import org.vietspider.ui.widget.action.HyperlinkEvent;
+import org.vietspider.ui.widget.images.ToolbarResource;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Nov 2, 2006
+ */
+abstract class UISourceMonitor extends DataMonitor {
+
+  protected Table tableData;
+  protected int lastSort = 0;
+  protected Combo cboName, cboData, cboLink;
+  
+  protected Button butBrowseContent;
+  protected Text txtSearchUrl;
+
+  protected StatusBar statusBar;
+
+  protected Image notifyIcon;
+
+  UISourceMonitor(Composite parent, Workspace _workspace) {
+    super(parent, _workspace);
+    this.workspace = _workspace;
+
+    String clazzName  = "org.vietspider.gui.monitor.Monitor";
+    ApplicationFactory factory = new ApplicationFactory(this, "Monitor", clazzName);
+
+    notifyIcon = factory.loadImage("warn.png");
+
+    GridLayout gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    setLayout(gridLayout);
+
+    SashForm sashMain = new SashForm(this, SWT.HORIZONTAL);
+    GridData gridData = new GridData(GridData.FILL_BOTH);
+    sashMain.setLayoutData(gridData);
+    sashMain.setBackground(getDisplay().getSystemColor(SWT.COLOR_WIDGET_BACKGROUND));
+
+    listDate = factory.createList(sashMain, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL, new String[]{});  
+    listDate.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent e) {
+        loadDataFromServer(true);
+      }
+    }); 
+    loadDate(null, null);
+
+    Composite mainComposite = new Composite(sashMain, SWT.NONE);
+    gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    mainComposite.setLayout(gridLayout);
+
+    Composite topComposite = new Composite(mainComposite, SWT.NONE);
+    gridData = new GridData(GridData.FILL_HORIZONTAL | GridData.HORIZONTAL_ALIGN_END);
+    topComposite.setLayoutData(gridData);
+
+    gridLayout = new GridLayout(5, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 7;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    topComposite.setLayout(gridLayout);
+
+    gridLayout = new GridLayout(2, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 2;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+
+    Composite nameComposite = new Composite(topComposite, SWT.NONE);
+    nameComposite.setLayout(gridLayout);
+    factory.setComposite(nameComposite);
+
+    factory.createLabel("lblFilterName");
+
+    cboName = factory.createCombo(SWT.BORDER);
+    gridData = new GridData();
+    gridData.widthHint = 200;
+    cboName.setLayoutData(gridData);
+    try {
+      Group [] groups = new SimpleSourceClientHandler().loadGroups().getGroups();
+      for(Group group : groups) {
+        cboName.add(group.getType()+".");
+      }
+    } catch (Exception e) {
+      ClientLog.getInstance().setException(cboName.getShell(), e);
+    }
+
+    Composite dataComposite = new Composite(topComposite, SWT.NONE);
+    dataComposite.setLayout(gridLayout);
+    factory.setComposite(dataComposite);
+
+    factory.createLabel("lblFilterData");
+    cboData = factory.createCombo(SWT.BORDER);
+    gridData = new GridData();
+    gridData.widthHint = 50;
+    cboData.setLayoutData(gridData);
+    cboData.setItems(new String[]{"0-0", "0-100", "100-500", "500-1000", "1000"});
+
+    Composite linkComposite = new Composite(topComposite, SWT.NONE);
+    linkComposite.setLayout(gridLayout);
+    factory.setComposite(linkComposite);
+
+    factory.createLabel("lblFilterLink");
+    cboLink = factory.createCombo(SWT.BORDER);
+    gridData = new GridData();
+    gridData.widthHint = 50;
+    cboLink.setLayoutData(gridData);
+    cboLink.setItems(new String[]{"0-100", "100-500", "500-1000", "1000"});
+
+    Composite pageComposite = new Composite(topComposite, SWT.NONE);
+    factory.setComposite(pageComposite);
+
+    gridLayout = new GridLayout(2, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 2;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    pageComposite.setLayout(gridLayout);
+
+    factory.createLabel("lblPage");
+
+    spinPage = factory.createSpinner(SWT.BORDER);
+    spinPage.setCursor(new Cursor(spinPage.getDisplay(), SWT.CURSOR_HAND));
+    spinPage.setIncrement(1);
+    gridData = new GridData();
+    gridData.widthHint = 30;
+    gridData.heightHint = 16;
+    spinPage.setLayoutData(gridData);
+    spinPage.addModifyListener(new ModifyListener() {
+      @SuppressWarnings("unused")
+      public void modifyText(ModifyEvent event) {
+        loadMonitorData(spinPage.getSelection());
+      }
+    });
+
+    factory.setComposite(topComposite);
+
+    Menu menu1 = new Menu(factory.getComposite().getShell(),SWT.POP_UP);
+    factory.createMenuItem(menu1,"menuMonitor",new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt){
+        loadDate(null, null);
+      }
+    });
+
+    listDate.setMenu(menu1);
+
+    final int TEXT_MARGIN = 3;
+    listDate.addListener(SWT.MeasureItem, new Listener() {
+      public void handleEvent(Event event) {
+        TableItem item = (TableItem)event.item;
+        String text = item.getText(event.index);
+        Point size = event.gc.textExtent(text);
+        event.width = size.x + 2 * TEXT_MARGIN;
+        event.height = Math.max(event.height, size.y + TEXT_MARGIN);
+      }
+    });
+    listDate.addListener(SWT.EraseItem, new Listener() {
+      public void handleEvent(Event event) {
+        event.detail &= ~SWT.FOREGROUND;
+      }
+    });
+    listDate.addListener(SWT.PaintItem, new Listener() {
+      public void handleEvent(Event event) {
+        TableItem item = (TableItem)event.item;
+        String text = item.getText(event.index);
+        /* center column 1 vertically */
+        int yOffset = 0;
+        //        if (event.index == 5) {
+        Point size = event.gc.textExtent(text);
+        yOffset = Math.max(0, (event.height - size.y) / 2);
+        //        }
+        event.gc.drawText(text, event.x + TEXT_MARGIN, event.y + yOffset, true);
+      }
+    });
+
+    final ToolbarResource resources = ToolbarResource.getInstance();
+    butGo = resources.createIcon(topComposite, 
+        resources.getImageGo(), resources.getTextGo(), new HyperlinkAdapter(){ 
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e) {
+        butGo.setImage(resources.getImageGo());
+      }
+      @SuppressWarnings("unused")
+      public void linkExited(HyperlinkEvent e) {
+        butGo.setImage(resources.getImageGo());
+      }
+      @SuppressWarnings("unused")
+      public void linkEntered(HyperlinkEvent e) {
+        butGo.setImage(resources.getImageGo());
+      }
+    }); 
+    butGo.addMouseListener(new MouseAdapter() {
+      @SuppressWarnings("unused")
+      public void mouseUp(MouseEvent e) {
+        loadDataFromServer(false);
+      }
+
+      @SuppressWarnings("unused")
+      public void mouseDown(MouseEvent e) {
+        butGo.setImage(resources.getImageGo1());
+        butGo.redraw();
+      }
+    });
+
+    //    butGo = factory.createIcon("butSelect", new HyperlinkAdapter(){  
+    //      @SuppressWarnings("unused")
+    //      public void linkActivated(HyperlinkEvent e) {
+    //        loadDataFromServer(false);
+    //      }
+    //    }); 
+    //    butGo.setBackground(new Color(butGo.getDisplay(), 255, 255, 255));
+
+    factory.setComposite(mainComposite);
+
+    tableData = factory.createTable("tableData",  null, SWT.FULL_SELECTION | SWT.MULTI | SWT.BORDER);  
+    tableData.setLinesVisible(true);
+    tableData.setHeaderVisible(true);
+    gridData = new GridData(GridData.FILL_BOTH);
+    tableData.setLayoutData(gridData);
+    Menu menu = new Menu(factory.getComposite().getShell(), SWT.POP_UP);  
+    factory.createMenuItem(menu, "menuEditSource", new SelectionAdapter(){
+      @Override
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) { 
+        editSource(getSelectedSource());
+      }   
+    });
+    factory.createMenuItem(menu, SWT.SEPARATOR);
+
+    //    final int TEXT_MARGIN2 = 3;
+
+    /*tableData.addListener(SWT.MeasureItem, new Listener() {
+      public void handleEvent(Event event) {
+        TableItem item = (TableItem)event.item;
+        String text = item.getText(event.index);
+        Point size = event.gc.textExtent(text);
+        event.width = size.x + 2 * TEXT_MARGIN2;
+        event.height = Math.max(event.height, size.y + TEXT_MARGIN2);
+      }
+    });
+    tableData.addListener(SWT.EraseItem, new Listener() {
+      public void handleEvent(Event event) {
+        event.detail &= ~SWT.FOREGROUND;
+      }
+    });
+    tableData.addListener(SWT.PaintItem, new Listener() {
+      public void handleEvent(Event event) {
+        TableItem item = (TableItem)event.item;
+        String text = item.getText(event.index);
+         center column 1 vertically 
+        int yOffset = 0;
+//        if (event.index == 5) {
+        Point size = event.gc.textExtent(text);
+        yOffset = Math.max(0, (event.height - size.y) / 2);
+//        }
+        event.gc.drawText(text, event.x + TEXT_MARGIN, event.y + yOffset, true);
+      }
+    });*/
+
+    factory.createMenuItem(menu, "menuRemoveFromCrawler", new SelectionAdapter(){
+      @Override
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        removeSourcesFromCrawler(); 
+      }   
+    });
+    tableData.setMenu(menu);
+
+    tableData.addSelectionListener(new SelectionAdapter() {
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent arg0) {
+        TableItem[] items = tableData.getSelection();
+        if(items.length < 1) return;
+        String text  = items[0].getText(5).trim();
+        if(text.isEmpty()) return;
+        String title =  items[0].getText(1).trim();
+
+        Notifier notifier = new Notifier(Display.getCurrent().getActiveShell(), title);
+        notifier.setTitle(title);
+        notifier.setIcon(notifyIcon);
+        notifier.setListener(new NotificationListener() {
+          public void clicked(NotificationEvent event) {
+            if(event.getComponent() == NotificationEvent.TITLE) {
+              String [] elements = event.getTitle().split("\\.");
+              editSource(new String[]{elements[1], elements[2], elements[0]});
+            } else  if(event.getComponent() == NotificationEvent.CLOSE) {
+              tableData.select(-1);
+            } else {
+              String [] elements = event.getTitle().split("\\.");
+              openLog(new String[]{elements[1], elements[2], elements[0]});
+            }
+          }
+        });
+        notifier.setMessage(text);
+        notifier.setDisplayTime(10000);
+
+        NotifierDialogs.notify(notifier);
+
+        /*NotifierDialogs.notify(Display.getCurrent().getActiveShell(),
+           10000, title, text, title, notifyIcon, new NotificationListener() {
+            public void clicked(NotificationEvent event) {
+              if(event.getComponent() == NotificationEvent.TITLE) {
+                String [] elements = event.getTitle().split("\\.");
+                editSource(new String[]{elements[1], elements[2], elements[0]});
+              } else  if(event.getComponent() == NotificationEvent.CLOSE) {
+                tableData.select(-1);
+              } else {
+                String [] elements = event.getTitle().split("\\.");
+                openLog(new String[]{elements[1], elements[2], elements[0]});
+              }
+            }
+        });*/
+
+      }
+
+    });
+
+    tableData.addMouseListener(new MouseAdapter() {
+      @SuppressWarnings("unused")
+      public void mouseDoubleClick(MouseEvent e) {
+        editSource(getSelectedSource());
+      }
+    });
+
+    sashMain.setWeights(new int[]{12, 88});
+
+    
+    Composite urlPanel = new Composite(factory.getComposite(), SWT.NONE);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    urlPanel.setLayoutData(gridData);
+    gridLayout = new GridLayout(4, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 10;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    urlPanel.setLayout(gridLayout);
+    
+    factory.setComposite(urlPanel);
+    txtSearchUrl = factory.createText(SWT.SEARCH | SWT.ICON_CANCEL | SWT.ICON_SEARCH);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    txtSearchUrl.setLayoutData(gridData);
+    txtSearchUrl.setMessage("Search the Content by URL");
+    txtSearchUrl.setFont(UIDATA.FONT_10);
+    txtSearchUrl.addKeyListener(new KeyAdapter() {
+      public void keyReleased(KeyEvent e) {
+        if(e.keyCode  == SWT.CR) searchIdByUrl();
+      }
+    });
+    txtSearchUrl.addModifyListener(new ModifyListener() {
+      @SuppressWarnings("unused")
+      public void modifyText(ModifyEvent arg0) {
+        butBrowseContent.setEnabled(false); 
+      }
+    });
+    
+    txtSearchUrl.setDoubleClickEnabled(false);
+    txtSearchUrl.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseDown(MouseEvent e) {
+        if(e.count == 3) {
+          txtSearchUrl.setText("");
+          txtSearchUrl.paste();
+          return;
+        }
+        
+        if(e.button == 2) {
+          searchIdByUrl();
+        }
+      }
+    });
+    
+    factory.createButton("browseClear", new SelectionAdapter() {
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent e) {
+        txtSearchUrl.setText("");
+        butBrowseContent.setEnabled(false);
+      }
+    });
+    
+    factory.createButton("browseSearch", new SelectionAdapter() {
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent e) {
+        searchIdByUrl();
+      }
+    });
+    
+    butBrowseContent = factory.createButton("browseContent", new SelectionAdapter() {
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent e) {
+        String url = txtSearchUrl.getText();
+        if(url.startsWith("http")) {
+          BrowserWidget widget = workspace.tab.createItem();
+          widget.setUrl(url);
+        }
+      }
+    });
+    
+   
+    
+    statusBar = new StatusBar(workspace, this);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    statusBar.setLayoutData(gridData);  
+  }
+  
+  abstract void searchIdByUrl();
+
+  private void editSource(String [] values) {
+    if(workspace == null) return;
+    if(values == null || values.length < 3) return ;
+    try {
+      Creator creator =  (Creator)workspace.getTab().createTool(Creator.class, true, SWT.CLOSE);
+      creator.selectData(new Worker[0], values[0], values[1], values[2]);
+    } catch (Exception e) {
+      ClientLog.getInstance().setException(getShell(), e);
+    }
+  }
+
+  private void openLog(final String [] values) {
+//    if(workspace == null) return;
+//    if(values == null || values.length < 3) return ;
+//    try {
+//      LogViewer2 logViewer = (LogViewer2)workspace.getTab().createTool(LogViewer2.class, true, SWT.CLOSE);
+//      Composite tab = logViewer.getTab();
+//      if(tab instanceof CTabFolder) {
+//        ((CTabFolder)tab).setSelection(1);
+//      } else {
+//        ((TabFolder)tab).setSelection(1);
+//      }
+//
+//      String date  = getSelectedDate();
+//      Combo cboDate = logViewer.getCboSourceDate();
+//      if(cboDate.getItemCount() < 1) {
+//        Runnable timer = new Runnable () {
+//          public void run () {
+//            openLog(values);
+//          }
+//        };
+//        cboDate.getDisplay().timerExec (2*1000, timer);
+//        return;
+//      }
+//
+//      for(int i = 0; i < cboDate.getItemCount(); i++) {
+//        if(cboDate.getItem(i).equals(date)) {
+//          cboDate.select(i);
+//          OpenSourceLogHandler sourceLog = 
+//            new OpenSourceLogHandler(logViewer, values[0], values[1], values[2]);
+//          new LoadSourceByDateHandler(logViewer.getListSources(), date, sourceLog.getWorker());
+//          return;
+//        }
+//      }
+//    } catch (Exception e) {
+//      ClientLog.getInstance().setException(getShell(), e);
+//    }
+  }
+
+  String [] getSelectedSource() {
+    TableItem[] items = tableData.getSelection();
+    if(items == null || items.length < 1) return null;
+    String text = items[0].getText(1);
+    String [] elements = text.split("\\.");
+    return new String[]{elements[1], elements[2], elements[0]};
+  }
+
+  abstract void loadMonitorData(int currentPage) ;
+
+  abstract  void loadDataFromServer(boolean update);
+
+  //  abstract long [] readLastAccess(int [] codes); 
+
+  abstract void removeSourcesFromCrawler();
+
+}

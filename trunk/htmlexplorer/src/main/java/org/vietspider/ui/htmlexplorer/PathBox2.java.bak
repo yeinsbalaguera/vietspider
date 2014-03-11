@@ -1,0 +1,470 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.htmlexplorer;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyleRange;
+import org.eclipse.swt.custom.TableEditor;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.ui.forms.events.HyperlinkAdapter;
+import org.eclipse.ui.forms.events.HyperlinkEvent;
+import org.eclipse.ui.forms.widgets.Hyperlink;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.PathHightLight;
+import org.vietspider.ui.widget.UIDATA;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 12, 2011  
+ */
+public class PathBox2 extends Composite {
+
+  public static class PathEvent {
+    private int index;
+    private String path;
+
+    public PathEvent(int index, String value) {
+      this.index = index;
+      this.path = value;
+    }
+
+    public int getIndex() { return index; }
+    public String getPath() { return path; }
+  }
+  
+  public static interface RemovePath {
+
+    public void remove(PathEvent event) ;
+
+  }
+
+  public static interface ChangePath {
+
+    public void change(PathEvent event) ;
+
+  }
+
+  public static interface CurrentPath {
+
+    public void change(PathEvent event) ;
+
+  }
+
+  private Table table;
+  private TableEditor editor;
+  private TableColumn pathColunm;
+  private TableColumn actionColunm;
+
+  private TableItem viewItem;
+
+  private List<TableEditor> actionEditors ;
+  private ApplicationFactory factory;
+
+  private List<ChangePath> changes = new ArrayList<ChangePath>();
+  private List<CurrentPath> currents = new ArrayList<CurrentPath>();
+  private List<RemovePath> removes = new ArrayList<RemovePath>();
+
+  private PathEvent carretEvent = null;
+
+  public PathBox2(Composite parent, ApplicationFactory factory) {
+    super (parent, SWT.BORDER);
+    this.factory = factory;
+
+    actionEditors = new ArrayList<TableEditor>();
+
+    setLayout(new FillLayout());
+
+    table = new Table(this, SWT.FULL_SELECTION | SWT.HIDE_SELECTION);
+    actionColunm = new TableColumn(table, SWT.NONE);
+    pathColunm = new TableColumn(table, SWT.NONE);
+    table.setCursor(new Cursor(getDisplay(), SWT.CURSOR_HAND));
+
+    editor = new TableEditor(table);
+    editor.horizontalAlignment = SWT.LEFT;
+    editor.grabHorizontal = true;
+    editor.minimumWidth = 250;
+
+    table.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent e) {
+        TableItem item = (TableItem) e.item;
+        if (item == null ) return;
+
+        Control oldEditor = editor.getEditor();
+        if (oldEditor != null) oldEditor.dispose();
+
+        PathBoxEditor newEditor = new PathBoxEditor(table);
+        newEditor.changes = changes;
+        newEditor.currents = currents;
+        newEditor.carretEvent = carretEvent;
+        newEditor.setCursor(new Cursor(getDisplay(), SWT.CURSOR_HAND));
+        newEditor.setBackground(item.getBackground());
+        newEditor.setFont(item.getFont());
+        newEditor.edit(item, editor);
+        PathHightLight.setAutoStyle(newEditor);
+      }
+    });
+
+    viewItem = new TableItem(table, SWT.NONE);
+
+    TableEditor actionEditor = new TableEditor(table);
+    actionEditor.horizontalAlignment = SWT.LEFT;
+    actionEditor.grabHorizontal = true;
+    actionEditor.minimumWidth = 70;
+    Hyperlink actionButton = new Hyperlink(table, SWT.PUSH);
+    actionButton.setText(factory.getLabel("butAdd"));
+    actionButton.computeSize(SWT.DEFAULT, table.getItemHeight());
+    actionEditor.setEditor(actionButton, viewItem, 0);
+    actionButton.addHyperlinkListener(new HyperlinkAdapter(){
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e){
+        addItem();
+      }
+    });
+    viewItem.setBackground(new Color(getDisplay(), 244, 244, 244));
+
+    viewItem.setText(0, "                ");
+    viewItem.setText(1, "");
+    viewItem.setFont(UIDATA.FONT_9B);
+    actionButton.setBackground(viewItem.getBackground());
+  }
+
+  public void setCarretEvent(PathEvent carretEvent) {
+    this.carretEvent = carretEvent;
+  }
+
+  public void setError(int type, int index) {
+    Hyperlink button = (Hyperlink)actionEditors.get(index).getEditor();
+    if(type == 0) {
+      button.setForeground(new Color(getDisplay(), 255, 0, 0));
+      button.redraw();
+      return;
+    }
+    button.setForeground(new Color(getDisplay(), 0, 0, 0));
+    button.redraw();
+  }
+
+  public void addChangePath(ChangePath changePath) { changes.add(changePath); }
+  
+  public void addRemovePath(RemovePath removePath) { removes.add(removePath); }
+
+  public void addCurrentPath(CurrentPath currentPath) { currents.add(currentPath); }
+
+  public void addSelectionListener(SelectionListener listener) {
+    table.addSelectionListener(listener);
+  }
+
+  public void setItems(String[] paths) {
+    TableItem[] items = table.getItems();
+    if(items != null) {
+      for(int i = 1; i < items.length; i++) {
+        items[i].dispose();
+      }
+      cleanEditor();
+    }
+
+    for (int i = 0; i < paths.length; i++) {
+      addPath(paths[i], false);
+    }
+    pathColunm.pack();
+    actionColunm.pack();
+  }
+
+  public void addItem() {
+    String _path = viewItem.getText(1).trim();
+    if(_path.length() < 1
+        || _path.indexOf('{') > -1
+        || _path.indexOf('}') > -1) return;
+    addPath(_path, false);
+    viewItem.setText("");
+
+    int index = table.getItemCount() - 1;
+    if(index < 1) return;
+    String path = table.getItem(index).getText(1);
+    PathEvent event = new PathEvent(index, path);
+    for(int i = 0; i < changes.size(); i++) {
+      changes.get(i).change(event);
+    }
+  }
+
+  public void setPath(String path) {
+    viewItem.setText(1, path);
+    pathColunm.pack();
+    actionColunm.pack();
+  }
+
+  public void removeAll() {
+    viewItem.setText(1, "");
+    TableItem[] items = table.getItems();
+    if(items != null) {
+      for(int i = 1; i < items.length; i++) {
+        PathEvent event = new PathEvent(i, items[i].getText(1));
+        for(int j = 0; j < removes.size(); j++) {
+          removes.get(j).remove(event);
+        }
+        items[i].dispose();
+      }
+      cleanEditor();
+    }
+    pathColunm.pack();
+    actionColunm.pack();
+  }
+
+  public int getSelectedIndex() {
+    int select = table.getSelectionIndex();
+    if(select < 1) return select;
+    return select - 1 ;
+  }
+
+  public String getSelectedPath() {
+    int select = table.getSelectionIndex();
+    if(select < 1) return null;
+    return table.getItem(select).getText(1);
+  }
+
+  public void packList() {
+    pathColunm.pack();
+    actionColunm.pack();
+  }
+
+  public void addPath(String path, boolean error) {
+    TableItem item = new TableItem(table, SWT.NONE);
+    item.setFont(UIDATA.FONT_9);
+
+    TableEditor actionEditor = new TableEditor(table);
+    actionEditor.horizontalAlignment = SWT.LEFT;
+    actionEditor.grabHorizontal = true;
+    actionEditor.minimumWidth = 50;
+    Hyperlink button = new Hyperlink(table, SWT.PUSH);
+    button.setText(factory.getLabel("butRemove"));
+    if(error) {
+      button.setForeground(new Color(getDisplay(), 255, 0, 0));
+    } else {
+      button.setForeground(new Color(getDisplay(), 0, 0, 0));
+    }
+    button.setBackground(item.getBackground());
+    button.computeSize(SWT.DEFAULT, table.getItemHeight());
+    actionEditor.setEditor(button, item, 0);
+    button.addHyperlinkListener(new HyperlinkAdapter(){
+      public void linkActivated(HyperlinkEvent e){
+        int index = table.getSelectionIndex();
+        if(index > 1) removePath(index);
+        Hyperlink link = (Hyperlink) e.getSource();
+        for(int i = 0; i < actionEditors.size(); i++) {
+          if(actionEditors.get(i).getEditor() == link) {
+            removePath(actionEditors.get(i).getItem());
+          }
+        }
+      }
+    });
+
+    item.setText(0, "                ");
+
+    item.setText(1, path);
+
+    actionEditors.add(actionEditor);
+
+    //    table.pack();
+    pathColunm.pack();
+    actionColunm.pack();
+  }
+
+  public void showErrorPath(List<String> errors) {
+    TableItem [] items = table.getItems();
+    for(int i = 1; i < items.length; i++) {
+      if(isErrorPath(items[i].getText(1), errors)) {
+        items[i].setForeground(new Color(getDisplay(), 255, 0, 0));
+      } else {
+        items[i].setForeground(new Color(getDisplay(), 0, 0, 0));
+      }
+    }
+  }
+
+  private boolean isErrorPath(String path, List<String> errors) {
+    for(int i = 0; i < errors.size(); i++) {
+      if(path.equals(errors.get(i))) return true;
+    }
+    return false;
+  }
+
+  public void removePath(int index) {
+    if(index < 1) return;
+    TableItem item = table.getItem(index);
+    
+    PathEvent event = new PathEvent(index, item.getText(1));
+    for(int i = 0; i < removes.size(); i++) {
+      removes.get(i).remove(event);
+    }
+    
+    item.dispose();
+    cleanEditor();
+    
+    Control oldEditor = editor.getEditor();
+    if (oldEditor != null) oldEditor.dispose();
+    table.setSelection(-1);
+
+    pathColunm.pack();
+    actionColunm.pack();
+    table.redraw();
+  }
+
+  public void removePath(TableItem item) {
+    PathEvent event = new PathEvent(-1, item.getText(1));
+    for(int i = 0; i < removes.size(); i++) {
+      removes.get(i).remove(event);
+    }
+    item.dispose();
+    cleanEditor();
+
+    Control oldEditor = editor.getEditor();
+    if (oldEditor != null) oldEditor.dispose();
+    table.setSelection(-1);
+
+    //    table.pack();
+    pathColunm.pack();
+    actionColunm.pack();
+    table.redraw();
+  }
+
+  public void removePath(String path) {
+    TableItem [] items = table.getItems();
+    for(int i = 1; i < items.length; i++) {
+      if(items[i].getText(1).equals(path)) {
+        PathEvent event = new PathEvent(i, items[i].getText(1));
+        for(int j = 0; j < removes.size(); j++) {
+          removes.get(j).remove(event);
+        }
+        items[i].dispose();
+      }
+    }
+    cleanEditor();
+
+    Control oldEditor = editor.getEditor();
+    if (oldEditor != null) oldEditor.dispose();
+    table.setSelection(-1);
+
+    pathColunm.pack();
+    actionColunm.pack();
+  }
+
+  public int getItemCount() {
+    return table.getItemCount() - 1;
+  }
+
+  private void cleanEditor() {
+    Iterator<TableEditor> iterator = actionEditors.iterator();
+    while(iterator.hasNext()) {
+      TableEditor _editor = iterator.next();
+      TableItem item = _editor.getItem();
+      if(item == null || item.isDisposed()) {
+        _editor.getEditor().dispose();
+        _editor.dispose();
+        iterator.remove();
+      }
+    }
+  }
+
+  public String[] getItems() {
+    TableItem [] items = table.getItems();
+    String [] values = new String[items.length-1];
+    for(int i = 1; i < items.length; i++) {
+      values[i-1] = items[i].getText(1);
+    }
+    return values;
+  }
+
+  public void up() {
+    int index = table.getSelectionIndex();
+    if(index < 2) return;
+    String path1 = table.getItem(index).getText(1);
+    String path2 = table.getItem(index-1).getText(1);
+    table.getItem(index-1).setText(1, path1);
+    table.getItem(index).setText(1, path2);
+    Control oldEditor = editor.getEditor();
+    if (oldEditor != null) oldEditor.dispose();
+    table.select(index-1);
+  }
+
+  public void down() {
+    int index = table.getSelectionIndex();
+    if(index < 1 || index >= table.getItemCount()) return;
+    String path1 = table.getItem(index).getText(1);
+    String path2 = table.getItem(index+1).getText(1);
+    table.getItem(index+1).setText(1, path1);
+    table.getItem(index).setText(1, path2);
+    Control oldEditor = editor.getEditor();
+    if (oldEditor != null) oldEditor.dispose();
+    table.select(index+1);
+  }
+
+  public void highlightError(String path, int from) {
+    if(from >= path.length()) return;
+
+    PathBoxEditor pathEditor = (PathBoxEditor)editor.getEditor();
+    if (pathEditor == null) return;
+
+    if(!path.equals(pathEditor.getText())) return;
+
+//    System.out.println(from + " : "+ (path.length() - from));
+
+    StyleRange [] styleRanges = pathEditor.getStyleRanges(from, path.length() - from);
+    
+//    System.out.println(styleRanges.length);
+
+    Color color = new Color(getDisplay(), 255, 200, 200);
+    if(styleRanges == null || styleRanges.length < 1) {
+      StyleRange styleRange = new StyleRange();
+      styleRange.start = from;
+      styleRange.length = path.length() - from;
+      styleRange.background = color;
+      pathEditor.setStyleRange(styleRange);
+    } else {
+      for(int i = 0; i < styleRanges.length; i++) {
+        StyleRange styleRange = styleRanges[i];
+        styleRange.background = color;
+        pathEditor.setStyleRange(styleRange);
+      }
+    }
+
+
+    pathEditor.redraw();
+  }
+
+   public static void main(String[] args) {
+    Display display = new Display();
+    Shell shell = new Shell(display);
+    shell.setLayout(new FillLayout());
+    
+    ApplicationFactory factory = new ApplicationFactory(shell,
+        "HTMLExplorer", "org.vietspider.ui.htmlexplorer.HTMLExplorer");
+
+    PathBox2 box = new PathBox2(shell, factory);
+
+    shell.setSize(300, 300);
+    shell.open();
+
+    while (!shell.isDisposed()) {
+      if (!display.readAndDispatch())
+        display.sleep();
+    }
+    display.dispose();
+  }
+
+}

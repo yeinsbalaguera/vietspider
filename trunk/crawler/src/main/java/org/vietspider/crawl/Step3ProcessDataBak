@@ -1,0 +1,213 @@
+/***************************************************************************
+ * Copyright 2001-2003 VietSpider         All rights reserved.  *
+ * Please look at license.txt in info directory for more license detail.   *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import java.util.List;
+
+import org.vietspider.bean.SourceMonitor;
+import org.vietspider.chars.CharsUtil;
+import org.vietspider.chars.refs.RefsDecoder;
+import org.vietspider.chars.unicode.Normalizer;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.SourceResource;
+import org.vietspider.crawl.plugin.ProcessPlugin;
+import org.vietspider.crawl.plugin.ProcessPlugin.PluginData;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.Name;
+import org.vietspider.html.parser.HTMLParser;
+import org.vietspider.html.path2.HTMLExtractor;
+import org.vietspider.html.path2.NodePath;
+import org.vietspider.html.util.HTMLAnchorUtil;
+import org.vietspider.io.monitor.SourceMonitorService;
+import org.vietspider.model.ExtractType;
+import org.vietspider.model.Group;
+import org.vietspider.model.Source;
+import org.vietspider.net.client.WebClient;
+import org.vietspider.parser.rss2.EntryItem;
+import org.vietspider.parser.rss2.IMetaItem;
+import org.vietspider.parser.rss2.MetaDocument;
+import org.vietspider.parser.rss2.MetaLink;
+
+/**
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@exoplatform.com
+ * Mar 13, 2007
+ */
+public class Step3ProcessDataBak extends CrawlTask {
+  
+  private int counter = 0;
+
+  public Step3ProcessDataBak cloneInstance() { return new Step3ProcessDataBak(); }
+
+  public Link execute(Link link) throws Exception {
+    counter = 0;
+    
+//    System.out.println("step 4 " + link.getAddress());
+    String pluginName = worker.getResource(CrawlExecutor.PLUGIN_NAME);
+    ProcessPlugin plugin = worker.<ProcessPlugin>getResource(pluginName);
+    if(plugin == null) return null;
+//      LogService.getInstance().setMessage(link.getSource(), pluginName + " : plugin not found!");
+//      return null;
+    
+    CrawlExecutor executor = (CrawlExecutor) worker.getExecutor();
+    
+//*****************************************handle rss data ***************************************
+    
+    if(link.isRss()) { 
+      MetaDocument metaDocument = link.getDocument();
+      if(metaDocument == null) return null;
+      List<IMetaItem> metaItems = metaDocument.getItems();
+      RefsDecoder decoder = worker.getResource(RefsDecoder.class);
+
+//      LinkStore store = (LinkStore)worker.getExecutor().getStore();
+      for(IMetaItem metaItem : metaItems) {
+        Link itemLink = createLink(link, metaItem);
+        if(itemLink == null || plugin.checkDownloaded(itemLink)) continue;
+
+        String content = null;
+        if(metaItem instanceof EntryItem) content = ((EntryItem)metaItem).getContent();
+        if(content == null || content.trim().isEmpty()) content = metaItem.getDesc();
+
+        char [] chars = decoder.decode(content.toCharArray());
+        content = new String(decoder.decode(content.toCharArray()));
+        HTMLDocument htmlDocument = HTMLParser.createDocument(chars);
+        HTMLNode root = htmlDocument.getRoot();
+        if(root.getChildren().size() < 1) continue;
+        decode(root);
+
+        itemLink.setDocument(htmlDocument);
+
+        PluginData pluginData = plugin.createPluginData(itemLink);
+        if(pluginData == null) continue;
+        
+        pluginData.setCheckTitle(true);
+        pluginData.getMeta().setTitle(metaItem.getTitle());
+        pluginData.getMeta().setSource(metaItem.getImage());
+        if(plugin.handle(pluginData)) counter++;
+      }
+      return null;
+    }
+
+//*****************************************handle html data ***************************************
+    
+    HTMLDocument document = link.getDocument();
+    
+    if(link.getRef() != null) {
+      HTMLAnchorUtil anchorUtil = new HTMLAnchorUtil();
+      document = anchorUtil.searchDocument(document, link.getRef());
+    }
+
+    Source source = link.getSource();
+    
+    NodePath [] extractPaths = executor.getResource(Group.Region.EXTRACT);
+    if(extractPaths == null || extractPaths.length < 1) return null;
+
+    HTMLExtractor extractor = worker.getResource(HTMLExtractor.class);
+    NodePath [] removePaths = executor.getResource(Group.Region.CLEAN);
+    Boolean isCleanFrom = executor.getResource(Group.Region.CLEAN_FROM);
+
+//*****************************************hanlde normal data *************************************
+    if(source.getExtractType() == ExtractType.ROW) { 
+      HTMLDocument [] documents = extractor.extractRow(document, extractPaths);
+      if(documents.length < 1) return null;
+
+      int level = link.getLevel();
+      String refer = link.getAddress();
+      WebClient webClient = executor.getResource(WebClient.class);
+      SourceResource sourceResource = executor.getResource(SourceResource.class);
+      
+      for(int i = 0; i < documents.length; i++) {
+        Link itemLink = sourceResource.createLink(webClient, source, refer, level); 
+        HTMLNode root = documents[i].getRoot();
+
+        if(removePaths != null && removePaths.length > 0) {
+          if(isCleanFrom) extractor.removeFrom(root, removePaths[removePaths.length-1]);
+          extractor.remove(root, removePaths);
+        }
+
+        if(root.getChildren().size() < 1) continue;
+        
+        decode(root);
+        itemLink.setDocument(documents[i]);
+        PluginData pluginData = plugin.createPluginData(itemLink);
+        if(pluginData != null && plugin.handle(pluginData)) counter++;
+      }
+      return null;
+    } 
+    
+//*****************************************hanlde normal data ************************************
+//    System.out.println(document.getTextValue());
+    document = extractor.extract(document, extractPaths);
+//    System.out.println("step  sang buoc thu 2 " + link.getAddress() + " doc "+ document.getTextValue());
+    if(document == null) return null;
+    
+    HTMLNode root = document.getRoot();
+    if(removePaths != null && removePaths.length > 0) {
+      if(isCleanFrom) extractor.removeFrom(root, removePaths[removePaths.length-1]);
+      extractor.remove(root, removePaths);
+    }
+    
+//    System.out.println("step  sang buoc thu 3 " + link.getAddress() + " doc "+ root.getChildren().size());
+    if(root.getChildren().size() < 1) return null;
+    
+    decode(root);
+    link.setDocument(document);
+    
+//    System.out.println("step 4 " + link.getAddress());
+    PluginData pluginData = plugin.createPluginData(link);
+    if(pluginData != null && plugin.handle(pluginData)) counter++;
+
+    return null;
+  }
+
+  private void decode(HTMLNode node){
+    List<HTMLNode> children = node.getChildren();   
+    if(children == null) return ;
+    RefsDecoder decoder = worker.getResource(RefsDecoder.class);
+    Normalizer normalizer = worker.getResource(Normalizer.class);
+    for(HTMLNode child : children) {
+      if(child.isNode(Name.COMMENT)) continue;
+      if(child.isNode(Name.CONTENT)) {
+        char [] chars = child.getValue();
+        chars = decoder.decode(chars);
+        chars = CharsUtil.cutAndTrim(chars, 0, chars.length);
+        chars = normalizer.normalize(chars);
+        child.setValue(chars);              
+      } else if(!child.isNode(Name.SCRIPT) && !child.isNode(Name.STYLE)) {
+        decode(child) ;
+      }
+    }  
+  }  
+
+  private Link createLink(Link link, IMetaItem metaItem) {
+    List<MetaLink> metaLinks = metaItem.getLinks();
+    CrawlExecutor executor = (CrawlExecutor) worker.getExecutor();
+    
+    String refer = link.getAddress();
+    Source source = link.getSource();
+    WebClient webClient = executor.getResource(WebClient.class);
+    SourceResource sourceResource = executor.getResource(SourceResource.class);
+    
+    if(metaLinks == null || metaLinks.size() < 1) {
+      return sourceResource.createLink(webClient, source, refer, 1);
+    }
+    
+    for(MetaLink metaLink : metaLinks) {
+      if(metaLink == null) continue;
+      String href = metaLink.getRealHref();
+      if(href == null || href.trim().isEmpty()) continue;
+      return sourceResource.createLink(webClient, source, href, 1);
+    }
+
+    return sourceResource.createLink(webClient, source, refer, 1);
+  }
+  
+  public void end(Link link) {
+    if(link == null) return;
+    SourceMonitorService.getInstance().save(new SourceMonitor(link.getSource(), 0, 1, counter));
+  }
+
+}

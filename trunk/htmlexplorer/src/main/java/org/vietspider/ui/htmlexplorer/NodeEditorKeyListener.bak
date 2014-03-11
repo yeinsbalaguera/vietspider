@@ -1,0 +1,125 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.htmlexplorer;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.vietspider.html.HTMLNode;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 2, 2009  
+ */
+class NodeEditorKeyListener extends KeyAdapter {
+
+  private NodeEditor2 editor;
+
+  public NodeEditorKeyListener(NodeEditor2 _editor) {
+    this.editor = _editor;
+  }
+
+  @Override
+  public void keyPressed(KeyEvent event) {
+    if(event.keyCode == SWT.CR) {
+      editor.explorer.addEditItem();
+      event.doit = false;
+      return;
+    } 
+
+    int pos = editor.textEditor.getCaretOffset();
+    int length = editor.textEditor.getText().length();
+    pos = Math.min(pos, length-1);
+    String path  = editor.textEditor.getText(0, pos);
+    HTMLNode root = editor.explorer.getDocument().getRoot();
+
+    if(event.character == '[') {
+      editor.textEditor.insert("]");
+      showDataOption(root, path, pos);
+      event.doit = false;
+      return;
+    }
+    
+    if(event.keyCode == SWT.ARROW_DOWN) {
+      if(editor.popup != null) editor.popup.setFocus();
+      return;
+    }
+    
+    if(event.keyCode == SWT.ARROW_LEFT
+        || event.keyCode == SWT.ARROW_RIGHT) {
+      if(editor.popup != null) editor.popup.dispose();
+      return;
+    }
+    
+    if(event.keyCode == SWT.BS || event.keyCode == SWT.DEL) {
+      if(pos < 1 || pos >= path.length()) return;
+      if(editor.tempText.charAt(pos-1) == '['  
+        && editor.tempText.charAt(pos) == ']') {
+//        path = path.substring(0, path.length()-1);
+        showDataOption(root, path, pos);
+      }
+      return;
+    } 
+    
+    if(event.character == '.' && pos >= path.length()-1)  {
+      showNodeOption(root, path);
+      return;
+    }
+  }
+  
+  void showDataOption(HTMLNode root, String path, int pos) {
+    short type = showType(path, pos);
+    if(type == 0) {
+      showIndexOption(root, path);
+    } else {
+      showAttributeOption(root, path);
+    }
+  }
+
+  @SuppressWarnings("unused")
+  boolean showIndexOption(HTMLNode root, String path) {
+    String [] templates = {"*", "i>=", "i>", "i%2=", "i<", "i<="};
+    if(templates.length < 1) return false;
+    if(editor.popup != null) editor.popup.dispose();
+    editor.popup = new NodeSuggestion(editor, templates, NodeSuggestion.ATTRIBUTE);
+    editor.textEditor.setFocus();
+    return true;
+  }
+
+  boolean showAttributeOption(HTMLNode root, String path) {
+    HTMLNode node = NodeEditorUtils.createNode(root, path);
+    String [] templates = NodeEditorUtils.getAttributes(node);
+    if(templates.length < 1) return false;
+    if(editor.popup != null) editor.popup.dispose();
+    editor.popup = new NodeSuggestion(editor, templates, NodeSuggestion.ATTRIBUTE);
+    editor.textEditor.setFocus();
+    return true;
+  }
+
+  boolean showNodeOption(HTMLNode root, String path) {
+    int idx = path.lastIndexOf(']');
+    if(idx > 0) path = path.substring(0, idx+1);
+    String [] templates = NodeEditorUtils.getChildrenNames(root, path);
+    if(templates.length < 1)  return false;
+    if(editor.popup != null) editor.popup.dispose();
+    editor.popup = new NodeSuggestion(editor, templates, NodeSuggestion.NODE);
+    editor.textEditor.setFocus();
+    return true;
+  }
+  
+  private short showType(String path, int index) {
+    while(index > 0) {
+      char c = path.charAt(index);
+      if(c == '[') break;
+      index--;
+    }
+    
+    if(index < 1) return -1;
+    
+    if(path.charAt(index-1) == ']') return 1;
+    
+    return 0;
+  }
+}

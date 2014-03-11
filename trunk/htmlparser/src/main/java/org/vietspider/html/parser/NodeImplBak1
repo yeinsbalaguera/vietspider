@@ -1,0 +1,289 @@
+/***************************************************************************
+ * Copyright 2001-2006 VietSpider         All rights reserved.  *
+ * Please look at license.txt in info directory for more license detail.   *
+ **************************************************************************/
+package org.vietspider.html.parser;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
+import java.util.Iterator;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+import org.vietspider.chars.CharsDecoder;
+import org.vietspider.chars.CharsEncoder;
+import org.vietspider.chars.SpecChar;
+import org.vietspider.common.Application;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.Name;
+import org.vietspider.html.NodeChildHandler;
+import org.vietspider.html.NodeConfig;
+import org.vietspider.html.NodeIterator;
+import org.vietspider.html.Tag;
+import org.vietspider.token.TypeToken;
+
+/**
+ * Created by VietSpider
+ * Author : Nhu Dinh Thuan
+ *          thuan.nhu@exoplatform.com
+ * Sep 14, 2006  
+ */
+@SuppressWarnings("serial")
+public class NodeImplBak1 extends HTMLNode {
+
+  private transient boolean isOpen = false;
+
+  private transient int type = TypeToken.CONTENT ;
+
+  private NodeQueue queue;
+  private NodeImplBak1 nextNode;
+  private int level = 0;
+
+  protected char [] value ;
+  protected byte [] byteValue ;
+
+  public NodeImplBak1(char[] value, Name name){ 
+    super(name);
+    setValue(value);
+  }
+
+  public NodeImplBak1(char[] value, Name name, int type){
+    super(name);
+    this.type = type;
+    children = new NodeList();
+    NodeConfig config = HTML.getConfig(name);
+    if(config.end() != Tag.FORBIDDEN && type == TypeToken.TAG) isOpen = true;
+    setValue(value);
+  }
+
+  public boolean isOpen() { return isOpen; }
+  public void setIsOpen(boolean open) { isOpen = open; }
+
+  public int getType() { return type; }
+  public void setType(int type) { this.type = type; }
+
+  public void addChild(HTMLNode node) {
+    if(children == null 
+        || getConfig().end() == Tag.FORBIDDEN) return;
+    NodeImplBak1 impl = (NodeImplBak1) node;
+    //add
+    children.addElement(impl);
+    impl.setParentNode(this);
+    //set next
+    if(queue != null) queue.setModify(true);
+    impl.level = level+1;
+  }
+
+  public void addChild(int i, HTMLNode node) {
+    if(children == null || i < 0) return;
+    NodeImplBak1 impl = (NodeImplBak1)node;
+    //add
+    children.addElement(i, impl);
+    impl.setParentNode(this);
+    //set next
+    if(queue != null) queue.setModify(true);
+    impl.level = level+1;
+  }
+
+  public void setChild(int i, HTMLNode node) {
+    if(children == null || i < 0) return;
+    NodeImplBak1 impl = (NodeImplBak1)node;
+    //add
+    children.setElement(i, impl);
+    impl.setParentNode(this);
+    //set next
+    if(queue != null) queue.setModify(true);
+    impl.level = level+1;
+  }
+
+  public int indexOfChild(HTMLNode node) {
+    for(int i = 0; i < children.size(); i++) {
+      if(children.get(i) == node) return i;
+    }
+    return -1;
+  }
+
+  public HTMLNode getChild(int i) { return children.get(i); }
+
+  public void removeChild(HTMLNode node) {
+    if(children == null 
+        || !children.contains(node)) return;
+    NodeImplBak1 impl = (NodeImplBak1)node;
+    //remove
+    children.removeElement(impl);
+    impl.setParentNode(null);
+    //set next
+    if(nextNode == impl) {
+      nextNode = impl.nextNode;
+    } else {
+      for(int i = 1; i < children.size(); i++) {
+        if(children.get(i) != impl) continue;
+        ((NodeImplBak1)children.get(i-1)).nextNode = impl.nextNode;
+        break;
+      }
+    }
+    impl.level = level+1;
+  }
+
+  public void clearChildren() {
+    if(children == null || children.size() < 1) return;
+    //clear all
+    nextNode = ((NodeImplBak1)children.get(children.size()-1)).nextNode;
+    children.clearElements();
+  }
+
+  private void setParentNode(HTMLNode parent) { this.parent = parent;  }
+
+  public StringBuilder buildValue(StringBuilder builder){
+//  if(value.length < 1) return builder;
+    if(builder.length() > 0) builder.append(SpecChar.n);
+    boolean isTag = name != Name.CONTENT 
+    && name != Name.COMMENT
+    && name != Name.CODE_CONTENT;
+    if(isTag) builder.append('<');
+    if(type == TypeToken.CLOSE) builder.append('/');
+    builder.append(getValue());
+    if(isTag) builder.append('>');
+    if(type == TypeToken.CLOSE || getConfig().hidden())  return builder;
+
+    if(children == null ) return builder;
+    for(HTMLNode ele : children) {
+      ele.buildValue(builder);
+    }
+    if(getConfig().end() != Tag.FORBIDDEN){
+      builder.append(SpecChar.n).append('<').append('/').append(getName()).append('>');
+    }
+    return builder;
+  }
+
+  public void setValue(char [] chars) {
+    if(chars.length < 500) {
+      this.value = chars;
+      return;
+    }
+
+    if(name == Name.CONTENT ||
+        name == Name.CODE_CONTENT || name == Name.COMMENT ) { 
+      try {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        GZIPOutputStream zip = new GZIPOutputStream(outputStream);
+        
+//        System.out.println(new String(chars));
+        Charset charset = Charset.forName(Application.CHARSET);
+        CharsEncoder encoder = new CharsEncoder(charset, charset.name());
+        
+//        zip.write(new String(chars).getBytes(Application.CHARSET));
+        zip.write(encoder.encode(chars, 0, chars.length));
+        zip.close();
+        
+
+        value = null;
+        byteValue = outputStream.toByteArray();
+
+//        System.out.println("=== >" + chars.length + " : " + byteValue.length);
+//        System.out.println(new String(getValue()));
+        return;
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
+    this.value = chars;
+  }
+
+  public char[] getValue() { 
+    if(value != null) return value;
+    try {
+      ByteArrayInputStream byteInput = new ByteArrayInputStream(byteValue);
+      GZIPInputStream gzip = new GZIPInputStream(byteInput);
+
+      ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+      int read = -1;
+      byte [] bytes = new byte[16*1024];
+      while((read = gzip.read(bytes)) != -1) {
+        byteOutput.write(bytes, 0, read);
+      }
+
+      bytes = byteOutput.toByteArray();
+      return CharsDecoder.decode(Application.CHARSET, bytes, 0, bytes.length);
+//      ByteBuffer byteBuffer = ByteBuffer.wrap(byteOutput.toByteArray());
+//      Charset charset = Charset.forName(Application.CHARSET);
+//      CharBuffer charBuffer = charset.decode(byteBuffer);
+//      return charBuffer.array();
+    } catch (Exception e) {
+      return value;
+    }
+  }
+
+  public boolean isTag() {
+    return type != TypeToken.CONTENT 
+            && type != TypeToken.COMMENT  
+            && type != TypeToken.CODE_CONTENT; 
+  }
+
+  public void clone(HTMLNode nodeParent) {
+    if(type == TypeToken.CONTENT
+        || type == TypeToken.COMMENT 
+        || type == TypeToken.CODE_CONTENT) {
+      nodeParent.addChild(new NodeImplBak1(getValue(), name));
+      return;
+    }
+
+    NodeImplBak1 newImpl = new NodeImplBak1(getValue(), name, type);
+    nodeParent.addChild(newImpl);
+    if(children == null) return;
+    for(int i = 0; i < children.size(); i++) {
+      children.get(i).clone(newImpl);
+    }
+  }
+
+  Iterator<HTMLNode> childIterator() { return children.iteratorElement(); }
+
+  public NodeIterator iterator() {
+    if(queue == null || queue.isModify()) NodeQueue.build(this);
+    return new NodeIteratorImpl(this); 
+  }
+
+  void setNext(NodeImplBak1  node) { nextNode = node; }
+
+  public void traverse(NodeChildHandler handler) {
+    for(int i = 0; i < children.size(); i++) {
+      handler.handle(i, children.get(i));
+    }
+  }
+
+  public static class NodeIteratorImpl implements NodeIterator {
+
+    private NodeImplBak1 node;
+    private int level;
+    private boolean first = true;
+
+    public NodeIteratorImpl(NodeImplBak1 impl) {
+      this.node = impl;
+      this.level = impl.level;
+    }
+
+    public boolean hasNext() {
+      if(first) return node != null;
+      return node != null && node.level > level;
+    }
+
+    public HTMLNode next() {
+      if(first) first = false;
+      HTMLNode value  = node;
+      node = node.nextNode;
+      return value;
+    }
+  }
+
+  public static void next(NodeImplBak1 node) {
+//  System.out.println(node.getName() + "  : " + node.hashCode() 
+//  + " | " + node.nextNode.getName() + " : " + node.nextNode.hashCode());
+    if(node.getChildren() == null)  return;
+    for(int i = 0; i < node.getChildren().size(); i++) {
+      next((NodeImplBak1)node.getChildren().get(i));
+    }
+//  System.out.println("==========================================");
+  }
+
+}

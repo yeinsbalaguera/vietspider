@@ -1,0 +1,91 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.crepo;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jun 22, 2009  
+ */
+public class Md5Codes {
+  
+  /*private volatile Map<Integer, Md5Code> stores;
+
+  public Md5Codes() {
+    stores  = new ConcurrentHashMap<Integer, Md5Code>();
+  }
+  
+  public boolean contains(Link link) {
+    Integer key = link.getRootCode();
+    Md5Code code = stores.get(key);
+//    System.out.println(" md5 code "+ key + " / "+ link.getUrlId().toString());
+    if(code == null) {
+      code = new Md5Code(key);
+      stores.put(key, code);
+    } else {
+      if(code.contains(link.getUrlId())) {
+//        System.out.println(" md5 code chinh "+ key + " / "+ link.getUrlId().toString());
+        code.setLastAccess();
+        return true;
+      }
+    }
+    
+    Iterator<Map.Entry<Integer, Md5Code>> iterator = stores.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<Integer, Md5Code> entry = iterator.next();
+      Md5Code code2 = entry.getValue();
+      if(code2.contains(link.getUrlId())) {
+//        System.out.println(" md5 code phu "+ key + " / "+ link.getUrlId().toString());
+        code.add(link.getUrlId());
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  public boolean contains(MD5Hash hash) {
+    Iterator<Map.Entry<Integer, Md5Code>> iterator = stores.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<Integer, Md5Code> entry = iterator.next();
+      Md5Code code2 = entry.getValue();
+      if(code2.contains(hash)) return true;
+    }
+    
+    return false;
+  }
+  
+  public void addDefault(MD5Hash hash) {
+    Md5Code code = stores.get(0);
+    if(code == null) {
+      code = new Md5Code(0);
+      stores.put(0, code);
+    } else {
+      code.setLastAccess();
+    }
+    code.add(hash);
+  }
+  
+  public void add(Link link) {
+    Integer key = link.getRootCode();
+    Md5Code code = stores.get(key);
+    if(code == null) {
+      code = new Md5Code(key);
+      stores.put(key, code);
+    } else {
+      code.setLastAccess();
+    }
+    code.add(link.getUrlId());
+  }
+  
+  public void expire() {
+    Iterator<Map.Entry<Integer, Md5Code>> iterator = stores.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<Integer, Md5Code> entry = iterator.next();
+      Md5Code code = entry.getValue();
+      if(code.isTimeout()) iterator.remove();
+    }
+  }*/
+}

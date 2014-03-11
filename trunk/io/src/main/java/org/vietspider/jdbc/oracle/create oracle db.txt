@@ -1,0 +1,25 @@
+SQL*Plus: Release 10.2.0.1.0 - Beta on Wed Jun 20 16:15:56 2007
+
+Copyright (c) 1982, 2005, Oracle.  All rights reserved.
+
+SQL> conn sys/sys as sys.dba
+SP2-0306: Invalid option.
+Usage: CONN[ECT] [logon] [AS {SYSDBA|SYSOPER}]
+where <logon>  ::= <username>[/<password>][@<connect_identifier>] | /
+SQL> conn sys/sys as sysdba
+Connected.
+SQL> create user crawler identified by crawler;
+
+User created.
+
+SQL> grant connect,resource to crawler;
+
+Grant succeeded.
+
+SQL> conn crawler/crawler
+Connected.
+SQL>
+
+login default oracle expression 
+
+database: XE  username/password = system/123

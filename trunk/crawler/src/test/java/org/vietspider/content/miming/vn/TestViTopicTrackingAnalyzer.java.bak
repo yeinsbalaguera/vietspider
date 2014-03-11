@@ -1,0 +1,129 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.miming.vn;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.content.tp.model.TpWordIndex2;
+import org.vietspider.content.tp.vn.TpDocument;
+import org.vietspider.content.tp.vn.ViTopicTrackingAnalyzer;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 28, 2009  
+ */
+public class TestViTopicTrackingAnalyzer {
+  
+  public static void main(String[] args) throws Exception {
+    File file = new File("D:\\java\\headvances3\\trunk\\vietspider\\startup\\src\\test\\data\\");
+    System.setProperty("vietspider.data.path", file.getCanonicalPath());
+    
+    String content = "nokia 8800 GOLD Arte cần tiền bán lại cần bán máy .Tiếp nối phiên bản xa hoa "
+      +"Nokia 8800 Carbon Arte. khoác vẻ lịch lãm hơn, sang trọng hơn. Nokia 8800 Gold Arte được"
+      +" dát 18kara vàng và mặt sau của thân máy được bọc một lớp da thật màu trắng.máy nokia "
+      +"chính hãng nokia.còn bảo hành C ty 21 thang.bảo đảm máy chưa bung sưa gì .cung khong mọt"
+      +" vết sước nào.nay cần tiền bán lại giá 12tr3.phụ kiện theo máy nguyên hộp đầy đủ.ai có "
+      +"nhu cầu xài xin liên hệ vối mình.call;0908 890 737 van";
+    
+//    content += "Theo công văn số 171/UBND-BCĐ do Phó Chủ tịch UBND tỉnh "
+//      +" Bà Rịa -Vũng Tàu - Phó trưởng BTC cuộc thi \"Hoa hậu Quý bà đẹp và thành đạt năm 2009\""
+//      +"  Võ Thành Kỳ ký ngày 12.8.2009, thì cuộc thi này được phép của Chính phủ và quyết định"
+//      +"  của Bộ VHTTDL. UBND tỉnh Bà Rịa - Vũng Tàu đã triển khai các hoạt động phục vụ cuộc thi,"
+//      +"  trong đó có việc lập 2 website chính của cuộc thi là www.mrsvietnam2009.com và "
+//      +" www.mrsworldvietnam2009.com . ";
+//    
+//    
+//    content += "Tuy nhiên, trong quá trình quản lý, cập nhật thông tin cho 2 trang web này,"
+//      +" BTC cuộc thi đã phát hiện trên mạng Internet còn có trang web www.mrsworldvietnam.com do"
+//      +" Cty FBN, có địa chỉ là số B59 đường Tô Ký, P.Đông Hưng Thuận, Q.12 - TP.Hồ Chí Minh thực"
+//      +" hiện, đã đăng tải nhiều thông tin, hình ảnh về cuộc thi \"Hoa hậu Quý bà đẹp và thành đạt "
+//      +"thế giới 2009\". Theo BTC cuộc thi, việc Cty FBN đăng tải các thông tin về cuộc thi là vi "
+//      +"phạm quy định pháp luật về bản quyền hình ảnh, về thông tin trên mạng Internet... "
+//      +"Hiện vụ việc được Bộ Công an xác minh xử lý. " ;
+    
+    ViTopicTrackingAnalyzer analyzer2 = new ViTopicTrackingAnalyzer();
+//    TpDocument tpDocument = analyzer2.analyzeDocument(content); 
+//    TpWordIndex tpContent = tpDocument.getPhrases();
+    
+
+//    file = new File("D:\\Temp\\articles\\temp\\", "129.txt");
+//    byte [] bytes = new DataReader().load(file);
+//    content = new String(bytes, "utf-8");
+    
+    TpWorkingData workingData = analyzer2.analyzeDocument(content);
+    TpDocument tpDocument = workingData.getTpDocument();
+    
+    ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+    DataOutputStream outputStream = new DataOutputStream(byteOutput);
+    tpDocument.write(outputStream);
+    
+    byte [] bytes = byteOutput.toByteArray();
+    System.out.println(" hihi "+ bytes.length);
+    
+    ByteArrayInputStream byteInput = new ByteArrayInputStream(bytes);
+    DataInputStream inputStream = new DataInputStream(byteInput);
+    
+    TpDocument _tpDocument2 =  TpDocument.read(inputStream, bytes.length);
+    
+    TpWordIndex2 phrases1 = _tpDocument2.getPhrases();
+    TpWordIndex2 phrases2 = _tpDocument2.getPhrases();
+    
+    System.out.println(phrases1);
+    System.out.println(phrases2);
+    
+    TpWordIndex2 nouns1 = _tpDocument2.getNouns();
+    TpWordIndex2 nouns2 = _tpDocument2.getNouns();
+    
+    System.out.println(nouns1);
+    System.out.println(nouns2);
+    
+   /* ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
+    ObjectOutputStream out = new ObjectOutputStream(byteOutputStream);
+    try {
+      out.writeObject(tpDocument);
+      out.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+      return;
+    } finally {
+      try {
+        if(byteOutputStream != null) byteOutputStream.close();
+      } catch (Exception e) {
+      }
+      try {
+        out.close();
+      } catch (Exception e) {
+      }
+    }*/
+    
+    
+    /*List<TpWord> list = tpContent.toWordList();
+    
+    System.out.println("====>"+list.size());
+    for(int i = 0; i < list.size(); i++) {
+      int [] values = list.get(i).getValues();
+      for(int k = 0; k < values.length; k++) {
+        System.out.print(values[k]+",");
+      }
+      System.out.print("====>" + list.get(i).getTime() + "/" + list.get(i).getTotal());
+      System.out.println();
+    }
+    
+    TpWord tpWord = list.get(3);
+    System.out.println(tpContent.contains(tpWord));
+    
+    System.out.println(tpContent.contains(list.get(7)));
+    
+    int [] values = {"hình".hashCode(), "ảnh".hashCode()};
+    TpWord tpWord2 = new TpWord(values, 1, 2);
+    System.out.println(tpContent.contains(tpWord2));*/
+  }
+  
+}

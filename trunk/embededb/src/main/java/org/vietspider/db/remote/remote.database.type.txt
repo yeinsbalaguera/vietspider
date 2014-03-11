@@ -1,0 +1,5 @@
+dataCleaner=org.vietspider.db.remote.RemoteDataCleaner
+dataGetter=org.vietspider.db.remote.RemoteDataGetter
+dataSaver=org.vietspider.db.remote.RemoteDataSetter
+dataUtils=org.vietspider.db.remote.RemoteDataUtils
+databases.type=

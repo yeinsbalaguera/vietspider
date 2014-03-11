@@ -1,0 +1,161 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.htmlexplorer;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.FocusAdapter;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.ShellAdapter;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
+import org.vietspider.ui.widget.AlphaDialog;
+import org.vietspider.ui.widget.ApplicationFactory;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jul 7, 2009  
+ */
+public class AddPathButton extends AlphaDialog {
+  
+  private Button butUpdate;
+  private Button butAdd;
+  private NodeEditor2 _editor;
+  private HtmlExplorerListener _explorer;
+  
+  private StyledText text;
+
+  public AddPathButton(ApplicationFactory factory, 
+      HtmlExplorerListener explorer, NodeEditor2 editor) {
+    super(editor.getShell(), SWT.NO_TRIM | SWT.ON_TOP | SWT.BORDER);
+    this._editor = editor;
+    this._explorer = explorer;
+    
+    displayTime = 5*1000;
+
+    _editor.getShell().addShellListener(new ShellAdapter() {
+      @SuppressWarnings("unused")
+      public void shellDeiconified(ShellEvent e) {
+        fadeOut();
+      }
+    });
+    
+    text = _editor.getTextEditor(); 
+
+    text.addFocusListener(new FocusAdapter() {
+      @SuppressWarnings("unused")
+      public void focusGained(FocusEvent e) {
+        computeShowArea();
+      }
+      
+      @SuppressWarnings("unused")
+      public void focusLost(FocusEvent e) {
+        fadeOut();
+      }
+    });
+
+    GridLayout gridLayout = new GridLayout(2, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.marginBottom = 1;
+    gridLayout.marginTop = 0;
+    gridLayout.marginLeft = 0;
+    gridLayout.marginRight = 0;
+
+    gridLayout.horizontalSpacing = 15;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    popup.setLayout(gridLayout);
+    popup.setBackground(text.getBackground());
+    
+    Composite parent = factory.getComposite();
+    factory.setComposite(popup);
+    
+    butUpdate = factory.createButton("butUpdate", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {       
+//        _explorer.addEditItem();    
+      }   
+    });
+    GridData gridData = new GridData(GridData.HORIZONTAL_ALIGN_END);
+    butUpdate.setLayoutData(gridData);
+    
+    butAdd = factory.createButton("butAdd", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {       
+        _explorer.addItems();    
+      }   
+    });
+    gridData = new GridData(GridData.HORIZONTAL_ALIGN_END);
+    butAdd.setLayoutData(gridData);
+    
+    factory.setComposite(parent);
+
+    popup.pack();
+    
+  }
+
+  public void computeShowArea() {
+    Display display = text.getDisplay();
+//    popup.setBackground(ColorCache.getInstance().getColor(100, 100, 100));
+    Rectangle parentRect = display.map (text.getParent(), null, text.getBounds ());
+    Rectangle displayRect = text.getBounds();
+
+    int x = parentRect.x + displayRect.width - popup.getSize().x - 25;
+    int y = parentRect.y + displayRect.height - popup.getSize().y - 2 ;
+    //+ text.getCaretLocation().y;//- comboSize.y;
+    popup.setLocation(x, y);
+    popup.setAlpha(getFinalAlpha());
+    popup.setVisible(true);
+    
+    butUpdate.setEnabled(_explorer.hasSelectedItem());
+  }
+  
+  public void fadeOut() {
+    final Runnable run = new Runnable() {
+      @Override
+      public void run() {
+        try {
+          if (popup == null || popup.isDisposed()) return;
+          
+          String os_name = System.getProperty("os.name").toLowerCase();
+          if(os_name.indexOf("linux") > -1) {
+            popup.setVisible(false);
+            return;
+          }
+          
+          if(text.isFocusControl()) {
+            computeShowArea();
+            return;
+          }
+
+          int cur = popup.getAlpha();
+          cur -= fadeOutStep;
+
+          if (cur <= 0) {
+            popup.setAlpha(0);
+            popup.setVisible(false);
+            return;
+          }
+          
+          popup.setAlpha(cur);
+
+          Display.getDefault().timerExec(fadeTimer, this);
+        } catch (Exception err) {
+        }
+      }
+    };
+    Display.getDefault().timerExec(fadeTimer, run);
+  }
+
+  
+
+}

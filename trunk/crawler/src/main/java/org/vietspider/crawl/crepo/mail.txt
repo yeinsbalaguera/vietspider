@@ -1,0 +1,7 @@
+use link generator:
+
+Click on your channel -> expand properties -> select Link Generator -> paste the following value to text box and save.
+
+type org.vietspider.crawl.link.generator.URLIndexGenerator
+http://0.0.0.0/CompaniesDetails.aspx?id=[index]
+514000001->514020000

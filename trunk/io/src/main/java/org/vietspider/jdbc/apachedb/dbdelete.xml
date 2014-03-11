@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<database>  
+  <deleteDomain>
+    DELETE FROM DOMAIN WHERE DATE LIKE '$date'
+  </deleteDomain>
+  
+  <loadMetaByDate>
+    SELECT 
+        META.ID 
+      FROM META, DOMAIN
+        WHERE META.DOMAIN_ID = DOMAIN.ID AND DOMAIN.DATE LIKE '$date'
+      ORDER BY ID DESC
+  </loadMetaByDate>  
+  
+  <deleteMeta>
+  	DELETE FROM META WHERE ID = $id
+  </deleteMeta>
+  
+  <deleteImage>
+    DELETE FROM IMAGE WHERE META_ID = $id
+  </deleteImage>
+  
+  <deleteRelation>
+    DELETE FROM RELATION WHERE META_ID = $id
+  </deleteRelation>
+  
+  <deleteContent>
+    DELETE FROM CONTENT WHERE META_ID = $id
+  </deleteContent>
+</database>

@@ -1,0 +1,146 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.htmlexplorer;
+
+import java.util.List;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.FocusAdapter;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.widgets.Text;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.path2.HTMLExtractor;
+import org.vietspider.html.path2.NodePath;
+import org.vietspider.html.path2.NodePathParser;
+import org.vietspider.token.attribute.Attribute;
+import org.vietspider.token.attribute.Attributes;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jul 9, 2008  
+ */
+public class NodeEditorSuggestion {
+  
+  private Text text;
+  
+  private NodeEditor editor;
+  
+  private HTMLExplorer explorer;
+  
+  private String [] values1 = { "*", "i%2=", "i%3=", "i%4=", "i/2=", "i/3="};
+  
+  NodeEditorSuggestion(NodeEditor editor_, HTMLExplorer explorer) {
+    this.editor = editor_;
+    this.explorer = explorer;
+    this.text = editor.text;
+    
+    text.addKeyListener(new KeyAdapter() {
+      public void keyReleased(KeyEvent event) {
+        handle(event.keyCode, event.character);
+      }
+    });
+    
+    text.addFocusListener(new FocusAdapter(){
+      @SuppressWarnings("unused")
+      public void focusLost(FocusEvent event) {
+        editor.dropDown (false, false);
+      }
+    });
+  }
+  
+  private void handle(int code, char ch) {
+    int pos = text.getCaretPosition();
+    if(pos < 2) return;
+    
+    if(ch != '[') {
+      ch = text.getText(pos-1, pos).charAt(0);
+    }
+    
+    if(ch == '[') {
+      editor.dropDown(false);
+      editor.setType(0);
+      char c2 = text.getText(pos-2, pos-1).charAt(0);
+      if(c2 == ']'){
+        String path  = text.getText(0, pos);
+        editor.setItems(createAttributes(createNode(path)));
+      } else {
+        editor.setItems(values1);
+      } 
+      editor.dropDown (true, false);
+    } else if(ch == '.') {
+      editor.dropDown(false);
+      editor.setType(1);
+      String path  = text.getText(0, pos-1);
+      editor.setItems(createChildren(createNode(path)));
+      editor.dropDown (true, false);
+    } else {
+      if(code == SWT.KeyUp && code != SWT.KeyUp) { 
+        editor.dropDown (false, false);
+      } else {
+        editor.dropDown (true, false);
+      }
+    }
+  }
+  
+  private HTMLNode createNode(String path) {
+    HTMLExtractor extractor  = new HTMLExtractor();
+    NodePathParser pathParser = new NodePathParser();
+    if(path.endsWith("[.")) {
+      path  = path.substring(0, path.length() - 2);
+    } else  if(path.endsWith("[")) {
+      path  = path.substring(0, path.length() - 1);
+    }
+    try {
+      NodePath nodePath = pathParser.toPath(path);
+      return extractor.lookNode(explorer.getDocument().getRoot(), nodePath);
+    } catch (Exception e) {
+    }
+    return null;
+  }
+  
+  private String[] createChildren(HTMLNode node) {
+    if(node == null) return new String[0];
+    List<HTMLNode> children = node.getChildren();
+    if(children == null 
+        || children.size() < 1) return new String[0];
+    String [] values = new String[children.size()];
+    for(int i = 0; i < children.size(); i++) {
+      HTMLNode child = children.get(i); 
+      StringBuilder builder = new StringBuilder();
+      builder.append(child.getName().toString());
+      builder.append('[').append(getIndex(children, child)).append(']');
+      values[i] = builder.toString();
+    }
+    return values;
+  }
+  
+  private String[] createAttributes(HTMLNode node) {
+    if(node == null) return new String[0];
+    try {
+      Attributes attributes = node.getAttributes(); 
+      String [] values = new String[attributes.size()];
+      for(int i = 0; i < attributes.size(); i++) {
+        Attribute attr = attributes.get(i);
+        values[i] = attr.getName()+"=" + attr.getValue();
+      }
+      return values;
+    } catch(Exception exp) {
+    }
+    return new String[0];
+  }
+  
+  private int getIndex(List<HTMLNode> children, HTMLNode element){
+    int count = 0;
+    for(int i = 0; i < children.size(); i++){
+      if(children.get(i).isNode(element.getName())){
+        if(children.get(i) == element) return count;
+        count++;
+      }
+    }
+    return count;
+  }
+}

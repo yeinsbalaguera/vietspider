@@ -1,0 +1,88 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.plugin.index;
+
+import java.util.List;
+
+import org.vietspider.bean.Content;
+import org.vietspider.bean.Meta;
+import org.vietspider.common.io.LogService;
+import org.vietspider.content.tp.TopicTrackingAnalyzer;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.crawl.plugin.PluginData;
+import org.vietspider.html.HTMLNode;
+
+import com.sun.star.uno.Exception;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 18, 2009  
+ */
+public class ClassifiedPluginData2TpDocument {
+  
+  private TopicTrackingAnalyzer analyzer;
+  
+  public ClassifiedPluginData2TpDocument() {
+    analyzer = new ClassifiedViTopicTrackingAnalyzer();
+  }
+  
+  public TpWorkingData convert(PluginData pluginData)  {
+    List<HTMLNode> textNodes = pluginData.getCloneTextNodes();
+    if(textNodes == null) return null;
+    
+    Meta meta = pluginData.getMeta();
+    
+    String id  = pluginData.getMeta().getId();
+//    String group = pluginData.getGroup().getType();
+//    int minRate = pluginData.getGroup().getMinPercentRelation();
+//    if(pluginData.isWebPage()) minRate = 75;
+//    minRate = Math.max(30, minRate);
+//    int range = pluginData.getGroup().getDateRangeRelation();
+    
+//    Map<String,Object> properties = pluginData.getMeta().getProperties();
+    
+    String text = meta.getPropertyValue("temp.text");
+    if(text == null) {
+      StringBuilder builder = new StringBuilder();
+
+      for(HTMLNode node : textNodes)  {
+        char [] chars = node.getValue();
+        if(chars.length < 1) continue;
+        builder.append(chars).append(' ');
+      }
+      text = builder.toString();
+    } else {
+      pluginData.getMeta().removeProperty("temp.text");
+    }
+    
+    try {
+      StringBuilder builder = new StringBuilder();
+      builder.append(meta.getTitle()).append('\n');
+      builder.append(meta.getDesc()).append('\n');
+      RtRenderder renderder = new RtRenderder();
+      Content content = pluginData.getArticle().getContent();
+      String rttext = renderder.build(builder, content.getContent());
+      
+      TpWorkingData workingData = analyzer.analyzeDocument(rttext);
+      workingData.getTpDocument().setId(id);
+//      workingData.setMinRate(minRate);
+//      workingData.setRange(range);
+//      workingData.setGroup(group);
+      return workingData;
+    } catch (StackOverflowError e) {
+      LogService.getInstance().setMessage(new Exception(e.toString()), " Article "+ id);
+      return null;
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(e);
+      return null;
+    }
+    
+    //detect region
+      //factory.create(topicTracking.getMetaId(), builder.toString());
+//    topicTracking.setSummarize(summarize);
+  }
+  
+  
+}

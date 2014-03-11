@@ -1,0 +1,19 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.vn.comparator;
+
+import org.vietspider.content.tp.vn.TpDocument;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 4, 2009  
+ */
+public class ClassDetector extends ClassLoader {
+  
+  public Class<?> detect(byte[] b) {
+    return super.defineClass(TpDocument.class.getName(), b, 0, b.length);
+  }
+}

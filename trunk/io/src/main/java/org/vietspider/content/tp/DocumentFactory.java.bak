@@ -1,0 +1,150 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.content.tp;
+
+import java.util.List;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.vietspider.content.tp.model.SummarizeDocument;
+import org.vietspider.content.tp.vn.VietnameseAnalyzer;
+import org.vietspider.content.tp.word.CharUtil;
+import org.vietspider.content.tp.word.Word;
+import org.vietspider.content.tp.word.WordList;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Aug 22, 2006
+ */
+public class DocumentFactory {
+  
+  private VietnameseAnalyzer analyzer ;
+  private String info;
+  private int number = 10;
+  private NounComparator nounComparator; 
+  private SectionComparator sectionComparator; 
+  
+  public DocumentFactory() throws Exception {
+    analyzer = new VietnameseAnalyzer();
+    nounComparator = new NounComparator();
+    sectionComparator = new SectionComparator();
+  }
+  
+  public SummarizeDocument create(Object id, List<char[]> list){
+    WordList sections = new WordList(100);
+    WordList nouns = new WordList(50);
+    for(char[] seq : list){
+      analyzer.breakSequence(new String(seq), sections, nouns); 
+    }
+    SummarizeDocument document  = new SummarizeDocument(id, sections, nouns);
+    return document;
+  }
+  
+  public SummarizeDocument create(Object id, String text){
+    WordList sections = new WordList(100);
+    WordList nouns = new WordList(50);
+    analyzer.breakSequence(text, sections, nouns);
+    SummarizeDocument document  = new SummarizeDocument(id, sections, nouns);
+    return document;
+  }
+  
+  public double compare(SummarizeDocument doc1, SummarizeDocument doc2){
+    info = "";
+    double compareNouns = nounComparator.compare(doc1.getNouns(), doc2.getNouns(), 2);
+    info += " => compareNouns : "+compareNouns;
+    if(doc1.getNouns().getWord().length >= number 
+        && doc2.getNouns().getWord().length >= number) {
+      if(compareNouns >= 70) return compareNouns;// true     
+    }
+    double comparePhrases = sectionComparator.compare(doc1.getSections(), doc2.getSections());
+    info += " => comparePhrases : " + comparePhrases;
+    if(comparePhrases >= 60) return comparePhrases; // true  
+    if(comparePhrases < 10) return -1;//false 
+    double value  = (compareNouns+comparePhrases)/2;
+    info += " // ==> compareValue : " + value;
+    if(value > 20) return value;//true
+    return -1;
+  }
+  
+  public Document toDocument(SummarizeDocument summarize){
+    Document doc = new Document();
+    Field field = new Field(SummarizeDocument.FIELD_ID, 
+        summarize.getId().toString(), Field.Store.YES, Field.Index.NOT_ANALYZED);
+    doc.add(field);
+    Word [] words = summarize.getNouns().getWord();
+    String time  = "";
+    for(Word word : words){
+      for(int i = 0; i < word.getTime(); i++){      
+        field = new Field(SummarizeDocument.FIELD_NOUN, 
+            String.valueOf(word.getValue()), Field.Store.YES, Field.Index.NOT_ANALYZED);
+        doc.add(field);        
+      }
+      if(time.length() < 1) time += String.valueOf(word.getTime());
+      else time += "," + String.valueOf(word.getTime());      
+    }
+    
+    words = summarize.getSections().getWord();
+    time  = "";
+    for(Word word : words){
+      for(int i = 0; i < word.getTime(); i++){      
+        field = new Field(SummarizeDocument.FIELD_SECTION, 
+            String.valueOf(word.getValue()), Field.Store.YES, Field.Index.NOT_ANALYZED);
+        doc.add(field);
+      }
+      if(time.length() < 1) time += String.valueOf(word.getTime());
+      else time += "," + String.valueOf(word.getTime());      
+    }
+    return doc;
+  }
+  
+  public SummarizeDocument toSummarizeDocument(Document doc){
+    String id = doc.getField(SummarizeDocument.FIELD_ID).stringValue();
+    
+    Field [] fields = doc.getFields(SummarizeDocument.FIELD_NOUN);    
+    WordList nouns = new WordList(fields.length);
+    for(Field f : fields){
+      nouns.set(f.stringValue(), countProperNoun(f.stringValue()));
+    }
+    
+    fields = doc.getFields(SummarizeDocument.FIELD_SECTION);    
+    if(fields == null) return new SummarizeDocument(id, new WordList(0), nouns);
+    WordList sections = new WordList(fields.length);
+    for(Field f : fields){
+      sections.set(f.stringValue(), CharUtil.countChar(f.stringValue(), ' '));
+    }         
+    return new SummarizeDocument(id, sections, nouns);
+  }
+  
+  private int countProperNoun(CharSequence chars){
+    int count = 0;
+    for(int i = 0 ; i < chars.length(); i++){
+      if(Character.isUpperCase(chars.charAt(i)) ) count++;
+    }
+    return count;
+  }  
+  
+ 
+  public String getInfo() {
+    return info;
+  }
+  
+  /*Comparator<Word> comparator =  new Comparator<Word>(){
+      public int compare(Word w1, Word w2){
+        return w1.;
+      }
+    };
+    org.vietspider.common.util.Arrays.sort(sections.getWord(), new java.util.Comparator<Word>(){
+      public int compare(Word w1, Word w2){
+        return w2.getTime() - w1.getTime();
+      }
+    });
+    org.vietspider.common.util.Arrays.sort(nouns.getWord(), new java.util.Comparator<Word>(){
+      public int compare(Word w1, Word w2){
+        if(w2.getCount() == w1.getCount()) return w2.getTime() - w1.getTime();
+        return w2.getCount() - w1.getCount();
+      }
+    });   */
+}

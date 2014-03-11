@@ -1,0 +1,140 @@
+ @SuppressWarnings("unused")
+  public void setValues(final boolean showData, final boolean focus, 
+      final String group, final String category, final String...sources) {
+    Worker excutor = new Worker() {
+
+      private String [] dataCategories;
+      private String [] dataSources;
+      private AccessChecker accessChecker;
+
+      private File file;
+
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+        if(group != null) {
+          TreeSources.this.setGroup(group);
+          tree.removeAll();
+        }
+        file = new File(ClientConnector2.getCacheFolder("sources/type"), "group." + group);
+      }
+
+      public void execute() {
+        try {
+          if(group != null) {
+            if(file.exists()) {
+              byte [] bytes = new DataReader().load(file);
+              dataCategories = new String(bytes, Application.CHARSET).trim().split("\n");
+            } else {
+              dataCategories = new SourcesClientHandler(group).loadCategories();
+              accessChecker = new OrganizationClientHandler().loadAccessChecker();
+            }
+          }
+          if(category != null) {
+            if(group == null)  {
+              dataSources = new SourcesClientHandler(TreeSources.this.group).loadSources(category);
+            } else {
+              dataSources = new SourcesClientHandler(group).loadSources(category);
+            }
+          }
+        } catch (Exception e) {
+          ClientLog.getInstance().setException(null, e);
+        }
+      }
+
+      public void after() {
+        tree.setFocus();
+
+        if(dataCategories != null) {
+          if(accessChecker != null) {
+            StringBuilder builder = new StringBuilder();
+            for(String dataCategory : dataCategories) {
+              if(!accessChecker.isPermitAccess(group + "." + dataCategory, true)) continue;
+              lookCategoryItem(dataCategory);
+              if(builder.length() > 0) builder.append('\n');
+              builder.append(dataCategory);
+            }
+
+            try {
+              byte [] bytes = builder.toString().getBytes(Application.CHARSET);
+              new DataWriter().save(file, bytes);
+            } catch (Exception e) {
+              file.delete();
+            }
+          } else {
+            for(String dataCategory : dataCategories) {
+              lookCategoryItem(dataCategory);
+            }
+          }
+        }
+
+        if(category == null) return;
+
+        if(lastSelectedItem != null && !lastSelectedItem.isDisposed()) {
+          lastSelectedItem.setBackground(new Color(getDisplay(), 255, 255, 255));
+          lastSelectedItem.setExpanded(false);
+          lastSelectedItem.removeAll();
+          lastSelectedItem = null;
+        }
+
+        TreeItem [] items = tree.getItems();
+        if(items == null || items.length < 1) return ;
+
+        TreeItem selectedItem = null;
+        for(TreeItem item  : items) {
+          if(item.getText().equals(category)) {
+            selectedItem = item;
+            break;
+          }
+        }
+        if(selectedItem == null) return;
+        tree.setSelection(selectedItem);
+        loadSources(selectedItem, dataSources);
+        if(sources == null) return;
+        items = selectedItem.getItems();
+        if(items == null || items.length < 1) return ;
+
+        for(int i = 0; i < items.length; i++) {
+          for(String source : sources) {
+            if(!items[i].getText().equals(source)) continue;
+            tree.setSelection(new TreeItem[]{selectedItem, items[i]});
+            if(showData) creator.setSource(category, source, false);
+            int topIndex = i;
+            int visibleCount = tree.getSize().y/48;
+            if(topIndex - visibleCount < 0) return;
+            topIndex -= visibleCount;
+            tree.setTopItem(items[topIndex]);
+            break;
+          }
+        }
+      }
+    };
+    WaitLoading loading = new WaitLoading(tree, excutor);
+    loading.open();
+  }
+
+
+  private void loadSources(TreeItem item, String [] sources) {
+    if(lastSelectedItem == item) return;
+
+    if(lastSelectedItem != null && !lastSelectedItem.isDisposed()) {
+      lastSelectedItem.setBackground(new Color(getDisplay(), 255, 255, 255));
+      lastSelectedItem.setExpanded(false);
+      lastSelectedItem.removeAll();
+    }
+    lastSelectedItem = item;
+    lastSelectedItem.setBackground(new Color(getDisplay(), 190, 190, 255));
+
+    if(sources == null || sources.length < 1) return;
+
+    for(String source : sources) {
+      item = new TreeItem(lastSelectedItem, SWT.NONE);
+      item.setFont(UIDATA.FONT_9);
+      int idx = source.indexOf('.');
+      if(idx > -1) source = source.substring(idx+1);
+      item.setText(source);
+    }
+    if(!lastSelectedItem.getExpanded()) lastSelectedItem.setExpanded(true);
+  }

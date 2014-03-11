@@ -1,0 +1,190 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.htmlexplorer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.swt.widgets.Tree;
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.Name;
+import org.vietspider.html.path2.HTMLExtractor;
+import org.vietspider.html.path2.NodePath;
+import org.vietspider.html.path2.NodePathParser;
+import org.vietspider.html.util.CharacterUtil;
+import org.vietspider.html.util.HTMLText;
+import org.vietspider.token.attribute.Attribute;
+import org.vietspider.token.attribute.Attributes;
+import org.vietspider.ui.services.ClientLog;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 1, 2008  
+ */
+public class AutoSelectDataNode {
+  
+  private int type; 
+  private HTMLDocument document;
+  private TreeHandler handler;
+  private Tree tree;
+  
+  public AutoSelectDataNode(int type, HTMLDocument doc, TreeHandler handler, Tree tree) {
+    this.type = type;
+    this.document = doc;
+    this.handler = handler;
+    this.tree = tree;
+    if(Application.LICENSE == Install.PERSONAL 
+        || type == HTMLExplorer.NONE) return;
+    autoSelect();
+  }
+  
+  private void autoSelect() {
+    if(type == HTMLExplorer.NONE) return;
+    NodePath bodyPath = null;
+    NodePathParser pathParser = new NodePathParser();
+    try {
+      bodyPath  = pathParser.toPath("BODY");
+    }catch (Exception e) {
+      ClientLog.getInstance().setException(tree.getShell(), e);
+    }
+    
+    if(bodyPath == null || document == null) return;
+    HTMLNode body = new HTMLExtractor().lookNode(document.getRoot(), bodyPath);
+    List<HTMLNode> list = new ArrayList<HTMLNode>();
+    List<HTMLNode> commons = new ArrayList<HTMLNode>();
+    if(HTMLExplorer.SECTION == type) {
+      searchSectionCSS(commons, list, body);
+
+      short selectType = PathConfirmDialog.YES; 
+      for(HTMLNode ele : commons) {
+        try {
+          NodePath path = pathParser.toPath(ele);   
+          if(path == null) continue; 
+          selectType = handler.traverseTree(this, tree, path, TreeHandler.MARK, selectType);      
+        } catch(Exception exp){
+          ClientLog.getInstance().setMessage(tree.getShell(), exp);
+        }  
+      }
+
+      return;
+    }
+
+    searchContentCSS(commons, list, body);
+
+    int maxCountContent = 0;
+    HTMLNode maxNodeContent = null;
+
+    List<HTMLNode> contents = new ArrayList<HTMLNode>();
+    CharacterUtil characterUtil = new CharacterUtil();
+    
+    HTMLText htmlText = new HTMLText();
+    
+    short selectType = PathConfirmDialog.YES;
+    boolean traverse = false;
+    for(HTMLNode ele : commons) {
+      contents.clear();
+      htmlText.searchText(contents, ele);
+      int count = countText(characterUtil, contents);
+
+      if(count > maxCountContent) {
+        maxCountContent = count;
+        maxNodeContent = ele;
+      }
+
+      if(count < 100) continue;
+
+      NodePath path = pathParser.toPath(ele);   
+      if(path == null) continue; 
+      handler.traverseTree(tree, path, TreeHandler.MARK, selectType);
+      if(!traverse) traverse = true;
+    }
+    
+    if(traverse || maxNodeContent == null) return;
+    try {        
+      NodePath path = pathParser.toPath(maxNodeContent);   
+      if(path == null) return; 
+      handler.traverseTree(tree, path, TreeHandler.MARK, selectType);      
+    }catch(Exception exp){
+      ClientLog.getInstance().setMessage(tree.getShell(), exp);
+    }  
+  }
+
+  private boolean searchSectionCSS(List<HTMLNode> commons, List<HTMLNode> list, HTMLNode node) {
+    Attributes attributes = node.getAttributes(); 
+    for(Attribute attr : attributes) {
+      if(attr.getName().toLowerCase().equals("class")) {
+        String value = attr.getValue().toLowerCase();
+        if(value.indexOf("title") > -1 || value.indexOf("tieude") > -1) {
+          list.add(node);
+          return false;
+        }
+      }
+    }
+
+    if(node == null || 
+        node.isNode(Name.SCRIPT) || 
+        node.isNode(Name.STYLE) || 
+        node.isNode(Name.CONTENT)) return false;
+
+    List<HTMLNode> children = node.getChildren();
+    if(children == null) return false;
+
+    boolean add = false;
+    int total1 = list.size(); 
+    for(HTMLNode ele : children) {
+      if(searchSectionCSS(commons,list, ele)) add = true;
+    }
+
+    if(list.size() - total1 >= 5 && !add) {
+      commons.add(node);
+      return true;
+    }
+    return false;
+  }
+
+  private boolean searchContentCSS(List<HTMLNode> commons, List<HTMLNode> list, HTMLNode node) {
+    Attributes attributes = node.getAttributes(); 
+    for(Attribute attr : attributes) {
+      if(attr.getName().toLowerCase().equals("class")) {
+        String value = attr.getValue().toLowerCase();
+        if(value.indexOf("title") > -1 || value.indexOf("tieude") > -1) {
+          list.add(node);
+          return false;
+        }
+      }
+    }
+    if(node == null 
+        || node.isNode(Name.SCRIPT) 
+        || node.isNode(Name.STYLE) 
+        || node.isNode(Name.CONTENT)) return false;
+
+    List<HTMLNode> children = node.getChildren();
+    if(children == null) return false;
+
+    boolean add = false;
+    int total1 = list.size(); 
+    for(HTMLNode ele : children) {
+      if(searchContentCSS(commons,list, ele)) add = true;
+    }
+    int value = list.size() - total1;
+    if(value < 3  && value > 0 && !add) {
+      commons.add(node);
+      return true;
+    }
+    return false;
+  }
+
+  private int countText(CharacterUtil util, List<HTMLNode> list) {
+    int counter  = 0;
+    for(HTMLNode ele : list) {
+      counter += util.count(ele.getValue());
+    }
+    return counter;
+  }
+
+}

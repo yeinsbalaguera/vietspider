@@ -1,0 +1,229 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.gui.config;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Text;
+import org.vietspider.bean.DBInfo;
+import org.vietspider.bean.DatabaseConfig;
+import org.vietspider.ui.widget.ApplicationFactory;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 5, 2008  
+ */
+public class DatabaseInfo extends Composite {
+
+  private Combo cboDBType;
+
+  private Text txtDBHost;
+  private Text txtDBPort;
+  private Text txtDb;
+  private Text txtUsername;
+  private Text txtPassword;
+
+  public DatabaseInfo(Composite parent, ApplicationFactory factory) {
+    super(parent, SWT.NONE);
+
+    setLayout(new GridLayout(1, false));
+
+    Composite dbsComposite = new Composite(this, SWT.NONE);
+    dbsComposite.setLayout(new GridLayout(2, false));
+    factory.setComposite(dbsComposite);
+
+    factory.createLabel("lblDBType");
+    cboDBType = factory.createCombo(SWT.BORDER | SWT.READ_ONLY);
+    cboDBType.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        int type = cboDBType.getSelectionIndex();
+        switch (type) {
+        case DatabaseConfig.H2:
+        case DatabaseConfig.APACHE_DERBY:
+        case DatabaseConfig.HSQL:
+          txtDBPort.setText("");
+          txtDBHost.setText("");          
+          break;
+        case DatabaseConfig.MY_SQL:
+          txtDBPort.setText("3306");
+          txtDBHost.setText("127.0.0.1");
+          break;
+        case DatabaseConfig.MS_SQL_SERVER:
+          txtDBPort.setText("1433");
+          txtDBHost.setText("127.0.0.1");
+          break;
+          //        case DatabaseConfig.MS_SQL_SERVER_2005:
+          //          txtDBPort.setText("1433");
+          //          txtDBHost.setText("127.0.0.1");
+          //          break;
+        case DatabaseConfig.ORACLE:
+          txtDBPort.setText("1521");
+          txtDBHost.setText("127.0.0.1");
+          break;
+        case DatabaseConfig.POST_GRES:
+          txtDBPort.setText("");
+          txtDBHost.setText("127.0.0.1");
+          break;
+        case DatabaseConfig.MS_SQL_SERVER_EXPRESS:
+          txtDBPort.setText("4017");
+          txtDBHost.setText("127.0.0.1");
+          break;
+        default:
+          txtDBPort.setText("");
+          txtDBHost.setText("");
+          break;
+        }
+      }
+    });
+    cboDBType.setItems(new String[]{
+        "H2 Database",
+        "MySQL",
+        "Microsoft SQL Server",
+        //        "Microsoft SQL Server 2005",
+        "Oracle",
+        "Postgres",
+        "Apache Derby",
+        "HSQL Database",
+        "Microsoft SQL Server Express"
+    });
+    cboDBType.select(0);
+    cboDBType.setVisibleItemCount(15);
+
+    Composite serverComposite = new Composite(this, SWT.NONE);
+    GridLayout gridLayout = new GridLayout(2, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 5;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 2;
+    serverComposite.setLayout(gridLayout);
+    factory.setComposite(dbsComposite);
+
+    Composite hostComposite = new Composite(serverComposite, SWT.NONE);
+    hostComposite.setLayout(gridLayout);
+    factory.setComposite(hostComposite);
+
+    factory.createLabel("lblDBHost");    
+    txtDBHost = factory.createText();
+    GridData gridData = new GridData();
+    gridData.widthHint = 150;
+    txtDBHost.setLayoutData(gridData);
+
+    Composite portComposite = new Composite(serverComposite, SWT.NONE);
+    portComposite.setLayout(gridLayout);
+    factory.setComposite(portComposite);
+
+    factory.createLabel("lblDBPort");     
+    txtDBPort = factory.createText();
+    gridData = new GridData();
+    gridData.widthHint = 50;
+    txtDBPort.setLayoutData(gridData);
+
+    Composite dbComposite = new Composite(this, SWT.NONE);
+    dbComposite.setLayout(new GridLayout(2, false));
+    factory.setComposite(dbComposite);
+
+    factory.createLabel("lblDatabase");
+    txtDb = factory.createText();
+    gridData = new GridData();
+    gridData.widthHint = 150;
+    txtDb.setLayoutData(gridData);
+    txtDb.setText("vietspiderdb");
+
+    Composite accountComposite = new Composite(this, SWT.NONE);
+    gridLayout = new GridLayout(2, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 5;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 2;
+    accountComposite.setLayout(gridLayout);
+    factory.setComposite(accountComposite);
+
+    Composite usernameComposite = new Composite(accountComposite, SWT.NONE);
+    usernameComposite.setLayout(gridLayout);
+    factory.setComposite(usernameComposite);
+
+    factory.createLabel("lblUsername");    
+    txtUsername = factory.createText();
+    gridData = new GridData();
+    gridData.widthHint = 100;
+    txtUsername.setLayoutData(gridData);
+
+    Composite passwordComposite = new Composite(accountComposite, SWT.NONE);
+    passwordComposite.setLayout(gridLayout);
+    factory.setComposite(passwordComposite);
+
+    factory.createLabel("lblPassword");     
+    txtPassword = factory.createText();
+    txtPassword.setEchoChar('x');
+    gridData = new GridData();
+    gridData.widthHint = 100;
+    txtPassword.setLayoutData(gridData);
+  }
+
+  public void getData(DBInfo config) {
+    if(cboDBType.isEnabled()) {
+      config.setType(cboDBType.getSelectionIndex());
+    } else {
+      config.setType(-1);
+    }
+    if(txtDBHost.isEnabled()) config.setHost(txtDBHost.getText());
+    if(txtDBPort.isEnabled()) config.setPort(txtDBPort.getText());
+    if(txtDb.isEnabled()) {
+      config.setDatabase(txtDb.getText());
+    } else {
+      config.setDatabase("remote database");
+    }
+    if(txtUsername.isEnabled()) config.setUsername(txtUsername.getText());
+    if(txtPassword.isEnabled()) config.setPassword(txtPassword.getText());
+  }
+
+  public void setData(DBInfo config) {
+    cboDBType.select(config.getType());
+    if(config.getHost() != null) {
+      txtDBHost.setText(config.getHost());
+    }
+    if(config.getPort() != null) {
+      txtDBPort.setText(config.getPort());
+    }
+    if(config.getDatabase() != null) {
+      txtDb.setText(config.getDatabase());
+    }
+    if(config.getUsername() != null) {
+      txtUsername.setText(config.getUsername());
+    }
+    if(config.getPassword() != null) {
+      txtPassword.setText(config.getPassword());
+    }
+  }
+
+  public void setEnable(int type, boolean enable) {
+    if(type == 0) {
+      cboDBType.setEnabled(enable);
+      txtDBHost.setEnabled(enable);
+      txtDBPort.setEnabled(enable);
+      txtDb.setEnabled(enable);
+      txtUsername.setEnabled(enable);
+      txtPassword.setEnabled(enable);
+      return;
+    }
+    
+    if(type == 1) {
+      cboDBType.setEnabled(false);
+      txtDBHost.setEnabled(enable);
+      txtDBPort.setEnabled(enable);
+      txtDb.setEnabled(false);
+      txtUsername.setEnabled(enable);
+      txtPassword.setEnabled(false);
+      return;
+    }
+  }
+
+}

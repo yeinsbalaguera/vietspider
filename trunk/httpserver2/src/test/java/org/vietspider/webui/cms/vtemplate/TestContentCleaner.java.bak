@@ -1,0 +1,54 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.cms.vtemplate;
+
+import java.io.File;
+import java.net.URL;
+
+import org.vietspider.bean.Article;
+import org.vietspider.db.database.DatabaseService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 24, 2011  
+ */
+public class TestContentCleaner {
+  
+  public static void main(String[] args) throws Exception {
+    URL url = TestContentCleaner.class.getResource(".");
+    File folder = new File(url.toURI());
+    File file  = new File("D:\\java\\test\\vsnews\\data\\");
+//  File file  = new File("D:\\Releases\\Joomla_Demo\\VietSpider3_18_XML_Ent\\data");
+//  File file = new File("D:\\Releases\\VietStock\\VietSpiderServerBuild18\\data");
+//  File file = new File("D:\\Releases\\Releases\\VietSpider3_17_1_XML_Win32\\data\\");
+//  File file = new File("D:\\Releases\\Releases\\VietSpider3_17_1_XML_Win64\\data\\");
+//  File file = new File("D:\\VietSpider Build 18\\data\\");
+//  File file  = new File("D:\\Releases\\Joomla_Demo\\VietSpider3_18_XML_Solr\\data\\");
+  
+//  System.out.println(file.getCanonicalPath());
+    System.setProperty("save.link.download", "true");
+    System.setProperty("vietspider.data.path", file.getCanonicalPath());
+    System.setProperty("vietspider.test", "true");
+    
+    
+    Article article = DatabaseService.getLoader().loadArticle("201109241158120003"); 
+    String text = article.getContent().getContent();//new String(RWData.getInstance().load(file), "utf8");
+    
+    File oldfile = new File(folder,  "old." + article.getId() + ".html");
+    new DataWriter().save(oldfile, text.getBytes("utf8"));
+    
+    ContentCleaner cleaner = new ContentCleaner();
+    StringBuilder builder = new StringBuilder();
+    builder.append("<meta http-equiv=\"content-type\" content=\"text/head; charset=utf-8\">");
+    cleaner.buildContent(builder, text, "test");
+    
+    File newfile = new File(folder,  article.getId() + ".html");
+    new DataWriter().save(newfile, builder.toString().getBytes("utf8"));
+    
+    System.out.println(newfile.getAbsolutePath());
+    
+    System.exit(0);
+  }
+}

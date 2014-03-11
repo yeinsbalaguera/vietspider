@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<database>
+  <driver>org.postgresql.Driver</driver>
+  <connection>jdbc:postgresql://localhost/vietspiderdb</connection>
+  <user>postgres</user>
+  <password>12345</password>
+  <inited>true</inited>
+  <scripts>
+    <java.lang.String>DROP TABLE META</java.lang.String>
+    <java.lang.String>DROP TABLE RELATION</java.lang.String>
+    <java.lang.String>DROP TABLE DOMAIN</java.lang.String>
+    <java.lang.String>DROP TABLE IMAGE</java.lang.String>
+    <java.lang.String>DROP TABLE FILTER</java.lang.String>
+    <java.lang.String>DROP TABLE CONTENT</java.lang.String>
+    <java.lang.String>
+      CREATE TABLE DOMAIN (
+      	ID  				BIGINT, 
+      	DATE				VARCHAR(50), 
+      	CATEGORY 			VARCHAR(1000), 
+      	NAME 				VARCHAR(1000)
+      )
+    </java.lang.String>
+    <java.lang.String>
+      CREATE TABLE META (
+      	ID 					BIGINT, 
+      	DOMAIN_ID 			BIGINT,
+      	TITLE 				VARCHAR(2000), 
+      	DES 				VARCHAR(4000), 
+      	IMAGE 				VARCHAR(500), 
+        TIME 				VARCHAR(100), 
+        SOURCE_TIME 		VARCHAR(100), 
+        URL 				VARCHAR(500)
+      )
+    </java.lang.String>
+    <java.lang.String>
+      CREATE TABLE CONTENT(
+        META_ID 			BIGINT, 
+        DATE				VARCHAR(50),       
+        CONTENT 			TEXT
+      )
+    </java.lang.String>
+    <java.lang.String>
+      CREATE TABLE RELATION(
+        META_ID 			BIGINT, 
+        RELATION_ID 		BIGINT, 
+        PERCENT 			INTEGER
+      )
+    </java.lang.String>
+    <java.lang.String>
+      CREATE TABLE IMAGE(
+        ID 					VARCHAR(200), 
+        META_ID 			BIGINT, 
+        CONTENT_TYPE 		VARCHAR(200), 
+        NAME 				VARCHAR(200), 
+        IMAGE 				BYTEA
+      )
+    </java.lang.String>
+  </scripts>
+</database>

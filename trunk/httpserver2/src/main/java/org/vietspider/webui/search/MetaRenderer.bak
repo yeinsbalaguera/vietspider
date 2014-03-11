@@ -1,0 +1,162 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.search;
+
+import java.net.URL;
+import java.util.List;
+
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Meta;
+import org.vietspider.bean.MetaRelation;
+import org.vietspider.common.Application;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 4, 2009  
+ */
+class MetaRendererBak {
+  
+//  private String metaHtml;
+//  private String imageHtml;
+  
+  byte[] render(Article article, String query) throws Exception {  
+//    try {
+//      DataReader reader = new DataReader();
+//      File  file = new File(UtilFile.getFolder("system/cms/search/"), "Meta.html");
+////      metaHtml = new String(reader.load(file), Application.CHARSET);
+//      
+//      file = new File(UtilFile.getFolder("system/cms/search/"), "Image.html");
+//      imageHtml = new String(reader.load(file), Application.CHARSET);
+//    } catch (Exception e) {
+//      LogService.getInstance().setThrowable(e);
+//    }
+    
+    Meta  meta  = article.getMeta();
+    if(meta  == null 
+        || meta.getId() == null 
+        || meta.getId().equals("null")) return new byte[0];
+    
+    StringBuilder builder = new StringBuilder();
+    builder.append("<tr><td><a href=\"").append(meta.getSource()).append("\" class=\"meta_title\">");
+    
+    //System.out.println("  " + meta.getTitle() + " || " + article.getStatus());
+    
+    builder.append(meta.getTitle()).append(" (").append("-1").append(")</a>");
+   
+    builder.append("</td></tr><tr><td height=\"5\"></td></tr>");
+    builder.append("<tr><td class=\"text\">");
+   
+    //build image if has
+    
+    if(meta.getImage() != null && !meta.getImage().trim().isEmpty()) {
+      builder.append("<table align=\"left\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"125\">");
+      builder.append("<tbody><tr><td class=\"LoadBox\">");
+      builder.append("<img src=\"").append(meta.getImage()).append("\" border=\"0\" width=\"125\">");
+      builder.append("</td></tr> </tbody></table>");
+    }
+    
+    builder.append("<p align=\"justify\">").append(meta.getDesc()).append("</p>");
+
+    /*Map<String, Object> properties = meta.getProperties();
+    if(!properties.isEmpty()) {
+//      builder.append("<tr><td >");
+      
+      String value = (String)properties.get("nlp.product");
+      if(value != null && value.length() > 0) {
+        builder.append("<p class=\"properties\">&nbsp;&nbsp;&nbsp;");
+        builder.append(value);
+        builder.append("</p>");
+      }
+      
+      builder.append("<p class=\"properties\">&nbsp;&nbsp;&nbsp;");
+      boolean next = false;
+      value = (String)properties.get("nlp.phone");
+      if(value != null && value.length() > 0) {
+        if(next) builder.append("  <b>-</b> ");
+        builder.append(value);
+        next = true;
+      }
+      
+      value = (String)properties.get("nlp.address");
+      if(value == null || value.length() < 1) {
+        value = (String)properties.get("region");
+      }
+      
+      if(value != null && value.length() > 0) {
+        if(next) builder.append("  <b>-</b> ");
+        builder.append(value);
+      } 
+      
+      value = (String)properties.get("region");
+      if(value != null && value.length() > 0) {
+        if(next) builder.append("  <b> >>> ");
+        builder.append(value).append("</b>");
+      }
+      builder.append("</p>");
+    }*/
+    
+    String value = meta.getSourceTime();
+    if(value != null && value.length() > 0) {
+      builder.append("<p class=\"properties\">&nbsp;&nbsp;&nbsp;Rao ngày: ");
+      builder.append(value);
+      builder.append("</p>");
+    }
+    
+//    pattern = "$image";
+//    idx = metaHtml.indexOf(pattern);
+//    if(idx > -1){
+//      builder.append(metaHtml.substring(start, idx));
+//      String img = meta.getImage();
+//      if(img != null && img.trim().length() > 1 && !img.trim().equals("null")) {
+//        createImage(builder, img);
+//      }
+//      start = idx + pattern.length();
+//    }
+    
+
+    List<MetaRelation> relations = article.getMetaRelation();
+    if(relations != null && relations.size() > 0) {
+      RelationRenderer relationRenderer = new RelationRenderer();
+      builder.append(relationRenderer.createRelation(relations, meta.getId(), query));
+    }
+    
+    builder.append("</td></tr>");
+    
+    
+    builder.append("<tr><td align=\"right\">");
+    String host = "";
+    try {
+      host = new URL(meta.getSource()).getHost();
+    } catch (Exception e) {
+    }
+    builder.append("<span class=\"updated_time_local\">").append(host).append("</span>&nbsp; - &nbsp;");
+    builder.append("<span class=\"updated_time_local\"><a  href=\"/site/cached/");
+    builder.append(meta.getId()).append("/?query=").append(query).append("&translate=true");
+    builder.append("\" class=\"updated_time_local\">Chuyển sang có dấu");
+    builder.append("</a></span>&nbsp; - &nbsp;");    
+    
+    builder.append("<span class=\"updated_time_local\"><a  href=\"/site/cached/");
+    builder.append(meta.getId()).append("/?query=").append(query);
+    builder.append("\" class=\"updated_time_local\">Bản lưu tạm hôm ").append(meta.getTime());
+    builder.append("</a></span>");
+    builder.append("</td></tr>");
+    
+    builder.append("<tr><td height=\"20\"></td></tr>");
+    
+    return builder.toString().getBytes(Application.CHARSET);
+  }
+  
+//  void createImage(StringBuilder builder, String img) throws Exception {
+//    String pattern = "$image";
+//    int idx = imageHtml.indexOf(pattern);
+//    int start = 0;
+//    if(idx > -1){
+//      builder.append(imageHtml.substring(start, idx)).append(img);
+//      start = idx + pattern.length();
+//    }
+//    if(start < imageHtml.length()) builder.append(imageHtml.substring(start));
+//  }
+ 
+}

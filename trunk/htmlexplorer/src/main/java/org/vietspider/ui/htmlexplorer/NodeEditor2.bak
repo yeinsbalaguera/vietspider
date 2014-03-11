@@ -1,0 +1,218 @@
+package org.vietspider.ui.htmlexplorer;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.FocusAdapter;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
+import org.vietspider.common.util.Worker;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.LiveSashForm;
+import org.vietspider.ui.widget.PathHightLight;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.waiter.ThreadExecutor;
+
+public final class NodeEditor2 extends Composite {
+
+  public StyledText textEditor;
+  public StyledText textViewer;
+  
+//  NodeSuggestion popup;
+
+  protected  boolean hasFocus;
+  protected  Listener listener, filter;
+  
+  HtmlExplorerListener explorer;
+  
+  protected LiveSashForm liveSashForm;
+  
+  protected String tempText;
+  
+//  private AddPathButton dialog;
+
+  public NodeEditor2(Composite parent, 
+      HtmlExplorerListener htmlExplorer, ApplicationFactory factory) {
+    super (parent, SWT.BORDER);
+    
+    GridLayout gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.marginLeft = 5;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    
+    this.setLayout(gridLayout);
+    
+    this.explorer = htmlExplorer;
+    
+    liveSashForm = new LiveSashForm(this, SWT.VERTICAL);
+    GridData gridData = new GridData(GridData.FILL_BOTH);
+    liveSashForm.setLayoutData(gridData);
+
+    textEditor = new StyledText(liveSashForm, SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+    textEditor.setBackground(new Color(getDisplay(), 244, 244, 244));
+    textEditor.setDoubleClickEnabled(false);
+    textEditor.setFont(UIDATA.FONT_10B);
+//    textEditor.addKeyListener(new NodeEditorKeyListener(this));
+    
+    textEditor.setDoubleClickEnabled(false);
+    textEditor.addMouseListener(new MouseAdapter() {
+      public void mouseDown(MouseEvent e) {
+        if(e.button == 2) {
+          if(getText().trim().isEmpty()) return;
+//          explorer.addEditItem();
+        }
+      }
+
+      
+      @SuppressWarnings("unused")
+      public void mouseDoubleClick(MouseEvent e) {
+        PathHightLight.handleDoubleClick(textEditor);
+      }
+    });
+    
+    
+//    if(XPWidgetTheme.isPlatform()) {  
+//      PopupMenu popupMenu = new PopupMenu(textEditor, XPWidgetTheme.THEME);
+//      CMenu menu = new CMenu();
+//      popupMenu.setMenu(menu);
+//      textEditor.setMenu(new Menu(textEditor.getShell(), SWT.POP_UP));
+//      CMenuItem item = new CMenuItem(SWT.NONE);
+//      item.addSelectionListener(new SelectionAdapter() {
+//        @SuppressWarnings("unused")
+//        public void widgetSelected(SelectionEvent e) {
+//          textEditor.setText("");
+//        }
+//      });
+//      item.setText("Clear");
+//      menu.addItem(item);
+//    } else {
+      Menu menu = new Menu(textEditor.getShell(), SWT.POP_UP);
+      textEditor.setMenu(menu);
+      
+      MenuItem item = new MenuItem(menu, SWT.NONE);
+      item.addSelectionListener(new SelectionAdapter() {
+        @SuppressWarnings("unused")
+        public void widgetSelected(SelectionEvent e) {
+          textEditor.setText("");
+        }
+      });
+      item.setText("Clear");
+//    }
+    
+    textEditor.addFocusListener(new FocusAdapter() {
+      @SuppressWarnings("unused")
+      public void focusLost(FocusEvent e) {
+//        if(popup != null && popup.isFocus()) return; 
+        textViewer.setText(textEditor.getText());
+        liveSashForm.setMaximizedControl(textViewer);
+        PathHightLight.setAutoStyle(textViewer);
+      }
+    });
+    
+    textEditor.addModifyListener(new ModifyListener() {
+      @SuppressWarnings("unused")
+      public void modifyText(ModifyEvent arg0) {
+        tempText = textEditor.getText();
+        Runnable timer = new Runnable () {
+          public void run () {
+            if(textEditor.isDisposed()) return;
+            String newText = textEditor.getText();
+            if(tempText.equals(newText)) {
+              tempText = newText;
+              PathHightLight.setAutoStyle(textEditor);
+              return;
+            }
+            getDisplay().timerExec(1000, this);
+          }
+        };
+        getDisplay().timerExec(1000, timer);
+      }
+    });
+    
+    textViewer = new StyledText(liveSashForm, SWT.MULTI | SWT.H_SCROLL);
+    liveSashForm.setMaximizedControl(textViewer);
+    textViewer.setFont(UIDATA.FONT_10B);
+    textViewer.addFocusListener(new FocusAdapter() {
+      @SuppressWarnings("unused")
+      public void focusGained(FocusEvent e) {
+        textEditor.setText(textViewer.getText());
+        Runnable timer = new Runnable () {
+          public void run () {
+            int caret = textViewer.getCaretOffset();
+            liveSashForm.setMaximizedControl(textEditor);
+            textEditor.setSelection(caret, caret);
+            textEditor.setFocus();
+          }
+        };
+        getDisplay().timerExec(100, timer);
+      }
+    });
+      
+   /* dialog = */new AddPathButton(factory, explorer, this);
+  }
+  
+  void insertText(String pattern) {
+    int pos = textEditor.getCaretOffset();
+    String value = textEditor.getText();
+    value.toUpperCase();
+    value = value.substring(0, pos) + pattern + value.substring(pos);
+    textEditor.setText(value);
+    textEditor.setCaretOffset(pos + pattern.length());
+    getShell().setFocus();
+    liveSashForm.setMaximizedControl(textEditor);
+    textEditor.setFocus();
+    textEditor.setCaretOffset(pos+pattern.length());
+  }
+  
+  public String getText() {
+    String text = textEditor.getText();
+    StringBuilder builder = new StringBuilder(text.length());
+    int index = 0;
+    while(index < text.length()) {
+      char c = text.charAt(index);
+      if( c != ' ' && (Character.isSpaceChar(c) 
+          || Character.isWhitespace(c)) )  {
+        index++;
+        continue;
+      }
+      builder.append(c);
+      index++;
+    }
+    if(builder.length() != text.length()) setText(builder.toString());
+    return builder.toString(); 
+  }
+  
+  public void setText(final String value) {
+    Worker excutor = new Worker() {
+      public void abort() {}
+      public void before() {}
+      public void execute() {}
+
+      public void after() {
+        textEditor.setText(value);
+        textViewer.setText(value);
+        
+        PathHightLight.setAutoStyle(textViewer);
+        PathHightLight.setAutoStyle(textEditor);
+      }
+    };
+    new ThreadExecutor(excutor, textEditor).start();
+  }
+  
+  public StyledText getTextViewer() { return textViewer; }
+  public StyledText getTextEditor() { return textEditor; }
+
+}

@@ -1,0 +1,177 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.link.cache;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.zip.GZIPOutputStream;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.DataWriter;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.NameConverter;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.html.parser.HTMLTokenUtils;
+import org.vietspider.model.Source;
+import org.vietspider.serialize.Bean2XML;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 25, 2008  
+ */
+class LinkSaver  {
+
+  private volatile int totalOfFile = 0;
+  private volatile GZIPOutputStream gzip; 
+  private volatile File file;
+
+  private Source source;
+  private Bean2XML toXML = Bean2XML.getInstance();
+
+  public LinkSaver(Source source) {
+    this.source = source;
+  }
+
+  void write(ConcurrentLinkedQueue<Link> queue) {
+    if(queue == null || queue.isEmpty()) return;
+    int depth = source.getDepth();
+
+    createOutput();
+
+    try {
+      while(!queue.isEmpty()) {
+        Link link = queue.poll();
+        if(link == null) break;
+
+        int level = link.getLevel();
+        if(level < 1 || (level >= depth && !link.isData())) continue;
+
+        if(gzip == null) continue;
+
+        String xml =  toXML(link);
+        if(xml == null) continue;
+        if(totalOfFile > 0) {
+          gzip.write(LinkIO.INSTANCE_SEPARATOR.getBytes(Application.CHARSET));
+        }
+        gzip.write(xml.getBytes(Application.CHARSET));
+        gzip.flush();
+        totalOfFile++;
+
+        if(totalOfFile >= LinkIO.SIZE) break;
+      }
+
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(source, e);
+    } 
+
+//    System.out.println(" da save duoc "+ file.getAbsolutePath() + " : " + counter+ " void file "+ totalOfFile);
+  }
+
+  private void createOutput() {
+    //close old file
+    if(gzip != null) {
+      if(totalOfFile < LinkIO.SIZE) return;
+      endSession();
+    }
+
+    totalOfFile = 0;
+    File folder = getFolder();
+    if(!folder.exists()) folder.mkdirs();
+    List<Integer> indexs = toFileIndexs(folder);
+    this.file = searchFile(folder, indexs);
+    try {
+      FileOutputStream fileOutputStream = new FileOutputStream(file);
+      gzip = new GZIPOutputStream(fileOutputStream);
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(source, e);
+    }
+  }
+
+  void endSession() {
+    if(gzip == null) return;
+    try {
+      gzip.close();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(source, e);
+    }
+
+    if(file == null) return;
+    String name  = file.getName();
+    int index = name.lastIndexOf(".tmp");
+//    System.out.println(" thay co index "+ index);
+    if(index < 1) return;
+    name  = name.substring(0, index);
+    if(file.renameTo(new File(file.getParent(), name))) return;
+//    System.out.println(" rename ko thanh cong ");
+    try {
+      new DataWriter().copy(file, new File(file.getParent(), name));
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(source, e);
+    }
+    file.delete();
+  }
+
+
+  private String toXML(Link link) {
+    CachedWeb cachedLink = new CachedWeb();
+    cachedLink.setLink(link);
+
+    cachedLink.setLastAccess(System.currentTimeMillis());
+    if(link.getTokens() != null) {
+      cachedLink.setHtml(HTMLTokenUtils.buildContent(link.getTokens()));
+    }
+
+    try {
+      return toXML.toXMLDocument(cachedLink).getTextValue();
+    } catch (OutOfMemoryError e) {
+      System.gc();
+      LogService.getInstance().setThrowable(source, e);
+      return null;
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(source, e);
+      return null;
+    }
+  }
+
+  private List<Integer> toFileIndexs(File folder) {
+    List<Integer> list = new ArrayList<Integer>();
+    File [] files = folder.listFiles();
+    for(int i = 0; i < files.length; i++) {
+      try {
+        list.add(Integer.parseInt(files[i].getName()));
+      } catch (Exception e) {
+      }
+    }
+    Collections.sort(list);
+    return list;
+  }
+
+  private File searchFile(File folder, List<Integer> list) {
+    for(int i = 0; i < list.size(); i++) {
+      if(i == list.get(i)) continue;
+      list.add(i);
+      Collections.sort(list);
+      return new File(folder, String.valueOf(i));
+    }
+    int i = list.size();
+    list.add(i);
+    Collections.sort(list);
+    return new File(folder, String.valueOf(i)+".tmp");
+  }
+
+  private File getFolder() {
+    String name = new NameConverter().encode(source.getFullName());
+    return UtilFile.getFolder("track/link/"+name+"/");
+  }
+
+  Source getSource() { return source; }
+
+}
+

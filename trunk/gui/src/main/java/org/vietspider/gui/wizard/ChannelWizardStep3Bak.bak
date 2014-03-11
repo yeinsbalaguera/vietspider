@@ -1,0 +1,302 @@
+package org.vietspider.gui.wizard;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.browser.Browser;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.Tree;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.util.HTMLParserDetector;
+import org.vietspider.ui.htmlexplorer.PathBox;
+import org.vietspider.ui.htmlexplorer.TreeHandler;
+import org.vietspider.ui.services.ClientRM;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.UIDATA;
+
+/***************************************************************************
+ * Copyright 2001-2011 ArcSight, Inc. All rights reserved.  		 *
+ **************************************************************************/
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          thuannd2@fsoft.com.vn
+ * Dec 30, 2011  
+ */
+public class ChannelWizardStep3Bak extends ChannelWizardComposite {
+  
+  private Browser browser;
+  private Tree tree;
+  protected PathBox box;
+  
+  protected Button butRemovePath;
+  protected Button butUp;
+  protected Button butDown;
+  protected Button butRemoveAll;
+  
+  protected TreeHandler handler;
+  protected HTMLDocument document ;
+  
+  public ChannelWizardStep3Bak(ChannelWizard wizard) {
+    super(wizard);
+    
+    ClientRM clientRM = ChannelWizard.getResources();
+    ApplicationFactory factory = 
+      new ApplicationFactory(wizard, clientRM, getClass().getName());
+    
+    SashForm mainSash = new SashForm(this, SWT.VERTICAL);
+    mainSash.setBackground(getBackground());
+    GridData gridData = new GridData(GridData.FILL_BOTH);
+    mainSash.setLayoutData(gridData);
+
+    SashForm browserSash = new SashForm(mainSash, SWT.HORIZONTAL);
+    browserSash.setBackground(getBackground());
+    browserSash.setLayoutData(new GridData(GridData.FILL_BOTH));
+    
+    browser = ApplicationFactory.createBrowser(browserSash, null);
+    gridData = new GridData(GridData.FILL_BOTH);
+    browser.setLayoutData(gridData);
+    
+    tree = new Tree(browserSash, SWT.BORDER);
+    tree.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+//        String path = HTMLExplorerViewer.selectTree();
+//        if (path != null) HTMLExplorerViewer.box.setPath(path);
+      }
+    });
+    tree.addMouseListener(new MouseAdapter() {
+      public void mouseDown(MouseEvent e) {
+//        if (e.button == 2) HTMLExplorerViewer.addItems();
+      }
+    });
+    Menu treeMenu = new Menu(getShell(), 8);
+    tree.setMenu(treeMenu);
+
+    MenuItem menuItem1 = new MenuItem(treeMenu, SWT.PUSH);
+    menuItem1.setText(ChannelWizard.getLabel("step3.add.node"));
+    menuItem1.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+      }
+    });
+    
+    menuItem1 = new MenuItem(treeMenu, SWT.PUSH);
+    menuItem1.setText(ChannelWizard.getLabel("step3.remove.node"));
+    menuItem1.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+      }
+    });
+    
+    menuItem1 = new MenuItem(treeMenu, SWT.PUSH);
+    menuItem1.setText(ChannelWizard.getLabel("step3.expand.node"));
+    menuItem1.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+      }
+    });
+    
+
+    menuItem1 = new MenuItem(treeMenu, SWT.PUSH);
+    menuItem1.setText(ChannelWizard.getLabel("step3.collapse.node"));//"Collapse"
+    menuItem1.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+      }
+    });
+    
+    menuItem1 = new MenuItem(treeMenu, SWT.PUSH);
+    menuItem1.setText(ChannelWizard.getLabel("step3.expand.data.node"));//"Expand Data Node"
+    menuItem1.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+      }
+    });
+
+    menuItem1 = new MenuItem(treeMenu, SWT.PUSH);
+    menuItem1.setText(ChannelWizard.getLabel("step3.collapse.tree"));//"Collapse Tree");
+    menuItem1.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+      }
+    });
+    
+    menuItem1.setText(ChannelWizard.getLabel("step3.view.item"));//"View Item");
+    menuItem1.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+      }
+    });
+  
+    browserSash.setWeights(new int[] { 500, 300 });
+    
+    box = new PathBox(mainSash, factory);
+    box.setLayoutData(new GridData(GridData.FILL_BOTH));
+    
+    mainSash.setWeights(new int[] {80, 20 });
+    
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    createButton(gridData);
+  }
+  
+  protected void createButton(GridData gridData) {
+    Composite composite = new Composite(this, SWT.NONE);
+    composite.setLayoutData(gridData);
+    
+    GridLayout gridLayout = new GridLayout(7, false);
+    composite.setLayout(gridLayout);
+    
+    butRemoveAll = new Button(composite, SWT.PUSH);
+    butRemoveAll.setText(ChannelWizard.getLabel("step3.remove.all"));
+    butRemoveAll.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+//        MessageBox msg = new MessageBox(DataSelectorExplorer.getShell(), 65728);
+//        ClientRM clientRM = new ClientRM("HTMLExplorer");
+//        msg.setMessage(clientRM.getLabel("remove.all.message"));
+//        if (msg.open() != 64) return;
+//        DataSelectorExplorer.box.removeAll();
+      }
+    });
+    butRemoveAll.setFont(UIDATA.FONT_9);
+
+    butUp = new Button(composite, SWT.PUSH);
+    butUp.setText(ChannelWizard.getLabel("step3.up"));
+    butUp.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+//        DataSelectorExplorer.box.up();
+      }
+    });
+    butUp.setVisible(false);
+    butUp.setFont(UIDATA.FONT_9);
+
+    butDown = new Button(composite, SWT.PUSH);
+    butDown.setText(ChannelWizard.getLabel("step3.down"));
+    butDown.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+//        DataSelectorExplorer.box.down();
+      }
+    });
+    butDown.setVisible(false);
+    butDown.setFont(UIDATA.FONT_9);
+
+    lblStatus = new Label(composite, SWT.NONE);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    lblStatus.setLayoutData(gridData);
+    lblStatus.setFont(UIDATA.FONT_10);
+    lblStatus.setForeground(getDisplay().getSystemColor(3));
+
+    butRemovePath = new Button(composite, SWT.PUSH);
+    butRemovePath.setText(ChannelWizard.getLabel("step3.remove"));
+    butRemovePath.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent evt) {
+//        if (DataSelectorExplorer.errorPath != null) DataSelectorExplorer.box.removePath(DataSelectorExplorer.errorPath);
+//        DataSelectorExplorer.showErrorPath(null);
+      }
+    });
+    butRemovePath.setVisible(false);
+    butRemovePath.setFont(UIDATA.FONT_9);
+    
+    butPrevious = new Button(composite, SWT.PUSH);
+    butPrevious.setText(ChannelWizard.getLabel("previous"));
+    butPrevious.addSelectionListener(new PreviousCompositeSelectionAdapter());
+    gridData = new GridData();
+    butPrevious.setLayoutData(gridData);
+    
+    butNext = new Button(composite, SWT.PUSH);
+    butNext.setText(ChannelWizard.getLabel("next"));
+    butNext.addSelectionListener(
+        new NextCompositeSelectionAdapter());
+    gridData = new GridData();
+    butNext.setLayoutData(gridData);
+  }
+
+  public void show() {
+    try {
+      HTMLParserDetector detector = new HTMLParserDetector();
+      byte[] bytes = wizard.getTemp("page.data.content");
+      String text = new String(bytes, wizard.getSource().getEncoding());
+      document = detector.createDocument(text);
+    } catch (Exception e) {
+      error(e.toString());
+    }
+    if(document == null) return;
+    tree.removeAll();
+    if(handler == null) handler = new TreeHandler();
+    handler.createTreeItem(tree, document);
+  }
+  
+  /*private String selectTree() {
+    TreeItem[] items = tree.getSelection();
+    if( items == null || items.length  < 1) return null;
+    final TreeItem item = items[0];
+    final String txt = handler.getConfig(item);
+
+//    treeAddButton.computeShowArea(item);
+
+    HTMLExtractor extractor  = new HTMLExtractor();
+    NodePathParser pathParser = new NodePathParser();
+
+    try {
+      NodePath nodePath  = pathParser.toPath(txt);
+      HTMLNode node = extractor.lookNode(document.getRoot(), nodePath);
+      if(node == null) return txt;
+      if(node.isNode(Name.CONTENT) 
+          || node.isNode(Name.COMMENT) 
+          || node.isNode(Name.UNKNOWN)) {
+        browser.setText(node.getTextValue());
+        return txt;
+      }
+
+      NodePath headerPath  = pathParser.toPath("HEAD");
+      HTMLNode header = extractor.lookNode(document.getRoot(), headerPath);
+
+      String address = browser.getUrl();
+      if(address != null && address.startsWith("http") && address.length() > 7) {
+        HyperLinkUtil hyperlinkUtil = new HyperLinkUtil();
+        try {
+          URL home = new URL(address);
+
+          hyperlinkUtil.createFullNormalLink(node, home);
+          hyperlinkUtil.createFullImageLink(node, home);
+          HashMap<String, String> map = new HashMap<String,String>(); 
+          map.put("link","href");
+          map.put("script","src");
+          hyperlinkUtil.createFullLink(header, map, home, null);
+        } catch(MalformedURLException me) {
+        } catch (Exception e) {
+          ClientLog.getInstance().setException(getShell(), e);
+        }
+      }
+
+      StringBuilder builder = new StringBuilder();
+      builder.append("<html>");
+      builder.append("<head>");
+      if(toolbar.isShowAll() && header != null && header.getChildren() != null) {
+        for(HTMLNode ele : header.getChildren()){
+          builder.append(ele.getTextValue()).append('\n');
+        }
+      }
+      //      String baseHref = HTMLExplorer.class.getResource("").toString();
+      //      builder.append("<base href=\""+baseHref+"\">");
+      if(node.isNode(Name.BODY)) {
+        HTMLNode body = null;
+        try {
+          nodePath  = pathParser.toPath("BODY");
+          body = extractor.lookNode(document.getRoot(), nodePath);
+        } catch (Exception e) {
+          ClientLog.getInstance().setException(getShell(), e);
+        }
+
+        if(header == null || body == null) return txt;
+        searchRenderer.viewDocument(header, body, null);
+      } else {
+        searchRenderer.viewDocument(null, node, null);
+      }
+    } catch(Exception exp){
+      ClientLog.getInstance().setException(getShell(), exp);
+    }    
+    return txt;
+  }  */
+
+}

@@ -1,0 +1,308 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.io;
+
+import java.util.Calendar;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.LogService;
+import org.vietspider.db.SystemProperties;
+import org.vietspider.log.SourceLogUtils;
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jun 9, 2008  
+ */
+public class UpdatePriorityService implements Runnable {
+  
+  private int cacheDate = -1;
+  
+  public UpdatePriorityService() {
+  }
+  
+  public void run() {
+    boolean setPriority = false;
+    SystemProperties system = SystemProperties.getInstance();
+    try {
+      setPriority = Boolean.valueOf(system.getValue(Application.AUTO_SET_PRIORITY));
+    } catch (Exception exp) {
+      LogService.getInstance().setMessage(exp, null);
+      setPriority = false;
+    }
+    
+    while(setPriority) {
+      Calendar calendar = Calendar.getInstance();
+      if(calendar.get(Calendar.DAY_OF_MONTH) != cacheDate) {
+        int date = calendar.get(Calendar.DAY_OF_MONTH);
+        setPriority(date) ;
+        cacheDate = date;
+      }
+      
+      try {
+        Thread.sleep(1*60*60*1000l);
+      }catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+  }
+  
+  private void setPriority(final int date) {
+    SourceLogUtils log = new SourceLogUtils();
+    String [] dateValues = log.loadDate();
+    if(dateValues.length < 2) return ;
+//    File file = files[1];
+    
+//    new ISourceLogHandler() {
+//      @Override
+//      public void handle(SourceLog sourceLog) {
+//        int data = sourceLog.getTotalData();
+//        long link = sourceLog.getTotalLink();
+//        if(link < 1) return;
+//        
+//        String [] elements = sourceLog.getName().split("\\.");
+//        if(elements.length < 3) return;
+//
+//        NameConverter converter = new NameConverter();
+//        String group = NameConverter.encode(CharsUtil.cutAndTrim(elements[0]));
+//        String category = NameConverter.encode(CharsUtil.cutAndTrim(elements[1]));
+//        String name  = category+"."+NameConverter.encode(CharsUtil.cutAndTrim(elements[2]));
+//        
+//        File folder = UtilFile.getFolderNotCreate("sources/sources/"+group+"/"+category+"/");
+//        if(folder == null || !folder.exists()) return;
+//        File fileSource = new File(folder, name);
+//        if(!fileSource.exists()) return;
+//        
+//        Calendar lastUpdate = Calendar.getInstance();
+//        lastUpdate.setTimeInMillis(fileSource.lastModified()); 
+//        if(lastUpdate.get(Calendar.DAY_OF_MONTH) == date) return;
+//        
+//        Source source = SourceIO.getInstance().loadSource(group, category, name);
+//        if(source == null || source.getPriority() < 1) return;
+//        
+//        if(group.equals("ARTICLE") 
+//            || group.equals("CLASSIFIED")
+//            || group.equals("JOB")) {
+//          setDailyPriority(source, link, data);
+//        } else if(group.equals("PRODUCT") 
+//            || group.equals("FORUM")
+//            || group.equals("PROFILE")
+//            || group.equals("BLOG")) {
+//          setHalfWeekPriority(source, link, data);
+//        } else {
+//          setWeekPriority(source, link, data);
+//        }
+////        new SourceWriter(source);
+//      }
+//      
+//    };
+    
+    /*RandomAccessFile random = null;
+    try {
+      random = new RandomAccessFile(file, "r");
+      random.seek(0);
+      
+      long position = 0;
+      while(true) {
+        if(position >= random.length()) break;
+        
+        String sourceName = random.readUTF();
+        if(sourceName == null) break;
+        int visit = random.readInt();
+        int data = random.readInt();
+        long link = random.readLong();
+        
+        position = random.getFilePointer();
+
+        if(link < 1) continue;
+        
+        String [] elements = sourceName.split("\\.");
+        if(elements.length < 3) continue;
+
+        NameConverter converter = new NameConverter();
+        String group = NameConverter.encode(CharsUtil.cutAndTrim(elements[0]));
+        String category = NameConverter.encode(CharsUtil.cutAndTrim(elements[1]));
+        String name  = category+"."+NameConverter.encode(CharsUtil.cutAndTrim(elements[2]));
+        
+        folder = UtilFile.getFolderNotCreate("sources/sources/"+group+"/"+category+"/");
+        if(folder == null || !folder.exists()) continue;
+        File fileSource = new File(folder, name);
+        if(!fileSource.exists()) continue;
+        
+//        folder = UtilFile.getFolderNotCreate("sources/homepage/url/"+group+"/"+category+"/");
+//        File fileHomepage = new File(folder, name+".homepage.1");
+//        if(fileHomepage.exists()) continue;
+        
+        Calendar lastUpdate = Calendar.getInstance();
+        lastUpdate.setTimeInMillis(fileSource.lastModified()); 
+        if(lastUpdate.get(Calendar.DAY_OF_MONTH) == date) continue;
+        
+        Source source = new SourceReader().readSource(group, category, name);
+        if(source == null || source.getPriority() < 1) continue;
+        
+        if(group.equals("ARTICLE") 
+            || group.equals("CLASSIFIED")
+            || group.equals("JOB")) {
+          setDailyPriority(source, link, data);
+        } else if(group.equals("PRODUCT") 
+            || group.equals("FORUM")
+            || group.equals("PROFILE")
+            || group.equals("BLOG")) {
+          setHalfWeekPriority(source, link, data);
+        } else {
+          setWeekPriority(source, link, data);
+        }
+        new SourceWriter(source);
+      }
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable("APPLICATION", e);
+    } finally {
+      try {
+        if(random != null) random.close();
+      } catch (Exception e2) {
+        LogService.getInstance().setThrowable(e2);
+      }
+    }*/
+  }
+  
+  //ARTICLE, CLASSIFIED, JOB
+  private void setDailyPriority(Source source, long link, int data) {
+    int d = 2*24;
+    int priority = source.getPriority();
+    if(link < 50) {
+      if(data <= 0) {
+        if(priority < 3*d) {
+          source.setPriority(3*d);
+        } else {
+          source.setPriority(5*d);  
+        }
+      } else if(data > 0 && data < 5) {
+        source.setPriority(3*d);
+      } else if(data >= 5 && data < 10) {
+        source.setPriority(2*d);
+      } else if(data >= 10 && data < 15) {
+        source.setPriority(1*d);
+      } else {
+        source.setPriority(d/2);
+      }
+      return;
+    }
+    
+    long ratio = (data*100)/link;
+    
+    if(ratio < 2) {
+      if(priority < 4*d) {
+        source.setPriority(4*d);
+      } else {
+        source.setPriority(5*d);
+      }
+    } else if(ratio >= 2 && ratio < 5) {
+      source.setPriority(3*d + d/2);
+    } else if(ratio >= 5 && ratio < 10) {
+      source.setPriority(3*d);
+    } else if(ratio >= 10 && ratio < 15) {
+      source.setPriority(2*d);
+    } else if(ratio >= 15 && ratio < 25) {
+      source.setPriority(1*d);
+    } else if(ratio >= 25 && ratio < 30) {
+      source.setPriority(8);
+    } else {
+      source.setPriority(4);
+    }
+  }
+  
+  //FORUM, BLOG, PROFILE, PRODUCT
+  private void setHalfWeekPriority(Source source, long link, int data) {
+    int d = 2*24;
+    int priority = source.getPriority();
+    if(link < 50) {
+      if(data <= 0) {
+        if(priority < 7*d) {
+          source.setPriority(7*d);
+        } else {
+          source.setPriority(12*d);
+        }
+      } else if(data > 0 && data < 5) {
+        source.setPriority(7*d);
+      } else if(data >= 5 && data < 10) {
+        source.setPriority(5*d);
+      } else if(data >= 10 && data < 15) {
+        source.setPriority(3*d);
+      } else {
+        source.setPriority(d/2);
+      }
+      return;
+    }
+    
+    long ratio = (data*100)/link;
+    
+    if(ratio < 2) {
+      if(priority < 7*d) {
+        source.setPriority(7*d);
+      } else {
+        source.setPriority(12*d);
+      }
+    } else if(ratio >= 2 && ratio < 5) {
+      source.setPriority(6*d);
+    } else if(ratio >= 5 && ratio < 10) {
+      source.setPriority(5*d);
+    } else if(ratio >= 10 && ratio < 15) {
+      source.setPriority(3*d);
+    } else if(ratio >= 15 && ratio < 25) {
+      source.setPriority(2*d);
+    } else if(ratio >= 25 && ratio < 30) {
+      source.setPriority(d/2);
+    } else {
+      source.setPriority(12);
+    }
+  }
+  
+  // SEARCHTIONARY, STORY, LYRIC, POETRY
+  private void setWeekPriority(Source source, long link, int data) {
+    int d = 2*24;
+    int priority = source.getPriority();
+    if(link < 50) {
+      if(data <= 0) {
+        if(priority < 10*d) {
+          source.setPriority(10*d);
+        } else {
+          source.setPriority(14*d);
+        }
+      } else if(data > 0 && data < 5) {
+        source.setPriority(10*d);
+      } else if(data >= 5 && data < 10) {
+        source.setPriority(7*d);
+      } else if(data >= 10 && data < 15) {
+        source.setPriority(3*d);
+      } else {
+        source.setPriority(1*d);
+      }
+      return;
+    }
+    
+    long ratio = (data*100)/link;
+    
+    if(ratio < 2) {
+      if(priority < 12*d) {
+        source.setPriority(12*d);
+      } else {
+        source.setPriority(15*d);
+      }
+    } else if(ratio >= 2 && ratio < 5) {
+      source.setPriority(10*d);
+    } else if(ratio >= 5 && ratio < 10) {
+      source.setPriority(7*d);
+    } else if(ratio >= 10 && ratio < 15) {
+      source.setPriority(4*d);
+    } else if(ratio >= 15 && ratio < 25) {
+      source.setPriority(3*d);
+    } else if(ratio >= 25 && ratio < 30) {
+      source.setPriority(d/2);
+    } else {
+      source.setPriority(16);
+    }
+  }
+
+}

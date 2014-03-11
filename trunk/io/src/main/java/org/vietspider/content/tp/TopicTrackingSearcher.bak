@@ -1,0 +1,76 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.search;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.lucene.analysis.WhitespaceAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.store.RAMDirectory;
+import org.vietspider.content.tp.model.SummarizeDocument;
+import org.vietspider.content.tp.word.Word;
+import org.vietspider.index.HitDoc;
+import org.vietspider.index.HitDocCollector;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 5, 2007  
+ */
+public class TopicTrackingSearcher {
+  
+  private final static short MAX = 1000;
+  
+  public List<Document> search(String indexedDir, SummarizeDocument doc) throws Exception {
+    if(!check(indexedDir)) return null;
+    RAMDirectory ramDir = new RAMDirectory(indexedDir);
+    IndexReader reader = IndexReader.open(ramDir);
+    IndexSearcher indexSearcher = new IndexSearcher(reader);
+    List<Document>list =  new ArrayList<Document>();
+    Word [] words = doc.getNouns().getWord();
+    
+  
+    for(Word word : words){      
+      QueryParser parser = new QueryParser(SummarizeDocument.FIELD_NOUN, new WhitespaceAnalyzer());
+      Query query = parser.parse(word.getValue());
+      
+      HitDocCollector collector = new HitDocCollector(MAX) ;
+      indexSearcher.search(query, null, collector) ;
+      HitDoc[] hitDocs = collector.getHitDoc();
+      
+      for(int i = 0; i < Math.min(hitDocs.length, MAX); i++) {
+        int docId = hitDocs[i].getDocId();
+        addDocument(list, indexSearcher.doc(docId), String.valueOf(doc.getId()));
+      }
+    }
+    indexSearcher.close();
+    reader.close();
+    ramDir.close();
+    return list;
+  }
+  
+  private boolean check(String path){
+    if(path == null || path.length()< 1) return false;
+    File file  = new File(path);
+    if(!file.exists()) return false;    
+    return file.listFiles().length > 0;
+  }
+  
+  private void addDocument(List<Document> list, Document doc, String mine){
+    Field f = doc.getField(SummarizeDocument.FIELD_ID); 
+    if(mine.equals(f.stringValue())) return;
+    for(Document ele : list){
+      Field field = ele.getField(SummarizeDocument.FIELD_ID);
+      if(f.stringValue().equals(field.stringValue()) ) return;
+    }
+    list.add(doc);
+  }    
+}

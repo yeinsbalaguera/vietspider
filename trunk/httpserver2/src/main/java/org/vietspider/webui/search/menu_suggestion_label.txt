@@ -1,0 +1,7 @@
+Cửa hàng $pattern
+Biệt thự $pattern
+Chung cư $pattern
+Phòng $pattern
+Đất $pattern
+Nhà $pattern
+Căn hộ $pattern

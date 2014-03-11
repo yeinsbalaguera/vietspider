@@ -1,0 +1,77 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawler.util;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Mar 13, 2008  
+ */
+class GZipIO2 {
+  
+  public byte[] zip(byte [] bytes) throws Exception {
+    ByteArrayInputStream input = new ByteArrayInputStream(bytes);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    zip(input, output);
+    return output.toByteArray();
+  }
+  
+  public byte[] unzip(byte [] bytes) throws Exception {
+    if(bytes.length < 1) return bytes;
+    ByteArrayInputStream input = new ByteArrayInputStream(bytes);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    try {
+      unzip(output, input);
+    } catch (IOException e) {
+      return bytes;
+    }
+    return output.toByteArray();
+  }
+  
+  public void unzip(OutputStream output, InputStream input) throws Exception {
+    GZIPInputStream gzip = new GZIPInputStream(input);
+    byte[] tmp = new byte[2048];
+    int read;
+    while ((read = gzip.read(tmp)) != -1) {
+      output.write(tmp, 0, read);
+    }
+    gzip.close();
+  }
+  
+  public void zip(InputStream input, OutputStream output) throws Exception {
+    GZIPOutputStream gzip = new GZIPOutputStream(output);
+    byte[] tmp = new byte[2048];
+    int read;
+    while ((read = input.read(tmp)) != -1) {
+      gzip.write(tmp, 0, read);
+    }
+    gzip.close();
+  }
+  
+  public void unzip(OutputStream output, InputStream input, ZipProgress progress) throws Exception {
+    GZIPInputStream gzip = new GZIPInputStream(input);
+    byte[] tmp = new byte[2048];
+    int read;
+    while ((read = gzip.read(tmp)) != -1) {
+      output.write(tmp, 0, read);
+      if(progress != null) progress.setValue(read);
+    }
+    gzip.close();
+  }
+  
+  public static interface ZipProgress {
+    
+    public void setValue(int value);
+    
+  }
+  
+}

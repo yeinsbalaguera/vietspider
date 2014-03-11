@@ -1,0 +1,56 @@
+<div>
+	<h4>&nbsp;&nbsp;Gửi
+		nội dung cần mua hoặc cần thuê cho nik:
+	</h4>
+	<form name="user_post" id="user_post_form" method="post">
+		<div>
+			<textarea id="text" cols="80%" rows="10" name="text">$pattern
+			</textarea>
+		</div>
+		<br />
+		<div>
+			<input name="post" value="Gửi đi" type="submit">
+		</div>
+	</form>
+	<div style="display: block;" id="help">
+		<div class="tip_header">Hướng dẫn nhanh</div>
+		<div class="tip_body">
+			<p>
+				<dfn>&nbsp;›&nbsp;
+				</dfn>
+				Tìm kiếm theo giá, ví dụ:
+				<b>bán nhà 3.5 tỷ</b>
+				hoặc tìm theo khoảng giá, ví dụ:
+				<b>cho thuê phòng 1.5 triệu tới 2 triệu</b>
+				<br>
+			</p>
+			<p>
+				<dfn>&nbsp;›&nbsp;
+				</dfn>
+				Tìm kiếm theo diện tích, ví dụ:
+				<b>bán căn hộ 80m2</b>
+				hoặc
+				<b>cho thuê nhà 20m2 tới 40m2</b>
+				<br>
+
+			</p>
+			<p>
+				<dfn>&nbsp;›&nbsp;
+				</dfn>
+				Mẫu câu tìm kiếm tốt nhất gồm:
+				<b>loại hình rao</b>
+				+
+				<b>loại bất động sản</b>
+				+
+				<b>địa điểm</b>
+				+
+				<b>giá</b>
+				(nếu cần) +
+				<b>diện tích</b>
+				(nếu cần), ví dụ:
+				<b>Bán nhà quận 2 giá 3 tỷ 60m2</b>
+			</p>
+		</div>
+
+	</div>
+</div>

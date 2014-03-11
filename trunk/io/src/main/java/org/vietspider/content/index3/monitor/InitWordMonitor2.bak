@@ -1,0 +1,79 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.index3.monitor;
+
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 13, 2009  
+ */
+public class InitWordMonitor2 {
+
+  private static  int counter = 0;
+  private static List<InputStream> list = new ArrayList<InputStream>();
+
+  public static void main(String[] args) throws Exception {
+    //    File file = new File("D:\\java\\headvances3\\trunk\\vietspider\\startup\\src\\test\\data\\");
+    //    System.setProperty("vietspider.data.path", file.getCanonicalPath());
+    //
+    //    file = UtilFile.getFile("system/dictionary/vn/", "classified.key.word.txt");
+    //    String text = new String(new DataReader().load(file), "utf-8");
+
+    String []urls = {
+        "http://www.tienphong.vn/Tianyon/Index.aspx?ArticleID=174484&ChannelID=7",
+            "http://www.vnexpress.net/GL/Home/",
+            "http://linkhay.com/tin-hot",
+            "http://vietnamnet.vn/chinhtri/200910/Hoi-nghe-ca-VN-da-biet-thong-tin-nguoc-dai-ngu-dan-873574/",
+            "http://vietnamnet.vn/kinhte/200910/Chay-vang-mieng-tai-Ha-Noi-873582/",
+            "http://vietnamnet.vn/kinhte/200910/Giao-dich-tiep-tuc-bung-no-VNIndex-vuot-nguong-600-diem-873588/",
+            "http://vietnamnet.vn/kinhte/200910/Vang-tiep-tuc-tang-gia-du-doi-len-gan-239-trieu-dong/luong-873573/",
+            "http://vietnamnet.vn/xahoi/200910/Hang-chuc-ngan-dan-khan-cap-so-tan-873500/",
+            "http://vietnamnet.vn/xahoi/200910/Trang-dem-doi-bao-ngu-873598/",
+            "http://www.tuanvietnam.net/?vnnid=1240778",
+        "http://www.vnexpress.net/GL/Phap-luat/2009/10/3BA14842/"
+    };
+
+    int index = 1;
+
+    while(index < 1000) {
+      //      char c = text.charAt(index);
+      //      if(c == ',' || c ==';') {
+      //        String word = text.substring(start, index);
+      //        System.out.println(" connect by word "+ word.trim());
+      //        word = URLEncoder.encode(word.trim(), "utf-8");
+      for(int i = 0; i < urls.length; i++) {
+        final URL url = new URL(urls[i]);
+        new Thread() {
+          public void run() {
+            try   {
+              list.add(url.openConnection().getInputStream());
+              counter++;
+              System.err.println("open connections "+ counter);
+            } catch (java.io.IOException e) {
+              System.err.println(e.toString());
+            }
+          }
+        }.start();
+        try {
+              Thread.sleep(10l);
+            } catch(Exception e) {
+        }
+
+      }
+      index++;
+    }
+
+    try {
+      Thread.sleep(1000000l);
+    }catch (Exception e) {
+    }
+
+  }
+  
+}

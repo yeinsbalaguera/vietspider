@@ -1,0 +1,145 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.io;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.vietspider.bean.Meta;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.DataWriter;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.CalendarUtils;
+import org.vietspider.content.index.IndexEntry;
+import org.vietspider.crawl.plugin.PluginData;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.model.Source;
+import org.vietspider.serialize.Bean2XML;
+import org.vietspider.serialize.XML2Bean;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 28, 2008  
+ */
+class DbIndexEntry {
+  
+  private final static int SIZE_DATA = 50;
+  
+  private volatile int total = 0;
+  private ConcurrentLinkedQueue<IndexEntry> queue;
+  
+  DbIndexEntry() {
+    queue = new ConcurrentLinkedQueue<IndexEntry>();
+    
+    Application.addShutdown(new Application.IShutdown() {
+      public void execute() {
+        saveEntries();
+      }
+    });
+    
+    loadEntries();
+  }
+  
+  public IndexEntry read() {
+    if(total > 0) total--;
+    if(!queue.isEmpty()) return queue.poll();
+    return null;
+  }
+  
+  public void save(PluginData pluginData) {
+    List<HTMLNode> nodes = pluginData.getCloneTextNodes();
+    if(nodes == null) return;
+    
+    IndexEntry entry = new IndexEntry();
+    
+    Meta meta = pluginData.getMeta();
+    entry.setId(meta.getId());
+    entry.setTitle(meta.getTitle());
+    entry.setDesc(meta.getDesc());
+    
+    Source source = pluginData.getLink().getSource();
+    String domain = source.getGroup()+"."+source.getCategory()+"."+source.getName();
+    entry.setDomain(domain);
+    
+    String image = meta.getImage();
+    entry.setImage(image != null ? image : "");
+    
+    StringBuilder builder = new StringBuilder();
+    for(int i = 0; i < nodes.size(); i++) {
+      builder.append(' ').append(nodes.get(i).getValue());
+    }
+    entry.setContent(builder.toString());
+    
+    Calendar calendar = meta.getCalendar();
+    entry.setDate(CalendarUtils.getDateFormat().format(calendar.getTime()));
+    
+    save(entry);
+  }
+  
+  public void save(IndexEntry entry) {
+    loadEntries();
+    if(total >= SIZE_DATA) {
+      saveEntry(new DataWriter(), entry);
+      return;
+    }   
+    
+    queue.add(entry); 
+    total++;
+  }
+  
+  private void saveEntry(DataWriter writer, IndexEntry entry) {
+    try {
+      String xml = Bean2XML.getInstance().toXMLDocument(entry).getTextValue();
+      File file  = UtilFile.getFile("content/dbindexed/text/", entry.getId());
+      writer.save(file, xml.getBytes(Application.CHARSET));
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+  }
+  
+  private void saveEntries() {
+    DataWriter writer = new DataWriter();
+    while(!queue.isEmpty()) {
+      IndexEntry entry = queue.poll();
+      saveEntry(writer, entry);
+    }
+  }
+  
+  private void loadEntries() {
+    if(total >= SIZE_DATA) return;
+    
+    File file = UtilFile.getFolder("content/dbindexed/text/");
+    File [] files = file.listFiles();
+    Arrays.sort(files, new Comparator<File>() {
+      public int compare(File a, File b) {
+        return a.getName().compareTo(b.getName());
+      }
+    });
+    
+    DataReader reader = new DataReader();
+    XML2Bean xml2Bean = XML2Bean.getInstance();
+    for(File ele : files) {
+      try {
+        byte [] bytes = reader.load(ele);
+        IndexEntry entry = xml2Bean.toBean(IndexEntry.class, bytes);
+        if(entry == null) continue;
+        queue.add(entry);          
+        total++;
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+        continue;
+      }
+      ele.delete();
+      if(total >= SIZE_DATA) break;
+    }
+  }
+
+}

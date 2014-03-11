@@ -1,0 +1,61 @@
+package org.vietspider.ui.htmlexplorer;
+
+//@author Emil
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Shell;
+import org.vietspider.notifier.notifier.Notifier;
+
+public class PathConfirmDialogs {
+
+  static List<PathConfirmDialog> activeShells = new CopyOnWriteArrayList<PathConfirmDialog>();
+
+  public static PathConfirmDialog notify(Shell parent, String path) {
+    PathConfirmDialog dialog_ = new PathConfirmDialog(path);
+//        parent, displayTime, title, message, id, icon, listener);
+    // move other shells up
+    if (!activeShells.isEmpty()) {
+      List<PathConfirmDialog> modifiable = new ArrayList<PathConfirmDialog>(activeShells);
+      Collections.reverse(modifiable);
+      for (PathConfirmDialog dialog : modifiable) {
+        Shell shell = dialog.getShell();
+        if(shell.isDisposed() ||shell.getAlpha() < 1) continue;
+        Point curLoc = shell.getLocation();
+        shell.setLocation(curLoc.x, curLoc.y);
+        if (curLoc.y - 100 < 0) {
+          activeShells.remove(shell);
+          shell.dispose();
+        }
+      }
+    }
+
+    //    Rectangle clientArea = parent.getMonitor().getClientArea();
+    Rectangle clientArea = parent.getBounds();//parent.getClientArea();
+
+    int startX = clientArea.x + clientArea.width - 352;//352;
+    int startY = clientArea.y + clientArea.height - 105;
+
+    Shell shell = dialog_.getShell();
+    shell.setLocation(startX, startY);
+    shell.setAlpha(0);
+    shell.setVisible(true);
+    
+    activeShells.add(dialog_);
+    dialog_.fadeIn();
+
+    return dialog_;
+  }
+
+  public static void remove(PathConfirmDialog dialog) {
+    if(!dialog.getShell().isDisposed()) {
+      dialog.getShell().dispose();
+    }
+    activeShells.remove(dialog);
+  }
+
+}

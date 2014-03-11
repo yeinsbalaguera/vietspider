@@ -1,0 +1,86 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.content.tp;
+
+import org.vietspider.content.tp.word.CharUtil;
+import org.vietspider.content.tp.word.Word;
+import org.vietspider.content.tp.word.WordList;
+
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Aug 23, 2006
+ */
+public class NounComparator {
+  
+  public double compare(WordList list1, WordList list2, int timeRestriction){
+    Index index = getSimilars(list1, list2);    
+    double compareNumber = compareNumber(index, list1, list2);
+    if(compareNumber < 10) return 0.0;
+    if(index.size() < 3){
+      boolean small = true;
+      for(int i=0; i<index.size(); i++){
+        if(list1.getWord()[index.get(0,i)].getCount() > 1) {
+          small = false;
+          break;
+        }
+      }
+      if(small) return 0.0;
+    }
+//    System.out.println(" // compareNumber : " +compareNumber);
+    double compareTime = compareTime(index, list1, list2, timeRestriction);
+//    System.out.println(" compareTime : " + compareTime);
+    return (compareNumber + compareTime)/2;
+  }
+
+  public double compareNumber(Index index, WordList list1, WordList list2){
+    int time  = index.size()*100;
+    if(list2.getWord().length == 0) return 0;
+    if(list1.getWord().length == 0) return 0;
+    time = (time/list1.getWord().length) + (time/list2.getWord().length);
+    return time/2;
+  }
+
+  public double compareTime(Index index, WordList list1, WordList list2, int restriction){
+    int total1 = 0, total2 = 0;
+    Word [] words = list1.getWord();
+    for(Word word : words){ 
+      if(word.getCount() >= restriction ) total1 += word.getTime();
+    }
+
+    words = list2.getWord();
+    for(Word word : words){ 
+      if(word.getCount() >= restriction ) total2 += word.getTime(); 
+    }
+
+    int time1 = 0, time2 = 0; 
+
+    for(int i=0; i<index.size(); i++){
+      Word word = list1.getWord()[index.get(0,i)];
+      if(word.getCount() >= restriction ) time1 += word.getTime(); 
+      word = list2.getWord()[index.get(1,i)];
+      if(word.getCount() >= restriction ) time2 += word.getTime(); 
+    }   
+    if(total1 == 0 || total2 == 0) return 0; 
+    return (time1*100)/total1 + (time2*100)/total2;
+  }
+ 
+  public Index getSimilars(WordList list1, WordList list2){
+    int size = Math.min(list1.size(), list2.size());
+    Word [] words1 = list1.getWord();
+    Word [] words2 = list2.getWord();
+    Index indexs = new Index(size);
+    for(int i = 0; i < words1.length; i++){
+      for(int j = 0; j < words2.length; j++){
+        if(CharUtil.equals(words1[i].getValue(), words2[j].getValue())){
+          indexs.set(i, j);
+        }
+      }
+    }
+    return indexs;
+  }
+  
+}

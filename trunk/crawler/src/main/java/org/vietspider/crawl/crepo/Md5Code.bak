@@ -1,0 +1,43 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.crepo;
+
+import java.util.Comparator;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
+
+import org.headvances.util.html.MD5Hash;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jun 22, 2009  
+ */
+public class Md5Code {
+  
+  protected volatile Set<MD5Hash> codes;
+  protected volatile long lastAccess = System.currentTimeMillis();
+  
+  protected int homepageCode;
+  
+  Md5Code(int homepageCode) {
+    this.homepageCode = homepageCode;
+    codes = new ConcurrentSkipListSet<MD5Hash>(new Comparator<MD5Hash>() {
+      @Override
+      public int compare(MD5Hash m1, MD5Hash m2) {
+        return m1.compareTo(m2);
+      }
+    });
+  }
+  
+  public boolean contains(MD5Hash hash) { return codes.contains(hash); } 
+  
+  public void add(MD5Hash hash) { codes.add(hash); }
+
+  public int getHomepageCode() { return homepageCode; }
+  
+  void setLastAccess() { lastAccess = System.currentTimeMillis(); }
+  boolean isTimeout() { return System.currentTimeMillis() - lastAccess >= 5*60*1000; }
+  
+}

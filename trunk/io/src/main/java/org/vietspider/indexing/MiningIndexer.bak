@@ -1,0 +1,118 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.indexing;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.io.bean.DatabaseService;
+import org.vietspider.rt.analysis.DocumentFactory;
+import org.vietspider.rt.analysis.WhitespaceAnalyzer;
+import org.vietspider.rt.index.model.Document;
+import org.vietspider.rt.store.common.Directory;
+import org.vietspider.rt.store.common.FSDirectory;
+import org.vietspider.rt.store.index.IndexModifier;
+import org.vietspider.rt.store.index.IndexReader;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 5, 2007  
+ */
+public class MiningIndexer implements Runnable {
+  
+  private IndexModifier writer;
+  
+  private ConcurrentLinkedQueue<MiningMeta> queue;
+  
+  private DocumentFactory documentFactory;
+  
+  public MiningIndexer(DocumentFactory documentFactory) {
+    this.documentFactory = documentFactory;
+    queue = new ConcurrentLinkedQueue<MiningMeta>();
+    new Thread(this).start();
+    
+    Application.addShutdown(new Application.IShutdown() {
+      public void execute() {
+        try {
+          if(writer != null) writer.close();  
+        }catch (Exception e) {
+          LogService.getInstance().setThrowable(e);
+        }
+      }
+    });
+  }
+  
+  public void run() {
+    while(true) {
+      try {
+        if(!queue.isEmpty()) {
+          write(queue.poll());
+          Thread.sleep(1*1000);
+        } else {
+          Thread.sleep(15*1000);
+        }
+      } catch (Exception e) {
+        LogService.getInstance().setMessage(e, "delete data of date: ");
+      }
+    }
+  }
+  
+  public void put(MiningMeta meta) throws Exception { queue.add(meta); }
+  
+  private void write(MiningMeta meta) {
+    File file = UtilFile.getFolder("content/indexed/"+meta.getGroup().toString()+"/"+ meta.getDate());
+    try {
+      if(writer != null) writer.close();
+    }catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    
+    if(file.exists() && file.listFiles().length > 0) {
+//      try {
+//        Directory directory  = FSDirectory.getDirectory(file, true);
+//        if(IndexReader.isLocked(directory)) IndexReader.unlock(directory) ;
+//      } catch (Exception e) {
+//        LogService.getInstance().setThrowable(e);
+//      }  
+      
+      try {
+        writer = new IndexModifier(file, new WhitespaceAnalyzer(), false);
+      } catch (IOException ioe) {
+        try {
+          Directory directory  = FSDirectory.getDirectory(file, true);
+          if(IndexReader.isLocked(directory)) IndexReader.unlock(directory) ;
+        } catch (Exception e) {
+          LogService.getInstance().setThrowable(e);
+        } 
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+        return;
+      }   
+    } else {
+      try {
+        writer = new IndexModifier(file, new WhitespaceAnalyzer(), true);
+      }catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+        return;
+      }
+    }
+    
+    try {
+      Document doc = documentFactory.toDocument(meta.getSummarize());
+      writer.addDocument(doc);
+      writer.flush();
+      writer.close();
+      DatabaseService.getSaver().save(meta.getRelations());
+    } catch (Exception exp) {
+      LogService.getInstance().setMessage(exp, null);
+    }
+    writer = null;
+  }
+  
+}

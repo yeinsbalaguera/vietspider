@@ -1,0 +1,68 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.db.tp;
+
+import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.Query;
+import org.apache.solr.common.params.CommonParams;
+import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.search.QParser;
+import org.apache.solr.search.SolrQueryParser;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jan 6, 2010  
+ */
+class TpSolrQueryParser extends QParser {
+
+  String sortStr;
+
+  private SolrQueryParser phoneParser;
+  private SolrQueryParser emailParser;
+
+  public TpSolrQueryParser(String qstr,
+      SolrParams localParams, SolrParams params, SolrQueryRequest req) {
+    super(qstr, localParams, params, req);
+
+    String defaultField = getParam(CommonParams.DF);
+    if (defaultField==null) {
+      defaultField = getReq().getSchema().getDefaultSearchFieldName();
+    }
+  }
+
+
+  public Query parse() throws ParseException {
+//    System.out.println(" thay co "+ qstr);
+    if(qstr.startsWith("field:")) {
+      qstr = qstr.substring(6);
+      if(qstr.startsWith("phone:")) {
+        qstr = qstr.substring(6);
+//        System.out.println(qstr);
+        if(phoneParser == null) {
+          phoneParser = new SolrQueryParser(this, "phone");
+          phoneParser.setDefaultOperator(QueryParser.Operator.AND);
+        }
+//        System.out.println(phoneParser.parse(qstr));
+        return phoneParser.parse(qstr);
+      }
+      
+      if(qstr.startsWith("email:")) {
+        qstr = qstr.substring(6);
+        if(emailParser == null) {
+          emailParser = new SolrQueryParser(this, "email");
+          emailParser.setDefaultOperator(QueryParser.Operator.AND);
+        }
+        return emailParser.parse(qstr);
+      }
+    }
+    
+    return null;
+  }
+
+
+
+}

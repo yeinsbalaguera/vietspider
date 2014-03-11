@@ -1,0 +1,79 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.miming.vn;
+
+import java.io.File;
+import java.util.List;
+
+import org.vietspider.bean.xml.XArticle;
+import org.vietspider.common.io.DataReader;
+//import org.vietspider.content.db.tp.TopicTrackingServices;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.content.tp.vn.ViTopicTrackingAnalyzer;
+import org.vietspider.html.parser.HTMLParser2;
+import org.vietspider.html.parser.NodeImpl;
+import org.vietspider.locale.Html2Text;
+import org.vietspider.serialize.XML2Object;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 31, 2009  
+ */
+public class TestTpDatabases {
+  
+  static {
+    File file  = new File("D:\\Temp\\articles\\data");
+    try {
+      System.setProperty("vietspider.data.path", file.getCanonicalPath());
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+  
+  private static HTMLParser2 parser2 = new HTMLParser2();
+  private static DataReader reader = new DataReader();
+  private static ViTopicTrackingAnalyzer analyzer;
+  
+  public static void index(File file)  throws Exception {
+    File [] files = file.listFiles();
+    int counter = 0;
+    for(int i = 0; i < files.length; i++) {
+      if(files[i].getName().endsWith(".article.xml")) {
+        save(files[i]);
+      } else {
+        files[i].delete();
+      }
+      counter++;
+      if(counter >=10 ) {
+        try {
+          Thread.sleep(2*1000);
+        }catch (Exception e) {
+        }
+      }
+    }
+  }
+  
+  public static void save(File file) throws Exception {
+    byte [] bytes = reader.load(file);
+    XArticle xArticle = XML2Object.getInstance().toObject(XArticle.class, bytes);
+    List<NodeImpl> tokens = parser2.createTokens(xArticle.getContent().toCharArray());
+    String text = Html2Text.toText(tokens);
+    String name = file.getName();
+    int idx = name.indexOf('.');
+    if(idx > 0) name = name.substring(0, idx);
+    
+    TpWorkingData workingData = analyzer.analyzeDocument(text);
+    workingData.getTpDocument().setId(name);
+    
+//    TopicTrackingServices.getInstance().save(workingData);
+  }
+  
+  
+  public static void main(String[] args)  throws Exception {
+    File file = new File("D:\\Temp\\articles\\input");
+    analyzer = new ViTopicTrackingAnalyzer();
+    index(file);
+  }
+}
