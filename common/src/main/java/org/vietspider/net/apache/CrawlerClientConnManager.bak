@@ -1,0 +1,72 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.net.apache;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.http.HttpException;
+import org.apache.http.HttpResponse;
+import org.apache.http.conn.ClientConnectionOperator;
+import org.apache.http.conn.ClientConnectionRequest;
+import org.apache.http.conn.ConnectionPoolTimeoutException;
+import org.apache.http.conn.ManagedClientConnection;
+import org.apache.http.conn.OperatedClientConnection;
+import org.apache.http.conn.routing.HttpRoute;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.impl.conn.tsccm.BasicPoolEntry;
+import org.apache.http.impl.conn.tsccm.BasicPooledConnAdapter;
+import org.apache.http.impl.conn.tsccm.PoolEntryRequest;
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.params.HttpParams;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 19, 2009  
+ */
+public class CrawlerClientConnManager extends ThreadSafeClientConnManager {
+
+  public CrawlerClientConnManager(HttpParams params, SchemeRegistry schreg) {
+    super(params, schreg);
+    // TODO Auto-generated constructor stub
+  }
+
+  protected ClientConnectionOperator
+  createConnectionOperator(SchemeRegistry schreg) {
+    return new CrawlerClientConnectionOperator(schreg);
+  }
+
+  /*public ClientConnectionRequest requestConnection(final HttpRoute route, final Object state) {
+
+    final PoolEntryRequest poolRequest = connectionPool.requestPoolEntry(route, state);
+
+    return new ClientConnectionRequest() {
+      public void abortRequest() {
+        poolRequest.abortRequest();
+      }
+
+      public ManagedClientConnection getConnection(
+          long timeout, TimeUnit tunit) throws InterruptedException,
+          ConnectionPoolTimeoutException {
+        if (route == null) {
+          throw new IllegalArgumentException("Route may not be null.");
+        }
+
+        BasicPoolEntry entry = poolRequest.getPoolEntry(timeout, tunit);
+        return new BasicPooledConnAdapter(CrawlerClientConnManager.this, entry) {
+          public HttpResponse receiveResponseHeader() throws HttpException, IOException {
+            assertNotAborted();
+            OperatedClientConnection conn = getWrappedConnection();
+            assertValid(conn);
+            unmarkReusable();
+            return conn.receiveResponseHeader();
+          }
+        };
+      }
+
+    };
+
+  }*/
+}

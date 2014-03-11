@@ -1,0 +1,214 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.net.client;
+
+import java.io.InterruptedIOException;
+import java.net.SocketException;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.List;
+
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.NoHttpResponseException;
+import org.apache.http.client.RedirectException;
+import org.apache.http.client.methods.AbortableHttpRequest;
+import org.apache.http.conn.ConnectionPoolTimeoutException;
+import org.vietspider.chars.URLEncoder;
+import org.vietspider.common.io.LogService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 18, 2007  
+ */
+class HttpMethodHandler2  {
+
+  public final static String HTTP_REQUEST_TIMEOUT = "http.request.timeout";
+
+  private AbortableHttpRequest httpRequest;
+  private HttpHost httpHost;
+  private WebClient webClient;
+
+  private volatile  Executor executor;
+  private Thread threadExecutor;
+
+  private final Object lock = new Object();
+  private volatile  long timeout = 60*1000;
+  private volatile long time;
+  
+  public HttpMethodHandler2(WebClient webClient) {
+    this.webClient = webClient;
+  }
+
+  public HttpMethodHandler2 clone() { return new HttpMethodHandler2(webClient); }
+
+  public WebClient getWebClient() { return webClient; }
+
+  public HttpResponse execute(String address, String referer, List<NameValuePair> params) throws Exception {
+    try {
+      this.httpHost = webClient.createHttpHost(address); 
+      return execute(webClient.createPostMethod(address, referer, params));
+//    System.out.println(httpGet.getFirstHeader("User-Agent").getValue().trim());
+    } catch (URISyntaxException e) {
+      //encode url
+      URLEncoder encoder = new URLEncoder();
+      address = encoder.encode(address);
+      try {
+        this.httpHost = webClient.createHttpHost(address);
+        return execute(webClient.createPostMethod(address, referer, params));
+      } catch (URISyntaxException se) {
+        LogService.getInstance().setMessage(se, "1.Get method handler: " + address);
+        return null;
+      }
+    } catch (IllegalArgumentException e) {
+      LogService.getInstance().setMessage(e, "2.Get method handler: " + address);
+      return null;
+    } catch (Exception e) {
+      LogService.getInstance().setMessage(e, "3.Get method handler: " + address);
+      return null;
+    }
+  }
+
+  public HttpResponse execute(String address, String referer) throws Exception {
+    try {
+//    System.out.println(address);
+      this.httpHost = webClient.createHttpHost(address);
+      return execute(webClient.createGetMethod(address, referer));
+    } catch (UnknownHostException e) {
+      throw e;
+//    System.out.println(httpGet.getFirstHeader("User-Agent").getValue().trim());
+    } catch (URISyntaxException e) {//encode url
+      return executeEncodeURL(address, referer); 
+    } catch (IllegalArgumentException e) {
+      return executeEncodeURL(address, referer);
+    } catch (Exception e) {
+//    e.printStackTrace();
+      LogService.getInstance().setMessage(e, "6.Get method handler: " + e.toString() + "-" + address);
+      return null;
+    }
+  }
+  
+  private HttpResponse executeEncodeURL (String address, String referer) throws Exception {
+    URLEncoder encoder = new URLEncoder();
+    address = encoder.encode(address);
+    try {
+      this.httpHost = webClient.createHttpHost(address);
+      return execute(webClient.createGetMethod(address, referer));
+    } catch (URISyntaxException se) {
+      LogService.getInstance().setMessage(se, "4.Get method handler: " + address);
+    } catch (IllegalArgumentException e) {
+      LogService.getInstance().setMessage(e, "5.Get method handler: " + address);
+    }
+    return null;
+  }
+
+  public HttpResponse execute(HttpHost host, AbortableHttpRequest abortedHttpRequest) throws Exception {
+    this.httpHost = host;
+    return execute(abortedHttpRequest);
+  }
+
+  private HttpResponse execute(AbortableHttpRequest httpRequest_) throws Exception {
+    this.httpRequest = null;
+    HttpResponse httpResponse = null;
+    this.httpRequest = httpRequest_;
+    if(httpRequest == null) return null;
+
+    if(threadExecutor != null 
+        && threadExecutor.isAlive())  threadExecutor.interrupt();
+
+    executor = new Executor();
+    threadExecutor = new Thread(executor);
+
+//  System.out.println(address);
+//    long start_ = System.currentTimeMillis();
+
+    threadExecutor.start();
+    dowait();
+//    long end_ = System.currentTimeMillis();
+//    System.out.println(" hi duoc roi " + (end_ - start_));
+
+//  System.out.println(" mat " + (end_ - start_));
+
+    httpResponse = executor.getResponse();//webClient.execute(httpGet);
+    Exception exception = executor.getException();
+    if(exception != null) {
+      if(IndexOutOfBoundsException.class.isInstance(exception)
+          || RedirectException.class.isInstance(exception)
+          || IllegalStateException.class.isInstance(exception)
+          || SocketException.class.isInstance(exception)
+          || ConnectionPoolTimeoutException.class.isInstance(exception)
+          || InterruptedIOException.class.isInstance(exception) ) {
+        return null;
+      } else if(IllegalArgumentException.class.isInstance(exception))  {
+        LogService.getInstance().setMessage(exception, null);
+        return null;
+      } else if (NoHttpResponseException.class.isInstance(exception)
+          || UnknownHostException.class.isInstance(exception)) {
+        throw exception;
+      } 
+      throw exception;
+    }
+
+    if(httpResponse == null) return null;
+    httpRequest = null;
+    return httpResponse;
+  }
+  
+  public void setTimeout(long timeout) {
+    this.timeout = timeout;
+  }
+
+  public void abort() { 
+    if(httpRequest != null) httpRequest.abort();
+  }
+
+  private class Executor implements Runnable {
+
+    private volatile HttpResponse response;
+    private volatile Exception exception;
+
+    public synchronized void run() {
+      try {
+        response = webClient.execute(httpHost, (HttpRequest)httpRequest);
+//        System.out.println(" executor da thu hien xong " + (timeout - time));
+        time = -1;
+      } catch (Exception e) {
+        if(httpRequest != null) httpRequest.abort();
+        exception = e;
+      }
+    }
+
+    public HttpResponse getResponse() { return response; }
+
+    public Exception getException() { return exception; }
+  }
+  
+  private void dowait() {
+//    System.out.println(" chuan bi vao ");
+    time = timeout;
+    while(true) {
+      synchronized (lock) {
+        try {
+          time -= 100;
+          lock.wait(100, 0);
+//          if(time % 1000 == 0) {
+//            System.out.println(" dang chay cai roi " + time);
+//          }
+        } catch (InterruptedException ie) {
+          time = 0;
+        }
+        if(time < 1) break;
+      }
+    }
+    if(time == 0) httpRequest.abort();
+//      System.out.println(" da bi timeout ");
+//      httpRequest.abort();
+//    }
+//    System.out.println(" sau do "+ time);
+  }
+  
+}

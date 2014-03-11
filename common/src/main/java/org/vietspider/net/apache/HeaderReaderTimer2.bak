@@ -1,0 +1,82 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.net.apache;
+
+import java.io.InputStream;
+
+import org.vietspider.common.io.LogService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * May 7, 2009  
+ */
+class HeaderReaderTimer2 implements Runnable {
+
+  private int timeout = 2*60*1000;
+
+  protected volatile boolean live = true;
+
+  protected volatile int elapsed = 0;
+  private volatile InputStream instream;
+
+  HeaderReaderTimer2(InputStream inputStream) {
+    this.instream = inputStream;
+  }
+
+  public void run() {
+    while(live){
+      try { 
+        Thread.sleep(500);
+      } catch (InterruptedException ioe) {
+      }
+
+      // Use 'synchronized' to prevent conflicts
+      synchronized (this) {
+        elapsed += 500;
+
+        // Check to see if the time has been exceeded
+        if (elapsed >= timeout) {
+          System.out.println(" chuan bi abort " + instream.hashCode());
+          try {
+            instream.close();
+          } catch (Exception e) {
+            LogService.getInstance().setThrowable(e);
+          }
+          live = false;
+          //          System.out.println(" bi timeout roi "+ elapsed);
+          //          worker.abort();
+        } 
+      }
+    }
+  }
+
+  /* void abort() {
+    try {
+      Field field = LoggingSessionInputBuffer.class.getDeclaredField("in");
+      field.setAccessible(true);
+      Object obj = field.get(this.buffer);
+
+      field = obj.getClass().getDeclaredField("socket");
+      field.setAccessible(true);
+      Socket socket = (Socket)field.get(obj);
+
+      LogWebsite.getInstance().setMessage(null, "Close socket "+socket+" by read header timer!!!");
+
+//      System.out.println("thay co  "+ buffer.hashCode()+ socket+ " / "+ socket.getInputStream());
+//      System.out.println(" chuan bi kill no");
+
+      socket.getInputStream().close();
+      socket.close();
+
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(e);
+    }
+  }*/
+
+  boolean isLive() { return live; }
+
+  void closeTimer() { this.live = false; }
+
+}
