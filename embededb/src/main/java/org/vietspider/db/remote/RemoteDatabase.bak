@@ -1,0 +1,164 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.headvances.vietspider.remote;
+
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.headvances.service.storage.input.HadoopRPC;
+import org.headvances.storage.MimeType;
+import org.headvances.storage.entity.web.WebPage;
+import org.headvances.storage.record.Record;
+import org.headvances.storage.shard.ShardIdMapper;
+import org.headvances.vietspider.SystemProperties;
+import org.vietspider.bean.Content;
+import org.vietspider.bean.Domain;
+import org.vietspider.bean.Meta;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.text.CalendarUtils;
+import org.vietspider.model.Group;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 10, 2009  
+ */
+public final class RemoteDatabase {
+
+  private HadoopRPC rpc;
+  private Map<Integer, List<Record>> temp = new HashMap<Integer, List<Record>>();
+
+  public RemoteDatabase() {
+    String remote = SystemProperties.getInstance().getValue("remote.webdb.address");
+    if(remote == null || (remote = remote.trim() ).isEmpty()) return;
+    if(!remote.startsWith("http://")) remote = "http://"+remote;
+    try {
+      URL url = new URL(remote);
+      rpc = HadoopRPC.Util.getInstance(url.getHost(), url.getPort()) ;
+    } catch (Exception e) {
+      Application.addError(this);
+      LogService.getInstance().setThrowable(e);
+    }
+  }
+
+  public void add(Domain domain, Meta meta, Content content) {
+    if(rpc == null || domain == null) return;
+    int clusterId  = getClusterId(domain.getGroup(), domain.getCategory());
+    String mimeType = getMimeType(clusterId) ;
+    
+    Record record = createRecord(mimeType,
+        meta.getSource(), meta.getTitle(), 
+        meta.getDesc(), meta.getImage(), content.getContent(), meta.getTime()
+    );
+    List<Record> records = temp.get(clusterId);
+    if(records == null) {
+      records = new ArrayList<Record>();
+      temp.put(clusterId, records);
+    }
+    records.add(record);
+  }
+
+  public void sync() {
+    if(rpc == null) return;
+    Iterator<Entry<Integer, List<Record>>> iterator = temp.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Entry<Integer, List<Record>> entry = iterator.next();
+      Integer clusterId = entry.getKey();
+      List<Record> records = entry.getValue();
+      if(records.size() < 1) continue;
+      try {
+        rpc.add(clusterId, records.toArray(new Record[records.size()]));
+        records.clear();
+        if(Application.containsError(this)) Application.removeError(this);
+      } catch (Exception e) {
+        Application.addError(this);
+        LogService.getInstance().setThrowable(e);
+      } 
+    }
+//    LogService.getInstance().setMessage(null,  "remote 1 synchronized successfull!");
+  }
+
+  private Record createRecord(String mimeType, 
+      String url, String topic, String desc, String imageUrl, String content, String sourceTime) {
+    Record record = new Record(url, topic) ;
+
+    WebPage wdata = new WebPage(mimeType, url, topic, desc, content, System.currentTimeMillis()) ;
+    wdata.setLanguage(new String[] {"vn", "en"}) ;
+    wdata.setSymbolicImageURL(imageUrl) ;
+    if(sourceTime != null && !sourceTime.trim().isEmpty()) {
+      try {
+        Date date = CalendarUtils.getDateTimeFormat().parse(sourceTime);
+        wdata.setPostDate(date.getTime());
+      } catch (Exception e) {
+        LogService.getInstance().setMessage(e, e.toString());
+      }
+    }
+    record.add(wdata) ;
+
+    //byte[] buf = "This is the binary data.".getBytes() ;
+    //BinaryData bin = new BinaryData("binary", "binary/octet", buf) ;
+    //record.add(bin) ;
+    return record;
+  }
+
+  private int getClusterId(String group, String category) {
+    if("Trang vàng".equalsIgnoreCase(category)) {
+      return ShardIdMapper.WEBDATA_YELLOWPAGE;
+    }
+    
+    if(group.equalsIgnoreCase(Group.ARTICLE)) {
+      return  ShardIdMapper.WEBDATA_ARTICLE;
+    } else if(group.equalsIgnoreCase(Group.BLOG)) {
+      return  ShardIdMapper.WEBDATA_BLOG;
+    } else if(group.equalsIgnoreCase(Group.CLASSIFIED)) {
+      return  ShardIdMapper.WEBDATA_CLASSIFIED;
+    } else if(group.equalsIgnoreCase(Group.FORUM)) {
+      return  ShardIdMapper.WEBDATA_FORUM;
+    } else if(group.equalsIgnoreCase(Group.JOB)) {
+      return  ShardIdMapper.WEBDATA_JOB;
+    } else if(group.equalsIgnoreCase(Group.LYRIC)) {
+      return  ShardIdMapper.WEBDATA_LYRIC;
+    } else if(group.equalsIgnoreCase(Group.POETRY)) {
+      return  ShardIdMapper.WEBDATA_POETRY;
+    } else if(group.equalsIgnoreCase(Group.PRODUCT)) {
+      return  ShardIdMapper.WEBDATA_PRODUCT;
+    } else if(group.equalsIgnoreCase(Group.PROFILE)) {
+      return  ShardIdMapper.WEBDATA_PROFILE;
+    } else if(group.equalsIgnoreCase(Group.SEARCHTIONARY)) {
+      return  ShardIdMapper.WEBDATA_SEARCHTIONARY;
+    } else if(group.equalsIgnoreCase(Group.SITE)) {
+      return  ShardIdMapper.WEBDATA_SITE;
+    } else if(group.equalsIgnoreCase(Group.STORY)) {
+      return  ShardIdMapper.WEBDATA_LITERATURE;
+    } 
+    //     else if(clusterId == ShardIdMapper.WEBDATA_YELLOWPAGE) mimeType = MimeType.YELLOWPAGE;
+    return  ShardIdMapper.WEBDATA_SITE;
+  }
+
+  private String getMimeType(int clusterId) {
+    String mimeType = null ;
+    if(clusterId == ShardIdMapper.WEBDATA_ARTICLE) mimeType = MimeType.ARTICLE ;
+    else if(clusterId == ShardIdMapper.WEBDATA_BLOG) mimeType = MimeType.BLOG ;
+    else if(clusterId == ShardIdMapper.WEBDATA_FORUM) mimeType = MimeType.FORUM ;
+    else if(clusterId == ShardIdMapper.WEBDATA_POETRY) mimeType = MimeType.POETRY ;
+    else if(clusterId == ShardIdMapper.WEBDATA_LYRIC) mimeType = MimeType.LYRIC ;
+    else if(clusterId == ShardIdMapper.WEBDATA_LITERATURE) mimeType = MimeType.LITERATURE;
+    else if(clusterId == ShardIdMapper.WEBDATA_PROFILE) mimeType = MimeType.PROFILE;
+    else if(clusterId == ShardIdMapper.WEBDATA_CLASSIFIED) mimeType = MimeType.CLASSIFIED;
+    else if(clusterId == ShardIdMapper.WEBDATA_JOB) mimeType = MimeType.JOB;
+    else if(clusterId == ShardIdMapper.WEBDATA_PRODUCT) mimeType = MimeType.PRODUCT;
+    else if(clusterId == ShardIdMapper.WEBDATA_SEARCHTIONARY) mimeType = MimeType.SEARCHTIONARY;
+    else if(clusterId == ShardIdMapper.WEBDATA_YELLOWPAGE) mimeType = MimeType.YELLOWPAGE;
+    else if(clusterId == ShardIdMapper.WEBDATA_SITE) mimeType = MimeType.SITE;
+    return mimeType;
+  }
+  
+}

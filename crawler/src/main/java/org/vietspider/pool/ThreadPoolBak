@@ -1,0 +1,150 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.pool;
+
+import java.net.UnknownHostException;
+
+import org.vietspider.common.io.LogService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Nov 10, 2007  
+ */
+public class ThreadPoolBak<T, V, E extends Status> implements Runnable {
+  
+  protected Executor<T,V,E> [] executors;
+  
+  protected SessionQueue<T,V> sessionQueue;
+  
+  private boolean pause = false;
+  
+  private volatile boolean execute = true;
+  
+  protected volatile int sleep  = 5*1000; 
+  
+  protected int unknownHostCounter = 0;
+  
+  public void run () {
+    while(execute) {
+      monitor();
+      try {
+        Thread.sleep(sleep);
+      } catch (Exception e) {
+        LogService.getInstance().setException(e);
+      }
+    }
+  }
+  
+  protected void monitor() {
+    if(pause) return;
+
+    int free = 0;
+    
+    for(Executor<T,V,E> executor : executors) {
+      if(!executor.isEndSession()) continue;
+      executor.endSession();
+      T key  = sessionQueue.next();
+      while(key != null && isDownloadingKey(key)) {
+        key = sessionQueue.next();
+      }
+      V value = sessionQueue.createValue(key);
+      try {
+        if(sessionQueue.validate(key, value)) {
+          executor.newSession(key, value);
+        } else {
+          free++;
+        }
+        unknownHostCounter = 0;
+      } catch (UnknownHostException e) {
+        unknownHostCounter++;
+      } catch (Exception e) {
+        LogService.getInstance().setMessage(value, e.toString());
+      }
+    }
+    
+    if(unknownHostCounter >= free){
+      try {
+        Thread.sleep(15*sleep);
+      } catch (Exception e) {
+        LogService.getInstance().setException(e);
+      }
+    }
+    
+    if(unknownHostCounter >= executors.length) pause = true; 
+  }
+  
+  public void pauseExecutors() {
+    if(executors == null) return;
+    for(Executor<T,V,E> executor : executors) {
+      executor.setPause(true);
+    }
+    pause = true;
+  }
+  
+  public void continueExecutors() {
+    pause = false;
+//    if(sessionQueue.isLast()) sessionQueue.toFirst();
+    for(Executor<T,V,E> executor : executors) {
+      executor.setPause(false);
+    }  
+  }
+  
+  public boolean isPause() { return pause; }
+  
+  public void nextElement(T key) {
+    sessionQueue.next(key);
+    for(Executor<T,V,E> executor : executors) {
+      if(!executor.isEndSession()) continue;
+      executor.endSession();
+      key  = sessionQueue.next();
+      while(key != null && isDownloadingKey(key)) {
+        key = sessionQueue.next();
+      }
+      executor.newSession(key, sessionQueue.createValue(key));
+      return;
+    }
+    
+    if(executors.length < 1)  return ;
+    executors[0].abortSession();
+    key  = sessionQueue.next();
+    while(key != null && isDownloadingKey(key)) {
+      key = sessionQueue.next();
+    }
+    executors[0].newSession(key, sessionQueue.createValue(key));
+  }
+  
+  public void abortExecutor(String line) {
+    if(line == null) return ;
+    for(Executor<?,?,?> executor : executors) {
+      if(executor.getKey().equals(line)) {
+        executor.abortSession();
+        return;
+      }
+    }
+  }
+  
+  public Executor<T,V,E>[] getExecutors() { return executors; }
+
+  public void setExecutors(Executor<T, V, E>[] executors) {
+    this.executors = executors;
+  }
+
+  public void setSessionQueue(SessionQueue<T, V> queue) { this.sessionQueue = queue; }
+  
+  private boolean isDownloadingKey(T t) {
+    for(Executor<T, V, E> executor : executors) {
+      if(t.equals(executor.getKey())) return true;
+    }
+    return false;
+  }
+  
+  public void destroy() {
+    execute = false;
+    for(Executor<T,V,E> executor : executors) {
+      executor.destroy();
+    }
+  }
+
+}

@@ -1,0 +1,24 @@
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/head; charset=utf-8">
+			<meta NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW" />
+			<meta NAME="Googlebot" CONTENT="nofollow" />
+			<title>$pattern - BigBell </title>
+			<link rel="stylesheet" href="/site/file/vietspider.css" type="text/css" />
+			<script type="text/javascript" src="/site/file/avim.js"></script>
+			<script type="text/javascript">
+				function setLanguage(lang) {
+						if(lang == 'vn') {
+							document.getElementById('VNIcon').style.display='block';
+							document.getElementById('ENIcon').style.display='none';setMethod(0);
+						} else {
+							document.getElementById('VNIcon').style.display='none';
+							document.getElementById('ENIcon').style.display='block';setMethod(-1);
+						}
+			  }
+			</script>
+	</head>
+	<body leftMargin="0" topMargin="0" rightMargin="0">
+		<table align="left" valign="top" border="0" cellpadding="0"
+			cellspacing="0" width="70%" style="padding: 0px 0px 0px 25px;">
+			<tbody>

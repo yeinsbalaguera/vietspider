@@ -1,0 +1,87 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.miming.vn;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+
+import junit.framework.Assert;
+import junit.framework.TestCase;
+
+import org.junit.Test;
+import org.vietspider.content.tp.model.TpWordIndex2;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 29, 2009  
+ */
+public class TestTpWordIndex extends TestCase {
+  @Test
+  public void testTreeMap() throws Exception {
+    TpWordIndex2 wordIndex = new TpWordIndex2(0);
+    
+    
+    wordIndex.add("chia sẻ");
+    wordIndex.add("sẻ chia");
+    wordIndex.add("chia");
+    wordIndex.add("chuyên chính luận");
+    wordIndex.add("chuyên chính");
+    wordIndex.add("chính luận");
+    wordIndex.add("hay");
+    wordIndex.add("hào hứng");
+    wordIndex.add("su hào");
+    wordIndex.add("chuyên chính vô sản");
+    wordIndex.add("chuyên chở");
+    wordIndex.add("tuôn tràn");
+    
+    
+    Assert.assertEquals(wordIndex.contains("chia"), true);
+    Assert.assertEquals(wordIndex.contains("chia sẻ"), true);
+    Assert.assertEquals(wordIndex.contains("chi"), false);
+    
+    Assert.assertEquals(wordIndex.contains("chia sẻ ngọt bùi"), false);
+    
+    Assert.assertEquals(wordIndex.contains("chuyên"), false);
+    Assert.assertEquals(wordIndex.contains("chuyên chính"), true);
+    Assert.assertEquals(wordIndex.contains("chuyên chính vô"), false);
+    Assert.assertEquals(wordIndex.contains("chuyên chở"), true);
+    Assert.assertEquals(wordIndex.contains("tuôn"), false);
+    
+    wordIndex.remove("chia");
+    Assert.assertEquals(wordIndex.contains("chia"), false);
+    Assert.assertEquals(wordIndex.contains("chia sẻ"), true);
+    
+    wordIndex.add("chia");
+    Assert.assertEquals(wordIndex.contains("chia"), true);
+    
+    wordIndex.add("chia");
+    Assert.assertEquals(wordIndex.contains("chia"), true);
+    
+    System.out.println("===========================================");
+    String text1 = wordIndex.toString();
+    System.out.println(text1);
+    
+    
+    ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+    DataOutputStream outputStream = new DataOutputStream(byteOutput);
+    wordIndex.write(outputStream);
+    
+    byte [] bytes = byteOutput.toByteArray();
+    System.out.println(" hihi "+ bytes.length);
+    
+    ByteArrayInputStream byteInput = new ByteArrayInputStream(bytes);
+    DataInputStream inputStream = new DataInputStream(byteInput);
+    
+    TpWordIndex2 wordIndex2 = TpWordIndex2.readObject(inputStream, 0, bytes.length);
+    String text2 = wordIndex2.toString();
+    System.out.println(text2);
+    
+    
+    Assert.assertEquals(text1, text2);
+  }
+}

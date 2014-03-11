@@ -1,0 +1,51 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import java.util.Iterator;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jan 31, 2009  
+ */
+abstract public class CrawlQueueEntryBak {
+  
+  protected volatile LinkedBlockingQueue<CrawlSessionEntry> queue;
+  private volatile int capacity;
+  
+  public CrawlQueueEntryBak() {
+    this.capacity = 10;
+    queue = new LinkedBlockingQueue<CrawlSessionEntry>();
+  }
+  
+  public int size() { return queue.size(); }
+  
+  abstract CrawlSessionEntry nextEntry ();
+  
+  public void clear() { queue.clear(); }
+  
+  public boolean isFull() {return queue.size() >= capacity;}
+  
+  public void removeElement(String key) {
+    Iterator<CrawlSessionEntry> iterator = queue.iterator();
+    while(iterator.hasNext()) {
+      CrawlSessionEntry entry = iterator.next();
+      if(entry.getSource().getFullName().equals(key)) {
+        queue.remove(entry);
+      }
+    }
+  }
+  
+  public void add(CrawlSessionEntry entry) { queue.add(entry); }
+  
+  public boolean isEmpty() { return queue.isEmpty(); }
+
+  public void setCapacity(int capacity) { this.capacity = capacity; }
+  
+  public CrawlSessionEntry [] toArray() {
+    return queue.toArray(new CrawlSessionEntry[queue.size()]);
+  }
+}

@@ -1,0 +1,32 @@
+<project>
+  <parent>
+    <groupId>org.vietspider</groupId>
+    <artifactId>vietspider</artifactId>
+		<version>3.x</version>
+		<relativePath>../</relativePath>
+  </parent> 
+
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>org.vietspider.htmlparser</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0</version>
+  <name>org.vietspider.htmlparser</name>
+  <url>http://binhgiang.sourceforge.net/</url>
+  <description>HtmlParser component</description>
+
+  <dependencies>   
+    <dependency>
+      <groupId>org.vietspider</groupId>
+      <artifactId>org.vietspider.common</artifactId>
+      <version>1.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>rhino</groupId>
+      <artifactId>js</artifactId>
+      <version>1.6R7</version>
+      <scope>compile</scope>
+    </dependency>
+    
+  </dependencies>   
+</project>

@@ -1,0 +1,130 @@
+/*public List<HTMLNode> searchNodes(HTMLDocument document, int level, int step) throws Exception  {
+    List<HTMLNode> values = new ArrayList<HTMLNode>();
+    
+    HTMLNode body = ContentRendererFactory.searchBody(document);
+    ContentRenderer renderer = ContentRendererFactory.createContentRenderer(body, null);
+
+    int length = renderer.getTextValue().length();
+    List<HTMLNode> renderNodes = renderer.getNodePositions(0, length);
+    NodeRenderer nodeRenderer = new NodeRenderer(renderer, renderNodes, 0, length);
+
+    NodeRenderer [] nodeRenderers = {nodeRenderer};
+    int counter = 1;
+    while(true) {
+      nodeRenderer = filte(nodeRenderers);
+      
+      if(nodeRenderer == null 
+          || nodeRenderer.getTotalWord() < 20) break;
+
+      String pattern = nodeRenderer.getMaxPatternValue();
+      if(pattern == null || pattern.length() < level) break;
+      
+      if(counter%step == 0) {
+        int start  = nodeRenderer.getStart();
+        int end = nodeRenderer.getEnd();
+        List<HTMLNode> subNodes = renderer.getNodePositions(start, end);
+        values.add(parentUtil.getUpParent(subNodes));
+      }
+      
+      counter++;
+      nodeRenderers = nodeRenderer.split(pattern);
+    }
+
+    if(nodeRenderer == null) return values;
+    
+    int start  = nodeRenderer.getStart();
+    int end = nodeRenderer.getEnd();
+    List<HTMLNode> subNodes = renderer.getNodePositions(start, end);
+    values.add(parentUtil.getUpParent(subNodes));
+    
+    return values;
+  }*/
+  
+  
+  
+  
+  
+  
+   /*if(nodeRenderer.getTotalPattern() < 100) {  
+        if(pattern.length() > 4 
+            && pattern.length() < 30) {
+          int maxRate = compareRate(nodeRenderers, nodeRenderer.getTotalWord());
+          if(maxRate > 0 && maxRate < 10) {
+            System.out.println(" break by rate content "+ maxRate + " : " +filteNodeRenderer.getTotalPattern());
+            break;
+          }
+        } 
+        
+        else if(pattern.length() < 4) {
+//          System.out.println(" break by pattern length "+filteNodeRenderer.getTotalPattern() );
+          break;
+        }
+      }*/
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+       /* private boolean isFirstLink(HTMLNode node) {
+    NodeIterator iterator = node.iterator();
+    while(iterator.hasNext()) {
+      HTMLNode n  = iterator.next();
+      if(n.isNode(Name.CONTENT)) {
+        if(sentenceCounter.count(new String(n.getValue())) < 1) continue;
+        HTMLNode ancestor = getAncestor(n, Name.A, 0, 5);
+        if(ancestor != null) {
+        }
+        return ancestor != null;
+      }
+    }
+    return false;
+  }*/
+  
+  /*private HTMLNode getAncestor(HTMLNode node, Name name, int level, int max){
+    if(level > max || node == null) return null;
+    if(node.isNode(name)) return node;
+    return getAncestor(node.getParent(), name, level+1, max);
+  }*/
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+   /* if(plength > 2 && plength < 10) {
+        int start  = filteNodeRenderer.getStart();
+        int end = filteNodeRenderer.getEnd();
+        System.out.println(filteNodeRenderer.getTotalPattern());
+        value = parentUtil.getUpParent(renderer.getNodePositions(start, end));
+        if(!isFirstLink(value)) {
+//          System.out.println("chuan bi dung roi");
+          break;
+        }
+//      } else*/ //if(plength < 4) {
+//        System.out.println("break by pattern length less then 0 ");
+//        break;
+//      }

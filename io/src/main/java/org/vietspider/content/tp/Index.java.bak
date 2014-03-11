@@ -1,0 +1,46 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.content.tp;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Jul 19, 2006
+ */
+public class Index {
+  
+  private Object [] values;
+  private int size;
+  
+  public Index(int initialCapacity){
+    values = new Object[]{ new int [initialCapacity+1],  new int [initialCapacity+1]};
+    size = 0;
+  }
+  
+  public int size(){ return size; }
+  
+  public void set(int p, int m){
+    int [] arr = (int [])values[0]; 
+    if(size >= arr.length){
+      int [] newArr = new int [size+1];
+      System.arraycopy(arr, 0, newArr, 0, arr.length);
+      arr = newArr;
+    }
+    arr[size] = p;
+    arr = (int [])values[1];
+    if(size >= arr.length){
+      int [] newArr = new int [size+1];
+      System.arraycopy(arr, 0, newArr, 0, arr.length);
+      arr = newArr;
+    }
+    arr[size] = m;
+    size++;
+  }  
+  
+  public int get(int order, int index){
+    int [] arr = (int [])values[order];    
+    return arr[index]; 
+  }  
+}

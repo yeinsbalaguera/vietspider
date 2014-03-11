@@ -1,0 +1,45 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.vn;
+
+import java.io.Serializable;
+
+import org.vietspider.content.tp.vn.comparator.TpWordIndex;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 28, 2009  
+ */
+public class TpDocument implements Serializable {
+  
+  private final static long serialVersionUID = -1198272975486063235l;
+  
+  private String id;
+  private long longId = -1;
+  
+  private TpWordIndex phrases = new TpWordIndex(0);
+  private TpWordIndex nouns = new TpWordIndex(0);
+  
+  public TpWordIndex getPhrases() { return phrases; }
+  public void setPhrases(TpWordIndex data) { this.phrases = data; }
+  public void addPhrase(String value) {
+//    System.out.println("====> "+ value);
+    phrases.add(value); 
+  }
+  
+  public TpWordIndex getNouns() { return nouns; }
+  public void setNouns(TpWordIndex nouns) { this.nouns = nouns; }
+  
+  public String getId() { return id; }
+  public void setId(String id) { this.id = id; }
+  
+  public long getLongId() {
+    if(longId == -1) {
+      longId = Long.parseLong(id);
+    }
+    return longId; 
+  }
+  
+}

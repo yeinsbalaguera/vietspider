@@ -1,0 +1,71 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.db.tp;
+
+import java.util.Iterator;
+import java.util.TreeSet;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.content.tp.vn.TpDocument;
+import org.vietspider.db.CrawlerConfig;
+import org.vietspider.index.IIndexEntry;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jul 13, 2009  
+ */
+public class TpDocumentIndex extends IIndexEntry {
+  
+  private final static long serialVersionUID = -99334100l;
+  
+  final public static String FIELD_PROPER_NOUN   = "propernoun" ;
+  
+  private TpWorkingData workingData;
+  
+  public TpDocumentIndex(String group) {
+    expireDate = CrawlerConfig.EXPIRE_DATE;
+    folder = UtilFile.getFolder("content/tp/" + group+ "/indexed/");
+  }
+  
+  public TpWorkingData getTpWorkingData() { return workingData; }
+  public void setTpWorkingData(TpWorkingData workingData) { 
+    this.workingData = workingData;
+    this.id = this.workingData.getTpDocument().getId();
+  }
+
+  @Override
+  public void fromDocument(Document document) {
+    Field field = document.getField(FIELD_ID);
+    id = field.stringValue();
+    workingData = new TpWorkingData();
+    workingData.getTpDocument().setId(id);
+  }
+  
+  @Override
+  public Document toDocument() {
+    TpDocument tpDocument = workingData.getTpDocument();
+    if(tpDocument == null || tpDocument.getId() == null) return null;
+    Document doc = new Document();
+    doc.add(new Field(FIELD_ID, id, Field.Store.YES, Field.Index.NOT_ANALYZED));
+    
+    TreeSet<String> keys = workingData.getKeys();
+    Iterator<String> iterator = keys.iterator();
+    while(iterator.hasNext()) {
+      doc.add(new Field(FIELD_PROPER_NOUN, 
+          iterator.next(), Field.Store.NO, Field.Index.NOT_ANALYZED));  
+    }
+    
+    return doc;
+  }
+  
+  public int getExpireDate() { return CrawlerConfig.EXPIRE_DATE; }
+  
+//  @Override
+//  public Analyzer getAnalyzer() { return new SemicolonAnalyzer(); }
+
+}

@@ -1,0 +1,148 @@
+package org.vietspider.webui.search;
+
+import java.io.OutputStream;
+
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Content;
+import org.vietspider.bean.Meta;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.LogService;
+import org.vietspider.content.index3.HighlightBuilder;
+import org.vietspider.webui.search.page.PageChunk;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Dec 25, 2006
+ */
+public class CachedRendererImpl {
+  
+  private PageChunk pageHeader = new PageChunk("detail_header.xml");
+  private PageChunk pageFooter = new PageChunk("detail_footer.xml");
+  
+  public void write(OutputStream output, Article article, String query) throws Exception {
+    Meta meta = article.getMeta();
+    
+    pageHeader.write(output, meta.getTitle());
+    
+    HighlightBuilder highlighter = null;
+    if(query != null) {
+      highlighter = new HighlightBuilder(query);
+      highlighter.setHighlightTag(
+          "<b style=\"color: black; background-color: rgb(255, 255, 102);\">", "</b>");
+    }
+    
+    StringBuilder builder = new StringBuilder();
+    
+    builder.append("<tr><td align=\"center\" valign=\"center\" style=\"border: 1px solid rgb(153, 153, 153);\">");
+//    append("style=\"border: 1px solid rgb(153, 153, 153); margin: 0px; ").
+//    append("padding: 8px; none repeat scroll 0% 0%;").
+//    append("-moz-background-clip: border; -moz-background-origin: padding;").
+//    append(" -moz-background-inline-policy: continuous; font-family: arial,sans-serif;").
+//    append(" font-style: normal; font-variant: normal; font-size: 13px; line-height: ").
+//    append("normal; font-size-adjust: none; font-stretch: normal; -x-system-font: none;").
+//    append(" color: rgb(0, 0, 0); font-weight: normal; \">");
+    builder.append("<h1>DÀNH CHO QUẢNG CÁO</h1>").
+    append("</td></tr><tr><td height=\"12\"></td></tr>");
+    
+    builder.append("<tr><td align=\"center\" style=\"border: 1px solid rgb(153, 153, 153); margin: 12px; ").
+            append("padding: 8px; background: rgb(221, 221, 221) none repeat scroll 0% 0%;").
+            append("-moz-background-clip: border; -moz-background-origin: padding;").
+            append(" -moz-background-inline-policy: continuous; font-family: arial,sans-serif;").
+            append(" font-style: normal; font-variant: normal; font-size: 13px; line-height: ").
+            append("normal; font-size-adjust: none; font-stretch: normal; -x-system-font: none;").
+            append(" color: rgb(0, 0, 0); font-weight: normal; \">");
+    builder.append("<p style=\"text-align: left;\">Đây chỉ là bản lưu tạm tại địa chỉ ");
+    builder.append("<a href=\"").append(meta.getSource());builder.append("\">");
+    builder.append(meta.getSource()).append("</a>  vào  lúc ").append(meta.getTime());
+    builder.append(". Hãy vào trang nguồn theo địa chỉ trên để thấy được nội dung cập nhật mới nhất.</p>");
+    builder.append("<font><b style=\"color: red;text-align: center;\">");
+    builder.append("Chúng tôi không có bất kỳ mối liên hệ nào với tác giả và không chịu trách ");
+    builder.append("nhiệm về nội dung này</b></p>");
+    builder.append("</td></tr><tr><td>");
+    
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+    
+    builder.setLength(0);
+    String text  = meta.getTitle();
+    if(highlighter != null) text  = highlighter.buildTitle(text);
+    builder.append("<h4>").append(text).append("</h4>");
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+    
+    builder.setLength(0);
+    text  = meta.getDesc();
+    if(highlighter != null) text  = highlighter.buildTitle(text);
+    builder.append("<p>").append(text).append("</p>");
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+    
+    Content content = article.getContent();
+    builder.setLength(0);
+    
+    text = content.getContent();
+    if(highlighter != null) text  = highlighter.buildTitle(text);
+    builder.append("<p>").append(text).append("</p>");
+    
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+    
+    pageFooter.write(output, null);
+//    writeFooter(output);
+  }
+  
+  /*private void writeHeader(OutputStream output, String title) {
+    StringBuilder builder = new StringBuilder();
+//    builder.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Frameset//EN\" \"http://www.w3.org/TR/html4/frameset.dtd\">");
+    builder.append("<html>");
+    builder.append("<head>");
+    builder.append("<meta http-equiv=\"content-type\" content=\"text/head; charset=utf-8\">");
+    builder.append("<meta NAME=\"ROBOTS\" CONTENT=\"NOINDEX, NOFOLLOW\"/>");
+    builder.append("<meta NAME=\"Googlebot\" CONTENT=\"nofollow\"/>");
+    builder.append("<title>").append(title).append(" - moom.vn </title>");
+    builder.append("<link rel=\"stylesheet\" href=\"/site/file/vietspider.css\" type=\"text/css\" />");
+    builder.append("</head>");
+    builder.append("<body leftMargin=\"0\" topMargin=\"0\" rightMargin=\"0\">");
+    builder.append("<table align=\"center\" valign=\"top\" border=\"0\" cellpadding=\"0\" ")
+           .append("cellspacing=\"0\" width=\"70%\" style=\"padding: 5px 0px 0px 25px;\"> <tbody>");
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+   
+  }*/
+  
+/*  private void writeFooter(OutputStream output) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("</td></tr></tbody></table>");
+    builder.append("</body></html>");
+    
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+   
+  }*/
+  
+}

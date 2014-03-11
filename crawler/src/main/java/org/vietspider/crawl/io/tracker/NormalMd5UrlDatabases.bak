@@ -1,0 +1,23 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.io.tracker;
+
+import org.vietspider.je.codes.Md5UrlDatabases;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 25, 2007  
+ */
+public final class NormalMd5UrlDatabases extends Md5UrlDatabases {
+
+  public NormalMd5UrlDatabases(String group, String name, String source, int max) throws Exception {
+    super("track/site/" + group + "/" + name , "code", source, 6*24*60*60*1000, max, 5*1024*1024l);
+  }
+  
+
+//  public boolean isEmptyTemp() { return codes.isEmpty(); }
+
+}

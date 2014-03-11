@@ -1,0 +1,468 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.gui.module;
+
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowData;
+import org.eclipse.swt.layout.RowLayout;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.ExpandItem;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.ui.forms.events.IHyperlinkListener;
+import org.vietspider.client.common.ClientConnector2;
+import org.vietspider.client.common.DataClientHandler;
+import org.vietspider.client.common.SourceMenuClient;
+import org.vietspider.common.Application;
+import org.vietspider.common.util.Worker;
+import org.vietspider.gui.browser.BrowserWidget;
+import org.vietspider.gui.workspace.Workspace;
+import org.vietspider.monitor.CategoryInfo;
+import org.vietspider.monitor.MenuInfo;
+import org.vietspider.monitor.SourceInfo;
+import org.vietspider.notifier.cache.ColorCache;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.services.ClientRM;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.CCombo;
+import org.vietspider.ui.widget.ExpandMenu;
+import org.vietspider.ui.widget.Hyperlink;
+import org.vietspider.ui.widget.ImageHyperlink;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.action.ExpandSelectionEvent;
+import org.vietspider.ui.widget.action.ExpandSelectionListener;
+import org.vietspider.ui.widget.action.HyperlinkAdapter;
+import org.vietspider.ui.widget.action.HyperlinkEvent;
+import org.vietspider.ui.widget.waiter.ThreadExecutor;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Oct 26, 2006
+ */
+public class UINews2 {
+
+  protected CCombo cboDate;
+  protected ExpandMenu expand;
+  protected Workspace workspace; 
+  
+  protected Composite pageComposite;
+  protected Text txtPage;
+  protected Label lblPage;
+  protected int page = 1;
+  protected int totalPage = 0;
+  protected org.eclipse.ui.forms.widgets.Hyperlink butNextPage;
+  protected org.eclipse.ui.forms.widgets.Hyperlink butPrevPage;
+  
+  protected SourceMenuClient client ;
+  
+  protected ImageHyperlink buttonReresh;
+  
+  protected ThreadExecutor serverLoader;
+  protected volatile boolean dateLoading = false;
+  
+  private List<Integer> expandedItems = new ArrayList<Integer>();
+
+  public UINews2(ApplicationFactory factory, Workspace workspace) {    
+    factory.setClassName(getClass().getName());
+    this.workspace = workspace;
+    this.workspace.setUINews(this);
+  }
+
+  public void setExpand(ExpandMenu exp){
+    this.expand = exp;
+    expand.addSelectionListener(new ExpandSelectionListener(){
+      public void select(ExpandSelectionEvent event){
+        try {
+          selectCategory(event);
+        } catch( Exception ex) {
+          ClientLog.getInstance().setException(workspace.getShell(), ex);
+        }   
+      }
+    });
+    
+    final int time = 5*60*1000;
+    Runnable timer = new Runnable () {
+      public void run () {
+        if(!dateLoading) loadDate();
+        if(cboDate.isDisposed()) return;
+        cboDate.getDisplay().timerExec(time, this);
+      }
+    };
+    cboDate.getDisplay().timerExec (time, timer);
+
+    loadDate();
+  }
+
+  void selectCategory(ExpandSelectionEvent event) throws Exception {
+    if(event.getGroup() == null) return;
+    String date = cboDate.getItem(cboDate.getSelectionIndex());
+    viewPage(date.trim(), event.getGroup(), event.getElement());
+  }
+
+  public void selectDate(int currentPage) {
+    if(cboDate.getItemCount() < 1) return;
+    ExpandItem [] items = expand.getBar().getItems();
+    for(int i = 0; i < items.length; i++) {
+      if(expand.getBar().getItem(i).getExpanded()) expandedItems.add(i);
+    }
+    
+    if(currentPage > 0) {
+      if(client == null) return;
+      createUI(client.loadPage(currentPage-1));
+      return;
+    }
+    
+    Worker excutor = new Worker() {
+
+      private String date;
+      
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+        dateLoading = true;
+        date = cboDate.getItem(cboDate.getSelectionIndex()).trim();
+        client = new SourceMenuClient("summary", date);
+      }
+
+      public void execute() {
+        try {
+          client.download();
+          
+        }catch (Exception e) {
+          ClientLog.getInstance().setException(null, e);
+        }
+      }
+
+      public void after() {
+        if(pageComposite.isDisposed()) {
+          dateLoading = false;
+          return;
+        }
+        totalPage = client.totalPage();
+        txtPage.setEditable(totalPage > 1);
+        selectDate(1); 
+        txtPage.setText("1/"+ String.valueOf(totalPage));
+        butNextPage.setEnabled(1 < totalPage);
+        butPrevPage.setEnabled(false);
+        dateLoading = false;
+      }
+    };
+    new ThreadExecutor(excutor, cboDate).start();
+  }
+  
+  private void createUI(MenuInfo menuInfo) {
+    expand.removeAll(); 
+    List<CategoryInfo> categories = menuInfo.getCategories();
+    ClientRM resources = new ClientRM("VietSpider");
+    boolean isSingle =  Application.isSingleData();
+    for(CategoryInfo category : categories) {
+      List<String> sources = new ArrayList<String>();
+      for(SourceInfo sourceInfo : category.getSources()) {
+        if(sourceInfo == null) continue; 
+        sources.add(sourceInfo.getName());
+      }
+      
+      Composite composite = expand.createGroup(sources);
+      
+      Hyperlink lbl = new Hyperlink(composite, SWT.LEFT);
+      lbl.setFont(UIDATA.FONT_8V); 
+      lbl.setBackground(UIDATA.BCOLOR);  
+      lbl.setForeground(UIDATA.FCOLOR);
+      lbl.setTip(category.getCategory());
+      lbl.setText(resources.getLabel("viewAll"));
+      GridData gridData = new GridData(GridData.FILL_HORIZONTAL);          
+      lbl.setLayoutData(gridData);
+      lbl.addHyperlinkListener(new HyperlinkAdapter(){
+        public void linkActivated(HyperlinkEvent e){
+          String txtGroup = e.getTip().trim();
+          ExpandSelectionEvent exv = new ExpandSelectionEvent(-1, -1, txtGroup, null);
+          expand.select(exv);
+        }
+      });   
+      String categoryValue = category.getCategory();
+      if(isSingle) {
+        int idx = categoryValue.indexOf('.'); 
+        if(idx > -1) categoryValue = categoryValue.substring(idx+1);
+      }
+      expand.createExpandItem(categoryValue, composite);
+    }
+//    load(resources);
+    expand.getBar().layout();
+    
+    for(int i = 0; i < expandedItems.size(); i++) {
+      int idx = expandedItems.get(i);
+      if(idx >= expand.getBar().getItemCount()) continue;
+      expand.getBar().getItem(idx).setExpanded(true); 
+    }
+    expandedItems.clear();
+  }
+  
+  public void loadDate() {  
+    if(cboDate.isDisposed() || !buttonReresh.isEnabled()) return;
+    buttonReresh.setEnabled(false);
+    
+    Worker excutor = new Worker() {
+
+      private String [] data;
+      private int idx;
+      
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+        dateLoading = true;
+        if(cboDate.isDisposed()) return;
+        idx = cboDate.getSelectionIndex();
+      }
+
+      public void execute() {
+        try {
+          data = new DataClientHandler().getDate();
+        }catch (Exception e) {
+          ClientLog.getInstance().setException(null, e);
+          data = new String[]{};
+        }
+      }
+
+      public void after() {
+        if(cboDate.isDisposed() || data.length < 1) {
+          dateLoading = false;
+          return;
+        }
+        buttonReresh.setEnabled(true);
+        if(cboDate.getItemCount() > 0) cboDate.removeAll();
+        for(String ele : data) {
+          if(ele == null) continue;
+          cboDate.add(" "+ele);
+        }
+        if(idx < 0 || idx >= data.length) idx = 0;   
+        cboDate.select(idx);
+        selectDate(0);
+        dateLoading = false;
+      }
+    };
+    
+    if(serverLoader != null && serverLoader.isAlive()) return;
+    serverLoader  = new ThreadExecutor(excutor, cboDate);
+    serverLoader.start();
+  }
+  
+  public void viewPage(){
+    try{
+      if(cboDate.getItemCount() < 1 || cboDate.getSelectionIndex() < 0 ) return;
+      String date = cboDate.getItem(cboDate.getSelectionIndex());
+      if(date == null) return;
+      date = date.trim(); 
+      viewPage(date, null, null);
+    }catch( Exception exp){
+      ClientLog.getInstance().setException(workspace.getShell(), exp);
+    }   
+  }
+  
+
+  private void viewPage(String date, String category, String name){
+    if(workspace == null || date == null) return;
+    date = date.replace('/', '.');
+    try{
+      if(date == null) return;
+      BrowserWidget browser = workspace.getTab().getSelected();
+      if(browser == null || browser.isDisposed())  {
+        browser =  workspace.getTab().createItem();
+      }
+      StringBuilder builder = new StringBuilder();
+      ClientConnector2 connecter = ClientConnector2.currentInstance();
+      builder.append(connecter.getRemoteURL()).append('/');
+      builder.append(connecter.getApplication()).append('/').append("DOMAIN");
+      builder.append("/1/").append(date);
+      if(category != null) {
+        builder.append('/');
+        if(Application.isSingleData()  && category.indexOf('.') < 0) {
+          String group = Application.GROUPS[0];
+          builder.append(URLEncoder.encode(group, Application.CHARSET)).append('.');  
+        }
+        builder.append(URLEncoder.encode(category, Application.CHARSET));
+      }
+      if(name != null) {
+        builder.append('/').append(URLEncoder.encode(name, Application.CHARSET));
+      }
+      browser.setUrl(builder.toString());
+    }catch (Exception err) {
+      ClientLog.getInstance().setException(workspace.getShell(), err);
+    }
+  }
+
+  public void setDataPanel(ApplicationFactory factory, Composite comp) {
+    comp.setBackground(new Color(comp.getDisplay(), 255, 255, 255));
+    GridLayout gridLayout = new GridLayout();
+    gridLayout.numColumns = 2 ;    
+    comp.setLayout(gridLayout); 
+    comp.setSize(100, 30);
+    
+    factory.setComposite(comp);
+    
+    cboDate = new CCombo(comp, SWT.READ_ONLY | SWT.BORDER);
+    cboDate.setBackground(ColorCache.getWhite());
+    cboDate.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+    cboDate.setFont(UIDATA.FONT_8V);
+    cboDate.addListener(SWT.Selection, new Listener() {
+      @SuppressWarnings("unused")
+      public void handleEvent(Event e) {
+        loadDate();
+      }          
+    });     
+    cboDate.setVisibleItemCount(15);
+    
+    factory.setComposite(cboDate);
+    
+    buttonReresh = factory.createIcon("refresh", new HyperlinkAdapter(){  
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e) {
+        if(!dateLoading) loadDate();
+      }
+    });
+    cboDate.setIcon(buttonReresh);
+    
+    /*butMore = factory.createIcon("more", new HyperlinkAdapter(){  
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e) {
+        butMore.getMenu().setVisible(true);
+      }
+    });*/
+    
+//    createMoreMenu(factory);
+    factory.setComposite(comp);
+    
+    factory.createIcon("view", new HyperlinkAdapter(){  
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e) {
+        viewPage();
+      }
+    });
+  }
+
+  public void setPagePanel(ApplicationFactory factory, final Composite panel) {
+    panel.setBackground(new Color(panel.getDisplay(), 255, 255, 255));
+    panel.setSize(100, 25);
+    
+    RowLayout rowLayout = new RowLayout();
+    panel.setLayout(rowLayout);
+    rowLayout.justify = true;
+    rowLayout.fill = true;
+    rowLayout.marginLeft = 0;
+    rowLayout.marginTop = 5;
+    rowLayout.marginRight = 0;
+    rowLayout.marginBottom = 0;
+    panel.setLayout(rowLayout);
+    
+    this.pageComposite = panel;
+    
+    factory.setComposite(panel);
+    
+    butPrevPage = factory.createLink("pagePrev", new IHyperlinkListener(){
+      @SuppressWarnings("unused")
+      public void linkActivated(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+        selectPage(-1); 
+      }
+
+      public void linkEntered(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+        org.eclipse.ui.forms.widgets.Hyperlink hyperlink = 
+          (org.eclipse.ui.forms.widgets.Hyperlink)e.widget;
+        hyperlink.setUnderlined(true);
+      }
+
+      public void linkExited(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+        org.eclipse.ui.forms.widgets.Hyperlink hyperlink = 
+          (org.eclipse.ui.forms.widgets.Hyperlink)e.widget;
+        hyperlink.setUnderlined(false);
+      }
+    });
+    butPrevPage.setFont(UIDATA.FONT_8V);
+    
+    txtPage = factory.createText(SWT.CENTER | SWT.BORDER);
+    txtPage.setBackground(new Color(txtPage.getDisplay(), 255, 255, 255));
+    txtPage.setFont(UIDATA.FONT_8V);
+    txtPage.setLayoutData(new RowData(70, 8));
+    txtPage.addFocusListener(new FocusListener(){
+
+      @SuppressWarnings("unused")
+      public void focusGained(FocusEvent evt) {
+//        txtPage.setText("");
+      }
+
+      @SuppressWarnings("unused")
+      public void focusLost(FocusEvent evt) {
+        if(txtPage.getText().trim().isEmpty()) {
+          txtPage.setText(String.valueOf(page)+"/"+String.valueOf(totalPage));
+        }
+      }
+      
+    });
+    txtPage.addKeyListener(new KeyAdapter(){
+
+      @Override
+      public void keyReleased(KeyEvent e) {
+        if(e.keyCode == SWT.CR) selectPage(0); 
+      }
+
+    });
+    
+    factory.setComposite(panel);
+    
+    butNextPage = factory.createLink("pageNext", new IHyperlinkListener(){
+      @SuppressWarnings("unused")
+      public void linkActivated(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+        selectPage(1);
+      }
+
+      public void linkEntered(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+        org.eclipse.ui.forms.widgets.Hyperlink hyperlink = 
+          (org.eclipse.ui.forms.widgets.Hyperlink)e.widget;
+        hyperlink.setUnderlined(true);
+      }
+
+      public void linkExited(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+        org.eclipse.ui.forms.widgets.Hyperlink hyperlink = 
+          (org.eclipse.ui.forms.widgets.Hyperlink)e.widget;
+        hyperlink.setUnderlined(false);
+      }
+    });
+    butNextPage.setFont(UIDATA.FONT_8V);
+  }
+  
+  private void selectPage(int type) {
+    try {
+      String value = txtPage.getText().trim();
+      int idx = value.indexOf('/'); 
+      if(idx > 0) value = value.substring(0, idx);
+      page = Integer.parseInt(value.trim());
+    } catch (Exception exp) {
+      page = 1;
+    }
+    page  = page + type;
+    page = page < 0 ? 1 : page > totalPage ? totalPage : page; 
+    selectDate(page);
+    txtPage.setText(String.valueOf(page)+"/"+ String.valueOf(totalPage));
+    butNextPage.setEnabled(page < totalPage);
+    butPrevPage.setEnabled(page > 1);
+  }
+  
+}

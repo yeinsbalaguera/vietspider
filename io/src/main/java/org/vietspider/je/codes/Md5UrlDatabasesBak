@@ -1,0 +1,26 @@
+ 
+  
+//  private final static int MAX_TEMP_SIZE = 1000;//10000;
+//  private final static int MAX_CACHED_COLLECTION = 1000000/MAX_TEMP_SIZE; 
+
+//  protected ConcurrentHashMap<MD5Hash, Integer> codes;
+//  protected volatile int tempSize = 0;
+
+ /*public void writeTemp() {
+//    System.out.println(" chuan bi write roi "+ group + " : "+ tempSize+  " : " +MAX_TEMP_SIZE);
+//    try {
+//      if(tempSize >= MAX_TEMP_SIZE) {
+//        tempSize -= current.commit(codes);
+//      }
+//    } catch (Exception e) {
+//      LogService.getInstance().setThrowable(group, e);
+//    }
+    
+    try {
+      nextDatabase();      
+    } catch (DeadlockException e) {
+      LogService.getInstance().setMessage(group, e, e.getMessage());
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(group, e);
+    }
+  }*/

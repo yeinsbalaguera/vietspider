@@ -1,0 +1,150 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.vn.comparator;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.vietspider.db.dict.WordIndex;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 28, 2009  
+ */
+public class TpWordIndex extends WordIndex {
+  
+  private final static long serialVersionUID = -1198272975486063436l;
+  
+  protected int time = 1;
+
+  protected int total = -1;
+  
+  private transient List<TpWordIndex> tpWords = null;
+
+  public TpWordIndex(int code) {
+    super(code);
+  }
+  
+  public int getTime() { return time; }
+  public void setTime(int time) { this.time = time; }
+  
+  public int getTotal() { return total;  }
+  public void setTotal(int total) { this.total = total; }
+  
+  public void add(String value) {
+//    System.out.println(" ==> "+ value);
+    tpWords = null;
+    add(value, 1, 0);
+  }
+  
+  private void add(String value, int counter, int level)   {
+    if(level > 30) return; 
+      //throw new StackOverflowError("To many add children ("+ value +")");
+    int index = value.indexOf(' ');
+    if(index < 0) {
+      int newCode = value.hashCode();
+      TpWordIndex child = new TpWordIndex(newCode);
+      TpWordIndex wordIndex = (TpWordIndex) children.ceiling(child);
+      if(wordIndex != null && wordIndex.getCode() == child.getCode()) {
+        TpWordIndex zero = new TpWordIndex(0);
+        TpWordIndex seft = (TpWordIndex)wordIndex.getChildren().ceiling(zero);
+        if(seft != null && seft.getCode() == 0) {
+          seft.setTime(seft.getTime()+1);
+          return;
+        }
+//        System.out.println("pipi "+ wordIndex.hashCode() + "/ "+ wordIndex.getChildren().size());
+        zero.setTime(1);
+        zero.setTotal(counter);
+        wordIndex.getChildren().add(zero);
+//        System.out.println("pipi  2 " + wordIndex.hashCode() + "/ " + wordIndex.getCode() + " / "+ wordIndex.getChildren().size());
+        return;
+      }
+      
+      TpWordIndex zero = new TpWordIndex(0);
+      zero.setTime(1);
+      zero.setTotal(counter);
+      
+      child.getChildren().add(zero);
+      children.add(child);
+      return;
+    }
+
+    int addCode = value.subSequence(0, index).hashCode();
+    value = value.substring(index+1, value.length());
+    TpWordIndex child = new TpWordIndex(addCode);
+    TpWordIndex wordIndex = (TpWordIndex)children.ceiling(child);
+    if(wordIndex != null && wordIndex.getCode() == child.getCode()) {
+      wordIndex.add(value, counter+1, level+1);
+      return;
+    }
+   
+    children.add(child);
+    child.add(value, counter+1, level+1);
+  }
+  
+  public int getTotalWord(int min) {
+    int totalWord = 0;
+    if(tpWords == null) searchWords();
+    for(int i = 0; i < tpWords.size(); i++) {
+      TpWordIndex word = tpWords.get(i);
+      if(word.getTotal() < min) continue;
+      totalWord += word.getTotal();
+    }
+    
+    return totalWord;
+  }
+  
+  public int getTotalWord2(int min) {
+    int totalWord = 0;
+    if(tpWords == null) searchWords();
+    for(int i = 0; i < tpWords.size(); i++) {
+      TpWordIndex word = tpWords.get(i);
+      if(word.getTotal() < min) continue;
+      totalWord += word.getTotal()*word.getTime();
+    }
+    
+    return totalWord;
+  }
+  
+ public int getTimeWord(int min) {
+   int totalWord = 0;
+   
+   if(tpWords == null) searchWords();
+   for(int i = 0; i < tpWords.size(); i++) {
+     TpWordIndex word = tpWords.get(i);
+     if(word.getTotal() < min) continue;
+     totalWord += word.getTime();
+   }
+  
+   return totalWord;
+ }
+ 
+ public List<TpWordIndex> getWords() {
+   if(tpWords == null) searchWords();
+   return tpWords;
+ }
+
+ private void searchWords() {
+   tpWords = new ArrayList<TpWordIndex>(children.size());
+   Iterator<WordIndex> iterator = children.iterator();
+   while(iterator.hasNext()) {
+     searchWords((TpWordIndex)iterator.next());
+   }
+ }
+ 
+ private void searchWords(TpWordIndex word) {
+   if(word.getCode() == 0) {
+     tpWords.add(word);
+     return ;
+   }
+   
+   Iterator<WordIndex> iterator = word.getChildren().iterator();
+   while(iterator.hasNext()) {
+     searchWords((TpWordIndex)iterator.next());
+   }
+ }
+ 
+}

@@ -1,0 +1,135 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import static org.vietspider.link.generator.Generator.HOMEPAGE_GENERATOR;
+import static org.vietspider.link.generator.LinkGeneratorInvoker.invoke;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.headvances.storage.v3.MD5Hash;
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.LinkCreator;
+import org.vietspider.crawl.link.SourceResource;
+import org.vietspider.crawl.link.cache.LinkCacher;
+import org.vietspider.crawl.link.cache.LinkCacherService;
+import org.vietspider.crawl.link.queue.LinkQueue;
+import org.vietspider.crawl.link.queue.UrlList;
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * May 12, 2009  
+ */
+final class SessionTempLink implements Runnable {
+
+  static int MAX_SIZE_LINK = 500;
+
+  static {
+    if(Application.LICENSE == Install.PROFESSIONAL) {
+      MAX_SIZE_LINK = 1000;
+    } else if(Application.LICENSE == Install.ENTERPRISE) {
+      MAX_SIZE_LINK = 3000;
+    } else if(Application.LICENSE == Install.SEARCH_SYSTEM) {
+      MAX_SIZE_LINK = 5000;
+    }
+  }
+
+  private volatile ConcurrentLinkedQueue<Link> tempLinkList;
+  private volatile ConcurrentLinkedQueue<UrlList> tempURLList;
+
+  private volatile boolean execute = true;
+
+  private SessionStore store;
+
+  SessionTempLink(SessionStore store) {
+    this.store = store;
+    this.tempLinkList = new ConcurrentLinkedQueue<Link>();
+    this.tempURLList = new ConcurrentLinkedQueue<UrlList>();
+    new Thread(this).start();
+  }
+
+  void push(String host, Link referer, List<Link> list) {
+    UrlList urlList = new UrlList(host, referer);
+    urlList.setList(list);
+    tempURLList.add(urlList);
+  }
+
+  void push(List<Link> list) {
+    tempLinkList.addAll(list);
+  }
+
+  public void run() {
+    while(execute) {
+      LinkQueue queue = store.getQueue();
+      handleTempLink(store.getCodes(), queue);
+      handleUrlList(queue);
+
+      SourceResource sourceResource = store.getSourceResource();
+      if(queue.size() < 15) {
+        LinkCreator linkCreator = sourceResource.getLinkCreator();
+        List<Object> generators = sourceResource.getLinkGenerators();
+        String referer = linkCreator.getRefererURL();
+        List<String> listHomepage = new ArrayList<String>();
+        invoke(generators, HOMEPAGE_GENERATOR, listHomepage);
+        store.addHomepages(null, referer, listHomepage.toArray(new String[listHomepage.size()]));
+      }
+
+      try {        
+        Thread.sleep(500);
+      } catch (Exception e) {
+      }
+    }
+  }
+
+  private void handleTempLink(Set<MD5Hash> codes, LinkQueue queue) {
+    boolean save = queue.size() > MAX_SIZE_LINK;
+    LinkQueue newQueue = new LinkQueue(queue.getSource());
+    while(!tempLinkList.isEmpty()) {
+      Link link = tempLinkList.poll();
+      if(!codes.add(link.getUrlId())) continue;
+      newQueue.push(link);
+      if(save) continue;
+      if(queue.size() > MAX_SIZE_LINK) break;
+    }
+
+    if(!newQueue.hasNext()) return;
+    if(save) {
+      LinkCacher cacher = LinkCacherService.getCacher(queue.getSource());
+      if(cacher != null) cacher.save(newQueue);
+    } else {
+//    /*size*/stores.size() += newQueue.size();
+      queue.appendFirst(newQueue);
+    }
+  }
+
+  private void handleUrlList(LinkQueue queue) {
+    boolean save = queue.size() > MAX_SIZE_LINK;
+    while(!tempURLList.isEmpty()) {
+      UrlList urlLink = tempURLList.poll();
+      LinkQueue newQueue = null;
+
+      newQueue = store.createLink(save, urlLink);
+
+      if(newQueue == null || !newQueue.hasNext()) continue;
+
+      Source source = urlLink.getReferer().getSource();
+      if(save) {
+        LinkCacher cacher = LinkCacherService.getCacher(source);
+        if(cacher != null) cacher.save(newQueue);
+      } else {
+        queue.appendFirst(newQueue);
+      }
+      if(queue.size() > MAX_SIZE_LINK) return;
+    }
+  }
+
+  void setExecute(boolean execute) { this.execute = execute; }
+}

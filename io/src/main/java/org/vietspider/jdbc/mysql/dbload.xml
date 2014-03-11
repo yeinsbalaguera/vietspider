@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<database>  
+  <loadDateFromDomain>
+    SELECT DISTINCT DATE FROM DOMAIN
+  </loadDateFromDomain>
+  <loadDomainById>
+    SELECT * FROM DOMAIN WHERE ID = $id
+  </loadDomainById>    
+  
+  <loadMetaByDate>
+    SELECT 
+        META.ID AS ID, META.TITLE, META.DES, META.IMAGE, META.TIME, META.SOURCE_TIME, DOMAIN.DATE, DOMAIN.CATEGORY, DOMAIN.NAME 
+      FROM META, DOMAIN
+        WHERE META.DOMAIN_ID = DOMAIN.ID AND DOMAIN.DATE LIKE '$date'
+      ORDER BY META.ID DESC
+  </loadMetaByDate>  
+  <loadMetaByCategory>
+    SELECT 
+        META.ID AS ID, META.TITLE, META.DES, META.IMAGE, META.TIME, META.SOURCE_TIME, DOMAIN.DATE, DOMAIN.CATEGORY, DOMAIN.NAME
+      FROM META, DOMAIN
+        WHERE META.DOMAIN_ID = DOMAIN.ID  AND DOMAIN.DATE LIKE '$date' AND DOMAIN.CATEGORY LIKE N'$category'
+      ORDER BY META.ID DESC
+  </loadMetaByCategory>  
+  <loadMetaBySource>
+    SELECT 
+        META.ID, TITLE, DES, IMAGE, TIME, SOURCE_TIME 
+      FROM META 
+      	WHERE DOMAIN_ID = $domain 
+      ORDER BY ID DESC
+  </loadMetaBySource>
+    
+  
+  <loadRelation>
+    SELECT 
+       META_ID, RELATION_ID, PERCENT 
+     FROM RELATION 
+     	WHERE META_ID = $id 
+     ORDER BY PERCENT DESC
+  </loadRelation>
+  
+  <loadArticle>
+    SELECT 
+        META.ID, META.TITLE, META.DES, META.IMAGE, META.TIME, META.SOURCE_TIME, META.URL, CONTENT.CONTENT, DOMAIN.DATE, DOMAIN.CATEGORY, DOMAIN.NAME 
+      FROM META, CONTENT, DOMAIN
+        WHERE META.ID = CONTENT.META_ID AND META.DOMAIN_ID = DOMAIN.ID AND META.ID = $id
+  </loadArticle>
+  <loadMetaRelation>
+    SELECT 
+        META.ID, META.TITLE, META.DES, META.IMAGE, META.TIME, DOMAIN.DATE, DOMAIN.NAME 
+      FROM META, DOMAIN
+        WHERE META.ID = $id AND META.DOMAIN_ID = DOMAIN.ID
+  </loadMetaRelation>
+  
+  <loadImage>
+    SELECT 
+      	ID, META_ID AS META, CONTENT_TYPE AS TYPE, NAME, IMAGE 
+      FROM IMAGE 
+        WHERE ID LIKE '$id'
+  </loadImage>  
+  <loadImages>
+		SELECT 
+				ID, META_ID AS META, CONTENT_TYPE AS TYPE, NAME, IMAGE 
+		  FROM IMAGE 
+				WHERE META_ID = $id
+  </loadImages>
+
+  <loadContent>
+		SELECT 
+				META_ID AS META, DATE, CONTENT
+		  FROM CONTENT
+				WHERE META_ID = $id
+  </loadContent>
+  
+  <loadMeta>
+		SELECT * FROM META WHERE ID = $id
+  </loadMeta>  
+ 
+  <search>
+    SELECT 
+       	META_ID 
+      FROM CONTENT 
+      	WHERE CONTENT.CONTENT LIKE  N'%$content%'
+      ORDER BY META_ID DESC
+  </search>  
+  
+  <loadEvent>
+    SELECT DISTINCT 
+        META.ID 
+      FROM META, DOMAIN, RELATION
+        WHERE DOMAIN.DATE LIKE '$date' AND DOMAIN.ID = META.DOMAIN_ID AND RELATION.META_ID = META.ID 
+      ORDER BY META.ID DESC
+  </loadEvent>
+  <loadArticleForEvent>
+    SELECT 
+        META.ID, META.TITLE, META.DES, META.IMAGE, META.TIME, DOMAIN.DATE, DOMAIN.CATEGORY, DOMAIN.NAME 
+      FROM META, DOMAIN
+        WHERE META.ID = $id AND DOMAIN.ID = META.DOMAIN_ID
+  </loadArticleForEvent>
+  
+  <loadTopEventId>
+  	SELECT DISTINCT META_ID FROM RELATION ORDER BY META_ID DESC LIMIT 0, 15
+  </loadTopEventId>   
+  <loadTopEvent>
+  	SELECT ID, TITLE, IMAGE FROM META WHERE META.ID = $id
+  </loadTopEvent>       
+  
+  <loadTopArticles>
+    SELECT 
+        META.ID, META.TITLE, META.DES, META.IMAGE, META.TIME, DOMAIN.DATE, DOMAIN.CATEGORY, DOMAIN.NAME 
+      FROM META, DOMAIN
+        WHERE META.DOMAIN_ID = DOMAIN.ID 
+      ORDER BY META.ID DESC LIMIT 0, 15 
+  </loadTopArticles>
+</database>

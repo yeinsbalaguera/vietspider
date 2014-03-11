@@ -1,0 +1,145 @@
+﻿private void writeForm(OutputStream output, SearchQuery query) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("<tr><td>");
+    builder.append("<table border=\"0\"><tbody><tr>");
+    builder.append("<td rowspan=\"2\"><a href=\"/\"><img border=\"0\" src=\"/site/file/Logo197x50.gif\"/></a></td>");
+    builder.append("<td><form id=\"search\" action=\"/site/search/1/\" method=\"GET\">");
+    builder.append("<div style=\"border: 1px solid rgb(0, 64, 128); float: left;\">");
+    builder.append("<img class=\"IconLanguageE\" id=\"ENIcon\" style=\"display: none;\" src=\"/site/file/blank.gif\" onclick=\"setLanguage('vn')\">");
+    builder.append(" <img  class=\"IconLanguageV\" style=\"display: block;\" id=\"VNIcon\" src=\"/site/file/blank.gif\" onclick=\"setLanguage('en')\">");
+    builder.append("<input name=\"query\" value=\"");
+    
+   /* int i = 0; 
+    String text = query.getPattern();
+    while(i < text.length()) {
+      char c = text.charAt(i);
+      if(c == '\"') {
+        builder.append("&quot;");
+      } else {
+        builder.append(c);
+      }
+      i++;
+    }*/
+    
+    try {
+      RefsEncoder encoder = new RefsEncoder();
+      builder.append(encoder.encode(query.getPattern().toCharArray()));
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    
+    builder.append("\" size=\"50\" style=\"border: 1px solid white; \">");
+    builder.append("</div>");
+    builder.append("<div style=\"padding: 0px 0px 0px 10px; float: left;\">");
+    builder.append("<input name=\"search\" value=\"Search\" type=\"submit\"></div>");
+    
+//    builder.append("<div style=\"padding: 0px 0px 0px 10px; float: left;\">");
+//    builder.append("<input name=\"search\" value=\"Bán\" type=\"submit\"></div>");
+//    builder.append("<div style=\"padding: 0px 0px 0px 10px; float: left;\">");
+//    builder.append("<input name=\"search\" value=\"Thuê\" type=\"submit\"></div>");
+    
+    builder.append("</form>");
+    builder.append("</td></tr><tr><td valign=\"top\">");
+    builder.append("<a class=\"meta_title\" href=\"#\">Đăng tin quảng cáo</a>");
+    builder.append("<span class=\"meta_title\">&nbsp;&nbsp;|&nbsp;&nbsp;</span>");
+    builder.append("<a class=\"meta_title\" href=\"#\">Giới thiệu BigBell</a>");
+    builder.append("<span class=\"meta_title\">&nbsp;&nbsp;|&nbsp;&nbsp;</span>");
+    builder.append("<a class=\"meta_title\" href=\"#\">Liên hệ</a>");
+    builder.append("</td></tr>");
+    builder.append("</tbody></table></td></tr>");
+
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+  }
+
+
+
+private void writeHeader(OutputStream output, SearchQuery query) {
+    StringBuilder builder = new StringBuilder();
+    //    builder.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Frameset//EN\" \"http://www.w3.org/TR/html4/frameset.dtd\">");
+    builder.append("<html>");
+    builder.append("<head>");
+    builder.append("<meta http-equiv=\"content-type\" content=\"text/head; charset=utf-8\">");
+    builder.append("<meta NAME=\"ROBOTS\" CONTENT=\"NOINDEX, NOFOLLOW\"/>");
+    builder.append("<meta NAME=\"Googlebot\" CONTENT=\"nofollow\"/>");
+    /*if(query.isRefresh()) {
+      builder.append("<meta http-equiv=\"Refresh\" content=\"5;URL=")
+      .append("/site/search/1/?query=").append(query.getPattern());
+      if(query.getRegion() != null) {
+        builder.append("&region=").append(query.getRegion());
+      }
+      builder.append("&search=Tìm+Rao+Vặt").append("\">");
+    }*/
+    builder.append("<title>").append(query.getPattern()).append(" - BigBell </title>");
+    builder.append("<link rel=\"stylesheet\" href=\"/site/file/vietspider.css\" type=\"text/css\" />");
+    builder.append("<script type=\"text/javascript\" src=\"/site/file/avim.js\"></script>");
+    builder.append("<script type=\"text/javascript\">");
+    builder.append("function setLanguage(lang) {");  
+    builder.append("if(lang == 'vn') {");
+    builder.append("document.getElementById('VNIcon').style.display='block';");
+    builder.append("document.getElementById('ENIcon').style.display= 'none';");
+    builder.append("setMethod(0);");
+    builder.append("} else {");
+    builder.append("document.getElementById('VNIcon').style.display='none';");
+    builder.append("document.getElementById('ENIcon').style.display='block';");
+    builder.append("setMethod(-1);");
+    builder.append("}");
+    builder.append("}");
+    builder.append("</script>");
+    builder.append("</head>");
+    builder.append("<body leftMargin=\"0\" topMargin=\"0\" rightMargin=\"0\">");
+    builder.append("<table align=\"left\" valign=\"top\" border=\"0\" cellpadding=\"0\" ")
+    .append(" cellspacing=\"0\" width=\"70%\" style=\"padding: 0px 0px 0px 25px;\"> <tbody>");
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+
+  }
+
+
+
+private void writeForm2(OutputStream output, SearchQuery query) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("<tr><td>");
+    //    builder.append("<div style=\"padding: 10px 0px 0px 25px;\">");
+    builder.append("<form id=\"search\" action=\"/site/search/1/\" method=\"GET\">");
+    builder.append("<div style=\"border: 1px solid rgb(0, 64, 128); float: left;\">");
+    builder.append("<img class=\"IconLanguageE\" id=\"ENIcon\" style=\"display: none;\" src=\"/site/file/blank.gif\" onclick=\"setLanguage('vn')\">");
+    builder.append(" <img  class=\"IconLanguageV\" style=\"display: block;\" id=\"VNIcon\" src=\"/site/file/blank.gif\" onclick=\"setLanguage('en')\">");
+    builder.append("<input name=\"query\" value=\"").append(query.getPattern()).append("\" size=\"60\" style=\"border: 1px solid white; \">");
+    builder.append("</div>");
+    builder.append("<div style=\"padding: 0px 0px 0px 10px; float: left;\"><input name=\"search\" value=\"Tìm Rao Vặt\" type=\"submit\"></div>");
+    builder.append("</form>");
+    //    builder.append("</div>");
+    builder.append("</tr></td>");
+
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+  }
+
+  private void writeFooter(OutputStream output) {
+    StringBuilder builder = new StringBuilder();
+    builder.append(" <tr><td align=\"center\"><br><font size=\"-1\"> © 2009 BigBell |  Privacy | Legal | Help | Feedback</font></td></tr>");
+    builder.append("</tbody></table>");
+    builder.append("<script type=\"text/javascript\">setLanguage('vn') ;</script>");
+    builder.append("</body></html>");
+
+    try {
+      output.write(builder.toString().getBytes(Application.CHARSET));
+      output.flush();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage("SERVER", e, null);
+    }
+
+  }

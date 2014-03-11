@@ -1,0 +1,194 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.io;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.vietspider.chars.CharsUtil;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.io.ExceptionWriter.TraceObject;
+import org.vietspider.db.SystemProperties;
+import org.vietspider.model.Source;
+import org.vietspider.model.SourceUtils;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 16, 2009  
+ */
+public class LogSourceImpl implements LogService.Log {
+
+  private ConcurrentHashMap<String, SourceExceptionWriter> holder;
+//  private boolean print =  false;
+  private HashMap<String, String> messages = new HashMap<String, String>();
+
+  public LogSourceImpl() {
+    holder = new ConcurrentHashMap<String, SourceExceptionWriter> ();
+//    print = "true".equals(System.getProperty("vietspider.test"));
+
+    String locale = SystemProperties.getInstance().getValue("locale");
+    File file = new File(UtilFile.getFolder("system"), locale + ".crawling.debug.properties");
+    if(file.exists() && file.length() > 0) {
+      try {
+        String text = new String(new DataReader().load(file), "utf-8");
+        List<String> lines = CharsUtil.split2List(text, '\n');
+        for(int i = 0; i < lines.size(); i++) {
+          String line  = lines.get(i);
+          int idx = line.indexOf('=');
+          if(idx < 1) continue;
+          String key = line.substring(0, idx);
+          String value = line.substring(idx+1, line.length());
+          messages.put(key, value);
+        }
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+  }
+
+  @SuppressWarnings("unused")
+  public void setMessage(Exception exp, String message) {
+    throw new UnsupportedOperationException();
+  }
+
+  @SuppressWarnings("unused")
+  public void setThrowable(Throwable throwable) {
+    throw new UnsupportedOperationException();    
+  }
+
+  @Override
+  public void setMessage(Object label, Exception exp, String message) {
+    if(label == null) throw new NullPointerException("Object key is null");
+    if(!(label instanceof Source)) throw new IllegalArgumentException("Invalid key type!");
+    
+    Source source = (Source) label;
+    SourceExceptionWriter writer = getWriter(
+        SourceUtils.getCodeName(source), source.getFullName());
+
+    message = getMessage(writer, message);
+
+    String [] elements = new String[0];
+
+    if(exp != null) {
+      elements = new String[3];
+      elements[0] = message;
+
+      StackTraceElement[] traceElements = exp.getStackTrace();
+      for(StackTraceElement trackElement : traceElements) {
+        String track  = trackElement.toString();
+        //      System.out.println(value);
+        if(track.indexOf("vietspider") < 0) continue;
+        elements[1] = track;
+        break;
+      }
+
+      elements[2] = exp.getMessage();
+      if(elements[2] == null || elements[2].trim().isEmpty()) elements[2] = exp.toString();
+    } else {
+      elements = new String[]{message};
+    }
+    //    new Exception().printStackTrace();
+   /* if(print) {
+      for(String element : elements) {
+        if(element == null) continue;
+        System.out.println(element);
+      }
+    }*/
+    writer.put(new TraceObject(source.toString(), elements));
+  }
+
+  @Override
+  public void setThrowable(Object label, Throwable throwable, String message) {
+    if(label == null) throw new NullPointerException("Object key is null");
+    if(!(label instanceof Source)) throw new IllegalArgumentException("Invalid key type!");
+
+    if(throwable == null) return;
+    
+    Source source = (Source) label;
+    SourceExceptionWriter writer = 
+      getWriter(SourceUtils.getCodeName(source), source.getFullName());
+
+    message = getMessage(writer, message);
+
+   /* if(print) {
+      if(label != null) System.out.println(label.toString());
+      if(message != null) System.out.println(message);
+      throwable.printStackTrace();
+    }*/
+   
+    writer.put(new TraceObject(source.toString(), throwable, message));
+    //    if(throwable instanceof NullPointerException) setThrowable(throwable);
+  }
+
+  @Override
+  public void setThrowable(Object label, Throwable throwable) {
+    setThrowable(label, throwable, null);
+  }
+
+  private SourceExceptionWriter getWriter(String code, String name) {
+    Iterator<Map.Entry<String, SourceExceptionWriter>> iterator = holder.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<String, SourceExceptionWriter> entry  = iterator.next();
+      SourceExceptionWriter writer = entry.getValue();
+      if(writer.isTimeout()) {
+        writer.close();
+      } else if(name.equals(entry.getKey())) {
+        return writer;
+      }
+    }
+    SourceExceptionWriter writer = 
+      new SourceExceptionWriter("track/logs/sources", code, name);
+//    writer.setPrint(print);
+    new Thread(writer).start();
+    holder.put(name, writer);
+    return writer;
+  }
+  
+  public void endLogSource(String name) {
+    SourceExceptionWriter writer = holder.get(name);
+    if(writer != null) writer.close();
+  }
+
+  private String getMessage(SourceExceptionWriter  writer, String message) {
+    if(message  == null) return null;
+    int index = 0;
+    while(index < message.length()) {
+      int start = message.indexOf('{', index);
+//      System.out.println(" === >" + start);
+      if(start < 0) return message;
+      index = start + 1;
+      
+      int end = message.indexOf('}', index);
+//      System.out.println(" === >" + end);
+      if(end < 0) return message;
+      index = end + 1;
+      
+      String key = message.substring(start+1, end).trim();
+      writer.putLog(key);
+//      System.out.println(" === >" + start+  " / "+ end);
+      String value  = messages.get(key);
+//      System.out.println(key+ " //// "+ value);
+      if(value == null) return message;
+      
+      StringBuilder  builder = new StringBuilder(message.subSequence(0, start));
+      builder.append("<font color=\"red\"><b>").append(value.trim()).append("</b></font>");
+      builder.append(message.substring(end+1, message.length()));
+//      System.out.println(" === :"+builder);
+      message = builder.toString();
+    }
+    return message;
+  }
+  
+  public String getMessage(String key) {
+    return messages.get(key);
+  }
+
+}

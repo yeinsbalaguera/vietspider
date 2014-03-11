@@ -1,0 +1,25 @@
+/* public void setException(Exception exp) {
+    setException(" APPLICATION ", exp);
+  }
+  
+  public void setException(Object obj, Exception exp) {
+    if(exp == null) return;
+    if(print) {
+      if(obj != null) System.out.println(obj.toString());
+      exp.printStackTrace();
+    }
+    if(writer.isOutOfSize()) writer.write();
+    writer.put(new TraceObject(obj != null ? obj.toString() : null, exp, null));
+  }
+  
+  public void setException(Object obj, Exception exp, String message) {
+    if(exp == null) return;
+    if(print) {
+      if(obj != null) System.out.println(obj.toString());
+      if(message != null) System.out.println(message);
+      exp.printStackTrace();
+    }
+    if(writer.isOutOfSize()) writer.write();
+    writer.put(new TraceObject(obj != null ? obj.toString() : null, exp, message));
+  }*/
+  

@@ -1,0 +1,290 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.gui.source;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.prefs.Preferences;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.List;
+import org.vietspider.client.common.ClientConnector2;
+import org.vietspider.client.common.OrganizationClientHandler;
+import org.vietspider.client.common.source.SourcesClientHandler;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.DataWriter;
+import org.vietspider.common.text.VietComparator;
+import org.vietspider.common.util.Worker;
+import org.vietspider.gui.creator.Creator;
+import org.vietspider.gui.creator.action.LoadGroupCategorySource.GroupCategorySource;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.waiter.WaitLoading;
+import org.vietspider.user.AccessChecker;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jan 16, 2008  
+ */
+public class ListSources extends SourcesHandler implements GroupCategorySource {
+
+  private Combo cboCategories;
+  private List listSources;
+  
+  private Creator creator;
+  
+  public ListSources(ApplicationFactory factory, Composite parent) {
+    super(parent);
+    setLayout(new GridLayout(1, false));
+    
+    cboCategories= new Combo(this, SWT.BORDER | SWT.READ_ONLY);
+    cboCategories.setFont(UIDATA.FONT_9);
+    cboCategories.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent e) {
+        int idx = cboCategories.getSelectionIndex();
+        if(idx < 0) return;
+        String category = cboCategories.getItem(idx);
+        setValues(false, false, null, category);
+        creator.selectData(null, category);
+        
+        Preferences prefs_ = Preferences.userNodeForPackage(Creator.class);
+        prefs_.put(group+".selected.category", String.valueOf(idx));
+      }
+    });
+    cboCategories.setVisibleItemCount(20);
+    GridData gridData = new GridData(GridData.FILL_HORIZONTAL);
+    cboCategories.setLayoutData(gridData);
+    KeyAdapter keyAdapter = new KeyAdapter(){
+      public void keyPressed(KeyEvent e) {
+        if(e.keyCode == SWT.DEL) removeSources();
+      }
+    };
+    cboCategories.addKeyListener(keyAdapter);
+
+    listSources = factory.createList(this, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL | SWT.H_SCROLL);
+    listSources.setFont(UIDATA.FONT_9);
+//    if(Application.LICENSE == Install.PERSONAL) listSources.setEnabled(false);
+    gridData = new GridData(GridData.FILL_BOTH);
+    listSources.setLayoutData(gridData);
+    
+    createMenu(listSources, factory);
+    
+    listSources.addSelectionListener(new SelectionAdapter() {
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent e) {
+        if(listSources.getSelectionCount() < 1) return;
+        String category = cboCategories.getText().trim();
+        String name = listSources.getSelection()[0];
+        creator.setSource(category, name, false);
+      }
+    });
+    listSources.addKeyListener(keyAdapter);
+  }
+
+  @Override
+  String[] getSelectedCategories() {
+    int idx = cboCategories.getSelectionIndex();
+    return idx < 0 ? null: new String[]{cboCategories.getItem(idx)};
+  }
+
+  public String getSelectedCategory() {
+    int idx = cboCategories.getSelectionIndex();
+    return idx < 0 ? null: cboCategories.getItem(idx);
+  }
+
+  public String[] getSelectedSources() { return listSources.getSelection(); }
+
+  @SuppressWarnings("unused")
+  String[] getSources(String category) { return listSources.getItems(); }
+  
+  public void setValues(final boolean showData, final boolean focus,  
+      final String group, final String category, final String...sources) {
+    Worker excutor = new Worker() {
+
+      private String [] dataCategories;
+      private String [] dataSources;
+      private AccessChecker accessChecker;
+      private File file;
+      
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+        if(group != null) ListSources.this.setGroup(group);
+        file = new File(ClientConnector2.getCacheFolder("sources/type"), "group." + group);
+        if(category != null) listSources.removeAll();
+      }
+
+      public void execute() {
+        try {
+          if(group != null) {
+            SourcesClientHandler client = new SourcesClientHandler(group);
+            if(file.exists()) {
+              byte [] bytes = new DataReader().load(file);
+              dataCategories = new String(bytes, Application.CHARSET).trim().split("\n");
+            } else {
+              dataCategories = client.loadCategories();
+              accessChecker = new OrganizationClientHandler().loadAccessChecker();
+            } 
+          }
+          
+          if(category != null) {
+            if(group == null) {
+              SourcesClientHandler client = new SourcesClientHandler(ListSources.this.group);
+              dataSources = client.loadSources(category);
+            } else {
+              SourcesClientHandler client = new SourcesClientHandler(group);
+              dataSources = client.loadSources(category);
+            }
+          }
+          
+        } catch (Exception e) {
+          ClientLog.getInstance().setException(null, e);
+        }
+      }
+
+      public void after() {
+        if(listSources.isDisposed()) return;
+        listSources.setFocus();
+        
+        if(dataCategories != null) {
+          cboCategories.removeAll();
+          if(accessChecker != null) {
+            StringBuilder builder = new StringBuilder();
+            for(String dataCategory : dataCategories) {
+              if(!accessChecker.isPermitAccess(group + "." + dataCategory, true)) continue;
+              cboCategories.add(dataCategory);
+              if(builder.length() > 0) builder.append('\n');
+              builder.append(dataCategory);
+            }  
+            
+            try {
+              byte [] bytes = builder.toString().getBytes(Application.CHARSET);
+              new DataWriter().save(file, bytes);
+            } catch (Exception e) {
+              file.delete();
+            }
+          } else {
+            for(String dataCategory : dataCategories) {
+              cboCategories.add(dataCategory);
+            }
+          }
+          
+        }
+        
+        boolean isSelectedCategory = false;
+        if(category != null) {
+          for(int i = 0; i < cboCategories.getItemCount(); i++) {
+            if(cboCategories.getItem(i).equals(category)) {
+              cboCategories.select(i);
+              isSelectedCategory = true;
+              break;
+            }
+          }  
+        }
+
+        if(!isSelectedCategory) {
+          if(cboCategories.getItemCount() < 1) return;
+          
+          int defaultSelected  = 0;
+          try {
+            Preferences prefs_ = Preferences.userNodeForPackage(Creator.class);
+            String value = prefs_.get(group+".selected.category", "");
+            defaultSelected = Integer.parseInt(value);
+          } catch (Exception e) {
+          }
+          while(defaultSelected >= cboCategories.getItemCount()) defaultSelected--;
+          cboCategories.select(defaultSelected);
+          creator.selectData(null, cboCategories.getItem(defaultSelected));
+          int idx = cboCategories.getSelectionIndex();
+          if(idx < 0) return;
+          setValues(false, false, null, cboCategories.getItem(idx));
+        }
+          
+        if(dataSources == null) return;
+        for(int i = 0; i < dataSources.length; i++) {
+          int idx = dataSources[i].indexOf('.');
+          if(idx > -1) dataSources[i] = dataSources[i].substring(idx+1);
+        }
+        Arrays.sort(dataSources, new VietComparator());
+        listSources.setItems(dataSources);
+        listSources.setToolTipText(dataSources.length+" items");
+        
+        if(sources == null || sources.length < 1) return;
+        listSources.setSelection(sources);
+        if(showData) creator.setSource(category, sources[0], focus);
+        int topIndex = listSources.getSelectionIndex();
+        int visibleCount = listSources.getSize().y/28;
+        if(topIndex - visibleCount < 0) return;
+        topIndex -= visibleCount;
+        listSources.setTopIndex(topIndex);
+      }
+    };
+    WaitLoading loading = new WaitLoading(listSources, excutor);
+    loading.open();
+  }
+
+  public void setCreator(Creator creator) { this.creator = creator; }
+  public Creator getCreator() { return creator; }
+
+  public void setCategories(AccessChecker accessChecker, String[] categories) {
+    cboCategories.removeAll();
+    if(categories == null) return;
+    if(accessChecker == null) {
+      for(String dataCategory : categories) {
+        cboCategories.add(dataCategory);
+      }
+      return;
+    }
+    group = creator.getSelectedGroupName();
+    
+    StringBuilder builder = new StringBuilder();
+    for(String dataCategory : categories) {
+      if(!accessChecker.isPermitAccess(group + "." + dataCategory, true)) continue;
+      cboCategories.add(dataCategory);
+      if(builder.length() > 0) builder.append('\n');
+      builder.append(dataCategory);
+    }  
+
+    File file = new File(ClientConnector2.getCacheFolder("sources/type"), "group." + group);
+    try {
+      byte [] bytes = builder.toString().getBytes(Application.CHARSET);
+      new DataWriter().save(file, bytes);
+    } catch (Exception e) {
+      file.delete();
+    }
+
+  }
+
+  @Override
+  public void setSelectedCategory(String cate) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void setSelectedSources(String... sources) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void setSources(String... sources) {
+    // TODO Auto-generated method stub
+    
+  }
+}

@@ -1,0 +1,156 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.crepo;
+
+import java.util.List;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.cache.LinkCacher;
+import org.vietspider.crawl.link.cache.LinkCacherService;
+import org.vietspider.crawl.link.queue.LinkQueue;
+import org.vietspider.crawl.link.queue.UrlList;
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * May 12, 2009  
+ */
+final public class SessionTempLinkHandler {
+
+  static int MAX_SIZE_LINK = 500;
+
+  static {
+    if(Application.LICENSE == Install.PROFESSIONAL) {
+      MAX_SIZE_LINK = 1000;
+    } else if(Application.LICENSE == Install.ENTERPRISE) {
+      MAX_SIZE_LINK = 3000;
+    } else if(Application.LICENSE == Install.SEARCH_SYSTEM) {
+      MAX_SIZE_LINK = 5000;
+    }
+  }
+
+//  private volatile ConcurrentLinkedQueue<Link> tempLinkList;
+//  private volatile ConcurrentLinkedQueue<UrlList> tempURLList;
+
+//  private SessionStore store;
+
+  SessionTempLinkHandler(/*SessionStore store*/) {
+//    this.store = store;
+//    this.tempLinkList = new ConcurrentLinkedQueue<Link>();
+//    this.tempURLList = new ConcurrentLinkedQueue<UrlList>();
+  }
+  
+  /*void push(SessionStore store, String host, Link referer, List<Link> list) {
+    LinkQueue queue = store.getQueue();
+    UrlList urlList = new UrlList(host, referer);
+    urlList.setList(list);
+    boolean save = queue.size() > MAX_SIZE_LINK;
+    LinkQueue newQueue = null;
+
+    newQueue = store.createLink(save, urlList);
+
+    if(newQueue == null || !newQueue.hasNext()) return;
+
+    Source source = urlList.getReferer().getSource();
+    if(save) {
+      LinkCacher cacher = LinkCacherService.getCacher(source);
+      if(cacher != null) cacher.save(newQueue);
+    } else {
+      queue.appendFirst(newQueue);
+    }
+    if(queue.size() > MAX_SIZE_LINK) return;
+  }
+
+  void push(SessionStore store,List<Link> list) {
+    Md5Codes codes = store.getCodes();
+    LinkQueue queue = store.getQueue(); 
+    boolean save = queue.size() > MAX_SIZE_LINK;
+    LinkQueue newQueue = new LinkQueue(queue.getCodeName());
+    Source source = null;
+    for(int i = 0; i < list.size(); i++) {
+      Link link = list.get(i);
+      if(source == null) source = link.getSource();
+      if(codes.contains(link)) continue;
+      codes.add(link);
+      newQueue.push(link);
+      if(save) continue;
+      if(queue.size() > MAX_SIZE_LINK) break;
+    }
+
+    if(!newQueue.hasNext()) return;
+    if(save) {
+      LinkCacher cacher = LinkCacherService.getCacher(source);
+      if(cacher != null) cacher.save(newQueue);
+    } else {
+      //    stores.size() += newQueue.size();
+      queue.appendFirst(newQueue);
+    }
+  }*/
+
+ /* public void process() {
+    LinkQueue queue = store.getQueue();
+    handleTempLink(store.getCodes(), queue);
+    handleUrlList(queue);
+    
+    SourceResource sourceResource = store.getSourceResource();
+    if(queue.size() < 15) {
+      LinkCreator linkCreator = sourceResource.getLinkCreator();
+      List<Object> generators = sourceResource.getLinkGenerators();
+      String referer = linkCreator.getRefererURL();
+      List<String> listHomepage = new ArrayList<String>();
+      invoke(generators, HOMEPAGE_GENERATOR, listHomepage);
+      store.addHomepages(null, referer, listHomepage.toArray(new String[listHomepage.size()]));
+    }
+
+  }*/
+
+  /*private void handleTempLink(Md5Codes codes, LinkQueue queue) {
+    boolean save = queue.size() > MAX_SIZE_LINK;
+    LinkQueue newQueue = new LinkQueue(queue.getCodeName());
+    Source source = null;
+    while(!tempLinkList.isEmpty()) {
+      Link link = tempLinkList.poll();
+      if(source == null) source = link.getSource();
+      if(codes.contains(link)) continue;
+      codes.add(link);
+      newQueue.push(link);
+      if(save) continue;
+      if(queue.size() > MAX_SIZE_LINK) break;
+    }
+
+    if(!newQueue.hasNext()) return;
+    if(save) {
+      LinkCacher cacher = LinkCacherService.getCacher(source);
+      if(cacher != null) cacher.save(newQueue);
+    } else {
+      //    stores.size() += newQueue.size();
+      queue.appendFirst(newQueue);
+    }
+  }*/
+
+  /*private void handleUrlList(LinkQueue queue) {
+    boolean save = queue.size() > MAX_SIZE_LINK;
+    while(!tempURLList.isEmpty()) {
+      UrlList urlLink = tempURLList.poll();
+      LinkQueue newQueue = null;
+
+      newQueue = store.createLink(save, urlLink);
+
+      if(newQueue == null || !newQueue.hasNext()) continue;
+
+      Source source = urlLink.getReferer().getSource();
+      if(save) {
+        LinkCacher cacher = LinkCacherService.getCacher(source);
+        if(cacher != null) cacher.save(newQueue);
+      } else {
+        queue.appendFirst(newQueue);
+      }
+      if(queue.size() > MAX_SIZE_LINK) return;
+    }
+  }*/
+
+}

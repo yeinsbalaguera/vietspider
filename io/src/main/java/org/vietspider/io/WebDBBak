@@ -1,0 +1,187 @@
+package org.vietspider.io;
+
+import java.io.File;
+import java.util.Comparator;
+
+import org.headvances.storage.v3.LongData;
+import org.headvances.storage.v3.MD5Hash;
+import org.headvances.storage.v3.PageHeader;
+import org.headvances.storage.v3.SequenceStorage;
+import org.headvances.storage.v3.Storable;
+import org.headvances.storage.v3.Storage;
+import org.headvances.storage.v3.StorageException;
+import org.headvances.storage.v3.StoragePlugin;
+import org.headvances.storage.v3.index.sort.Entry;
+import org.headvances.storage.v3.index.sort.Factory;
+import org.headvances.storage.v3.index.sort.Index;
+
+public abstract class WebDb<T extends Storable> {
+
+  final static public String DATA_FILE = "data.db" ;
+  private Index<MD5Hash, LongData> idIndex ;
+  protected SequenceStorage<T> storage;
+  
+  protected volatile int totalAction = 0;
+
+  public WebDb(String dir) throws Exception {
+    StoragePlugin<T> storagePlugin = new StoragePlugin<T>() {
+      public T createStorable() { return createBean(); }
+    } ;
+
+    File dbdir = new File(dir) ;
+    if(!dbdir.exists()) dbdir.mkdirs() ;
+
+    storage = new SequenceStorage<T>(dir+ "/" + DATA_FILE, storagePlugin) ;
+    storage.setCompress(false) ;
+    storage.setAllocateExtra(50) ;
+
+    Factory<MD5Hash, LongData> idxFactory = new Factory<MD5Hash, LongData>() {
+      public MD5Hash createKey() { return new MD5Hash(); }
+      public Comparator<MD5Hash> createKeyComparator() { return MD5Hash.COMPARATOR ; }
+      public LongData createValue() { return new LongData() ; }
+      public int getKeySize() { return MD5Hash.DATA_LENGTH; }
+      public int getValueSize() { return LongData.DATA_LENGTH ; }
+    } ;
+
+    idIndex = new Index<MD5Hash, LongData>(dir + "/idx",  idxFactory);
+
+    byte storageBrokenCommitStatus = storage.getBrokenCommitStatus() ;
+    byte idIndexBrokenCommitStatus = idIndex.getBrokenCommitStatus() ;
+    
+    if(storageBrokenCommitStatus == Storage.RECOVERABLE_BROKEN ||
+       idIndexBrokenCommitStatus == Storage.RECOVERABLE_BROKEN) {
+      if(storageBrokenCommitStatus == Storage.RECOVERABLE_BROKEN &&
+         idIndexBrokenCommitStatus == Storage.RECOVERABLE_BROKEN) {
+        idIndex.fixBrokenCommit() ;
+        storage.fixBrokenCommit() ;
+      } else {
+        idIndex.cleanBrokenCommit() ;
+        storage.cleanBrokenCommit() ;
+      }
+    } else if(storageBrokenCommitStatus == Storage.UNRECOVERABLE_BROKEN ||
+        idIndexBrokenCommitStatus == Storage.UNRECOVERABLE_BROKEN) {
+      idIndex.cleanBrokenCommit() ;
+      storage.cleanBrokenCommit() ;
+    }
+  }
+
+  public abstract T createBean();
+
+  public abstract MD5Hash getMD5HashId(T t);
+
+  public abstract void update(T from, T to);
+
+  public T find(String key) throws Exception {
+    return find(MD5Hash.digest(key)) ;
+  }
+
+  public T find(MD5Hash id) throws Exception {
+    Entry<MD5Hash, LongData> entry = idIndex.find(id) ;
+    if(entry == null) return null ;
+    return storage.fetch(entry.getValue().getValue()) ;
+  }
+
+  public synchronized int insert(T record) throws Exception {
+    Entry<MD5Hash, LongData> entry = idIndex.find(getMD5HashId(record)) ;
+    totalAction++;
+    if(entry == null) {
+      storage.add(record) ;
+      idIndex.insert(getMD5HashId(record), new LongData(record.getPageHeader().getPosition()), false) ;
+      return 1 ;
+    } 
+
+    T recordToUpdate = storage.fetch(entry.getValue().getValue()) ;
+    update(recordToUpdate, record);
+    //record.setPageHeader(header) ;
+    try {
+      storage.update(recordToUpdate) ;
+    } catch(StorageException ex) {
+      if(ex.getExceptionCode() == StorageException.OUT_OF_ALLOCATED_SIZE) {
+        //Move the record to a new place
+        storage.remove(recordToUpdate.getPageHeader()) ;
+        recordToUpdate.setPageHeader(null) ;
+        storage.add(recordToUpdate) ;
+        idIndex.update(getMD5HashId(recordToUpdate), 
+            new LongData(recordToUpdate.getPageHeader().getPosition())) ;
+      } else {
+        throw ex ;
+      }
+    }
+    return 0 ;
+  }
+
+  public synchronized int remove(String uri) throws Exception {
+    totalAction++;
+    return remove(MD5Hash.digest(uri)) ;
+  }
+
+  public synchronized int remove(MD5Hash md5Id) throws Exception {
+    totalAction++;
+    Entry<MD5Hash, LongData> entry = idIndex.remove(md5Id) ;
+    if(entry != null) {
+      storage.remove(entry.getValue().getValue()) ;
+      return 1 ;
+    }
+    return 0 ;
+  }
+
+  public synchronized void update(T record) throws Exception {
+    totalAction++;
+    PageHeader cHeader = record.getPageHeader() ;
+    try {
+      storage.update(record) ;
+    } catch(StorageException ex) {
+      if(ex.getExceptionCode() == StorageException.OUT_OF_ALLOCATED_SIZE) {
+        //Move the record to a new place
+        storage.remove(cHeader) ;
+        record.setPageHeader(null) ;
+        storage.add(record) ;
+        idIndex.update(getMD5HashId(record),
+            new LongData(record.getPageHeader().getPosition())) ;
+      } else {
+        throw ex ;
+      }
+    }
+  }
+  
+  synchronized void privateCommit() throws Exception {
+    idIndex.preCommit() ;
+    storage.preCommit() ;
+
+    idIndex.postCommit() ;
+    storage.postCommit() ;
+    
+    totalAction = 0;
+  }
+
+  synchronized void commit() throws Exception {
+    if(totalAction < 100) return;
+    privateCommit();
+  }
+
+  synchronized void close() throws Exception {
+    privateCommit() ;
+    storage.close() ;
+    idIndex.close() ;
+  }
+
+  public synchronized void delete() throws Exception {
+    storage.delete() ;
+    idIndex.delete() ;
+  }
+
+  public void checkCorruption() throws Exception {
+    idIndex.ensureKeyOrder() ;
+  }
+
+  public void setRecoverableBroken() {
+    storage.setBroken(Storage.RECOVERABLE_BROKEN) ;
+  }
+
+  public void setUnRecoverableBroken() {
+    storage.setBroken(Storage.UNRECOVERABLE_BROKEN) ;
+  }
+
+  public Object getLabel(){ return "WebDB"; } 
+
+}

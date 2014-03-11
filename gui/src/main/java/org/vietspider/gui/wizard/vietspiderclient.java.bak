@@ -1,0 +1,25 @@
+/***************************************************************************
+ * Copyright 2001-2012 ArcSight, Inc. All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.gui.wizard;
+
+import org.vietspider.startup.StartClient;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          thuannd2@fsoft.com.vn
+ * Jan 2, 2012  
+ */
+public class vietspiderclient {
+  public static void main(String[] args) {
+    System.setProperty("java.net.useSystemProxies", "true");
+    System.setProperty("vietspider.data.path",
+        "D:\\Program\\VietSpider Build 19\\data\\");
+    try {
+      new StartClient();
+    } catch (Exception exp) {
+      exp.printStackTrace();
+    }
+    System.exit(0);
+  }
+}

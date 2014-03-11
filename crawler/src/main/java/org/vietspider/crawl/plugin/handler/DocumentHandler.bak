@@ -1,0 +1,203 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.plugin.handler;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.vietspider.bean.Meta;
+import org.vietspider.common.io.LogService;
+import org.vietspider.crawl.plugin.ProcessPlugin.PluginData;
+import org.vietspider.handler.XMLHandler;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.Name;
+import org.vietspider.html.NodeIterator;
+import org.vietspider.html.path2.HTMLExtractor;
+import org.vietspider.html.path2.NodePath;
+import org.vietspider.html.path2.NodePathParser;
+import org.vietspider.model.Region;
+import org.vietspider.model.Source;
+import org.vietspider.parser.xml.XMLDocument;
+import org.vietspider.parser.xml.XMLNode;
+import org.vietspider.token.TypeToken;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 27, 2008  
+ */
+public class DocumentHandler extends XMLHandler {
+  
+  private NodePath [] contentPaths; 
+  
+  private NodePath [] numberPaths;  
+  private NodePath [] signPaths;  
+  private NodePath [] datePublishPaths;
+  private NodePath [] userSignPaths;
+  private NodePath [] sumamaryPaths;
+  private NodePath [] orgPaths;
+  private NodePath [] categoryPaths;
+  
+  private NodePath [] langPaths;
+  
+  private NodePath [] filePaths;
+  
+  private HTMLExtractor extractor  = new HTMLExtractor();  
+  
+  public DocumentHandler(Source source) {
+    Region [] Regions = source.getProcessRegion();
+    NodePathParser pathParser = new NodePathParser();
+    for(Region path : Regions) {
+      if(path == null || path.getPaths() == null) continue;
+      NodePath [] nodePaths =  null;
+      try {
+        nodePaths = pathParser.toNodePath(path.getPaths());
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(source, e);
+      }
+      if(nodePaths == null || nodePaths.length < 1)  continue;
+      
+      String name  = path.getName().trim().toLowerCase();
+      
+      if(name.endsWith("nội dung")) {
+        contentPaths = nodePaths;
+      } else if(name.endsWith("số văn bản")) {
+        numberPaths = nodePaths;
+      } else if(name.endsWith("ký hiệu")) {
+        signPaths = nodePaths;
+      } else if(name.endsWith("ngày ban hành")) {
+        datePublishPaths = nodePaths;
+      } else if(name.endsWith("người ký")) {
+        userSignPaths = nodePaths;
+      } else if(name.endsWith("trích yếu")) {
+        sumamaryPaths = nodePaths;
+      } else if(name.endsWith("cơ quan ban hành")) {
+        orgPaths = nodePaths;
+      } else if(name.endsWith("phân loại")) {
+        categoryPaths = nodePaths;
+      } else if(name.endsWith("đính kèm")) {
+        filePaths = nodePaths;
+      } else if(name.endsWith("ngôn ngữ")) {
+        langPaths = nodePaths;
+      }
+    }
+  }
+  
+  public String handle(PluginData pluginData) {
+    HTMLDocument document = pluginData.getLink().getDocument();
+    Meta meta = pluginData.getMeta();
+    
+    XMLNode xmlRoot = new XMLNode("document", TypeToken.TAG);
+    XMLDocument xmlDocument = new XMLDocument(xmlRoot);
+    
+    XMLNode xmlContentNode = new XMLNode("content", TypeToken.TAG);
+    xmlRoot.addChild(xmlContentNode);
+    
+    HTMLNode root = document.getRoot();
+        
+    String content = lookupTextValue2(root, contentPaths, Region.DEFAULT);
+    XMLNode  xmlContentDataNode = new XMLNode(content.toCharArray(), null, TypeToken.CONTENT);
+    xmlContentNode.addChild(xmlContentDataNode);
+    xmlContentNode.setIsOpen(false);
+
+    XMLNode xmlPropertiesNode = new XMLNode("properties", TypeToken.TAG);
+    xmlRoot.addChild(xmlPropertiesNode);
+   
+    content = lookupTextValue2(root, numberPaths, Region.DEFAULT);
+    xmlPropertiesNode.addChild(createPropertyNode("Số văn bản", content));
+    meta.setTitle(content.trim());
+    
+    content = lookupTextValue2(root, signPaths, Region.DEFAULT);
+    xmlPropertiesNode.addChild(createPropertyNode("Ký hiệu", content));
+    meta.setTitle(meta.getTitle()+"/"+content.trim());
+    
+    content = lookupTextValue2(root, datePublishPaths, Region.DEFAULT);
+    xmlPropertiesNode.addChild(createPropertyNode("Ngày ban hành", content));
+    meta.setSourceTime(content.trim());
+    
+    content = lookupTextValue2(root, userSignPaths, Region.DEFAULT);
+    xmlPropertiesNode.addChild(createPropertyNode("Người ký", content));
+    
+    content = lookupTextValue2(root, sumamaryPaths, Region.DEFAULT);
+    xmlPropertiesNode.addChild(createPropertyNode("Trích yếu", content));
+    meta.setDesc(content.trim());
+    
+    content = lookupTextValue2(root, orgPaths, Region.DEFAULT);
+    xmlPropertiesNode.addChild(createPropertyNode("Cơ quan ban hành", content));
+    
+    content = lookupTextValue2(root, categoryPaths, Region.DEFAULT);
+    xmlPropertiesNode.addChild(createPropertyNode("Phân loại", content));
+    
+    content = lookupTextValue2(root, langPaths, Region.DEFAULT);
+    String lower = content.toLowerCase().trim();
+    if(lower.indexOf("việt") > -1
+        || "vietnamese".equals(lower)) {
+      content = "vi"; 
+    } else  if(lower.indexOf("trung") > -1
+        || "chinese".equals(lower)) {
+      content = "zh";
+    } else  if(lower.indexOf("anh") > -1
+        || "english".equals(lower)) {
+      content = "en";
+    } else {
+      content = "vi"; 
+    }
+    xmlPropertiesNode.addChild(createPropertyNode("Ngôn ngữ", content));
+    
+    xmlPropertiesNode.setIsOpen(false);
+    
+    return xmlDocument.getTextValue();
+//    return new String[]{title, desc, xmlDocument.getTextValue()};
+  }
+  
+  /*private String lookupContentValue(Source source, HTMLNode root, NodePath[] paths) {
+    StringBuilder builder = new StringBuilder("<![CDATA[");
+    try {
+      if(paths != null) {
+        List<HTMLNode> nodes = extractor.matchNodes(root, paths);
+        for(int i = 0; i < nodes.size(); i++) {
+          if(i > 0) builder.append('\n');
+          if(nodes.get(i) == null) continue;
+          buildHTMLNode(builder, nodes.get(i), 0);
+        }
+      }
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(source, e);
+      builder.append(root.getTextValue());
+    }
+    builder.append("]]>");
+    return builder.toString();
+  }*/
+  
+  public List<HTMLNode> lookupFiles(Source source, HTMLDocument document) {
+    List<HTMLNode> values = new ArrayList<HTMLNode>();
+    try {
+      if(filePaths != null) {
+        List<HTMLNode> nodes = extractor.matchNodes(document.getRoot(), filePaths);
+        for(int i = 0; i < nodes.size(); i++) {
+          HTMLNode node = nodes.get(i);
+          if(node == null) continue;
+          searchLink(node, values);
+        }
+      } else {
+        searchLink(document.getRoot(), values);
+      }
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(source, e);
+      searchLink(document.getRoot(), values);
+    }
+    return values;
+  }
+  
+  private void searchLink(HTMLNode root, List<HTMLNode> values) {
+    NodeIterator iterator = root.iterator();
+    while(iterator.hasNext()) {
+      HTMLNode n = iterator.next();
+      if(n.isNode(Name.A)) values.add(n);
+    }
+  }
+}
+
+

@@ -1,0 +1,24 @@
+grant {
+    permission java.security.AllPermission;
+};
+
+
+grant codeBase "file:g:/dev/jakarta-turbine-jcs/target/classes/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "file:g:/dev/jakarta-turbine-jcs/src/conf/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "file:g:/dev/jakarta-turbine-jcs/src/conf/scripts/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "file:g:/dev/jakarta-turbine-jcs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "file:/G:/*" {
+    permission java.security.AllPermission;
+};

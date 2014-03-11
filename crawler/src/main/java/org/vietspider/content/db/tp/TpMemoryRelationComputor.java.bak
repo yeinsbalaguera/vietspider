@@ -1,0 +1,83 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.db.tp;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.vietspider.bean.Meta;
+import org.vietspider.bean.Relation;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.content.tp.vn.TpDocument;
+import org.vietspider.content.tp.vn.comparator.TpDocumentMatcher;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 18, 2009  
+ */
+public class TpMemoryRelationComputor extends TpComputor {
+  
+  public TpMemoryRelationComputor() {
+  }
+  
+  public void compute(java.util.Queue<TpWorkingData> queue)  {
+    Iterator<TpWorkingData> iterator = queue.iterator();
+//    List<TpDocument> documents = new ArrayList<TpDocument>();
+//    while(iterator.hasNext()) {
+//      documents.add(iterator.next().getTpDocument());
+//    }
+    
+    iterator = queue.iterator();
+    while(iterator.hasNext()) {
+      TpWorkingData temp = iterator.next();
+      computeRelation(queue.iterator(), temp);
+    }
+  }
+  
+  void computeRelation(Iterator<TpWorkingData> iterator, TpWorkingData workingData) {
+    Map<String, Meta> cachedMetas = new HashMap<String, Meta>();
+    
+    TpDocumentMatcher matcher = new TpDocumentMatcher();
+    while(iterator.hasNext()) {
+//    for(int i = 0; i < documents.size(); i++) {
+//      TpDocument2 rdoc = iterator.next().getTpDocument();//documents.get(i);
+      compute(matcher, cachedMetas, workingData,  iterator.next());
+    }
+  }
+  
+  private void compute(TpDocumentMatcher matcher,
+      Map<String, Meta> cachedMetas, TpWorkingData current, TpWorkingData another ) {
+    
+    TpDocument tpDocument = current.getTpDocument();
+    double m = matcher.compare(tpDocument, another.getTpDocument());
+    if(m < current.getMinRate()) return;   
+    if(m > 100) m = 100;
+
+    Relation relation = new Relation();
+
+    String metaId = tpDocument.getId();
+    String relationId = another.getTpDocument().getId();
+    if(metaId.equalsIgnoreCase(relationId)) return;
+    // check duplicate data
+    if(isDuplicate(cachedMetas, metaId, relationId, m)) {
+      if(!another.containsDuplicate(metaId))  {
+        current.addDuplicate(relationId, (int)m);
+      } 
+    }
+//    System.out.println("indexing compute "+ tpDocument.getId()+ " : " + rdoc.getId() + " : "+ m);
+    
+    relation.setMeta(metaId);
+    relation.setRelation(relationId);
+    
+    List<Relation> relations = current.getRelations();
+    if(check(relations, relation.getRelation())) return;
+
+    relation.setPercent((int)m);
+    relations.add(relation);
+  }
+  
+}

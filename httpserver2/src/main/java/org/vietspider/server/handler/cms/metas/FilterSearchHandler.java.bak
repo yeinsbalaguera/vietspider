@@ -1,0 +1,130 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.server.handler.cms.metas;
+
+import java.io.File;
+import java.net.URLDecoder;
+
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.protocol.HttpContext;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.NameConverter;
+import org.vietspider.db.database.MetaList;
+import org.vietspider.model.SourceFileFilter;
+import org.vietspider.server.WebRM;
+import org.vietspider.user.Filter;
+import org.vietspider.users.UserFilterService;
+import org.vietspider.webui.cms.CMSService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * May 4, 2008  
+ */
+public class FilterSearchHandler extends MetaListHandler {
+  
+  public FilterSearchHandler(String type) {
+    super(type); 
+    name = "FSEARCH"; 
+  }
+  
+  public String handle(final HttpRequest request, final HttpResponse response, 
+              final HttpContext context, String...params) throws Exception {
+//    if(logAgent) LogService.getInstance().setMessage(null, userAgent);
+    
+    referer = request.getRequestLine().getUri();
+    
+    String username = CMSService.INSTANCE.getUsername(getCookie(request));
+    if(username == null) {
+      WebRM resources = new  WebRM();
+      throw new IndexOutOfBoundsException(resources.getLabel("incorrectLogin"));
+    }
+    
+    String filterName = params[1];
+    int idx = filterName.indexOf('=');
+    if(idx < 0  || idx >= filterName.length()-1) { 
+      throw new IndexOutOfBoundsException("Incorrect parammeter");
+    }
+    
+    int end = filterName.indexOf('&', idx);
+    if(end < 0) end = filterName.length();
+    filterName = URLDecoder.decode(filterName.substring(idx+1, end), "UTF-8");
+    Filter filter = UserFilterService.getInstance().loadFilter(username, filterName.trim());
+        
+    MetaList metas = new MetaList();
+    metas.setAction("FSEARCH");
+    metas.setCurrentPage(Integer.parseInt(params[0]));
+    
+    /*if(filter != null && filter.getType() == Filter.DOMAIN) {
+      ContentSearcher searcher = new ContentSearcher();
+      int idxItem = params[1].indexOf("item=", end);
+      String filterValue = null;
+      if(idxItem > 0) filterValue = params[1].substring(idxItem + 5);
+      if(filterValue == null) filterValue = filter.getFilter();
+      if(filterValue == null || filterValue.trim().isEmpty()) {
+        searcher.searchByDomain(metas, listCategory(filterName));
+      } else{
+        searcher.searchByDomain(metas, filterValue.split("\n"));
+      }
+    } else {
+      ContentSearcher searcher = new ContentSearcher();
+      searcher.searchByQuery(metas, generateContentQuery(filter.getFilter()));
+    }*/
+    
+    WebRM resources = new  WebRM();
+    StringBuilder  builder = new StringBuilder(resources.getLabel("search"));
+    metas.setTitle(builder.toString());
+    metas.setUrl(params[1]); 
+    
+    return write(request, response, context, metas, params);
+  }
+  
+  private String [] listCategory(String filterName) {
+    NameConverter converter = new NameConverter();
+    filterName = NameConverter.encode(filterName);
+    String [] elements = filterName.split("\\.");
+    File folder = UtilFile.getFolder("sources/sources/"+ elements[0]+"/"+ elements[1]);
+    File [] files = UtilFile.listFiles(folder, new SourceFileFilter(false));
+    String [] values = new String[files.length]; 
+    for(int i = 0; i < files.length; i++) {
+      values[i] = elements[0] + "." + converter.decode(files[i].getName());
+    }
+    return values;
+  }
+  
+  private String generateContentQuery(String value) {
+    String [] elements = value.split(",");
+    StringBuilder pattern = new StringBuilder();
+    
+    for(String element : elements) {
+      element = element.trim();
+      if(element.isEmpty()) continue;
+      
+      if(pattern.length() > 0) pattern.append(' ');
+      
+      if(element.indexOf('+') < 1) {
+        if(element.charAt(0) != '\"') pattern.append('\"');
+        pattern.append(element);
+        if(element.charAt(element.length()-1) != '\"') pattern.append('\"');
+      }
+
+      String [] subElements = element.split("\\+");
+      for(int j = 0; j < subElements.length; j++) {
+        if(subElements[j].charAt(0) != '\"') pattern.append('\"');
+        pattern.append(subElements[j]);
+        if(subElements[j].charAt(subElements[j].length()-1) != '\"') pattern.append('\"');
+        if(j > 0 && j < subElements.length - 1) pattern.append('+');
+      }
+
+    }
+    StringBuilder builder = new StringBuilder();
+//    builder.append(ContentIndex.FIELD_TITLE).append(':').append(pattern).append(" OR ");
+//    builder.append(ContentIndex.FIELD_DESC_WORD).append(':').append(pattern).append(" OR ");
+//    builder.append(ContentIndex.FIELD_CONTENT_WORD).append(':').append(pattern);
+//    System.out.println(" ==== > query "+ builder);
+    return builder.toString();
+  }
+  
+}

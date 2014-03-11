@@ -1,0 +1,50 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.vn.comparator;
+
+import org.vietspider.content.tp.vn.TpDocument;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 30, 2009  
+ */
+public class TpDocumentMatcher {
+  
+  private StringBuilder info = new StringBuilder();
+
+  private PhraseMatcher phraseMatcher = new PhraseMatcher();
+  private NounMatcher nounMatcher = new NounMatcher();
+  
+  private final static short MIN_PROPER_NOUN = 10;
+  
+  public StringBuilder getInfo() { return info; }
+  
+  public double compare(TpDocument doc1, TpDocument doc2){
+    if(doc1 == null || doc2 == null) return 0.0;
+    info.setLength(0);
+    info.append(doc1.getId()).append(" <=> ").append(doc2.getId());
+    double compareNoun = nounMatcher.compare(doc1.getNouns(), doc2.getNouns());
+    info.append(" => compareNouns : ").append(String.valueOf(compareNoun));
+    
+    if(compareNoun < 10) return compareNoun;
+    
+//    System.out.println("cuoi cung " + compareNoun);
+    if(doc1.getNouns().getWords().size() >= MIN_PROPER_NOUN
+        && doc2.getNouns().getWords().size() >= MIN_PROPER_NOUN) {
+      if(compareNoun >= 60) return compareNoun;// true     
+    }
+    
+    double comparePhrases = phraseMatcher.compare(doc1.getPhrases(), doc2.getPhrases());
+    info.append(" => comparePhrases : ").append(comparePhrases);
+    if(comparePhrases >= 60) return comparePhrases; // true
+    
+    if(comparePhrases < 15) return comparePhrases;//false
+    
+    double value  = (compareNoun+comparePhrases)/2;
+    info.append(" // ==> compareValue : ").append(value);
+//    if(value > 10) return value;//true
+    return value;
+  }
+}

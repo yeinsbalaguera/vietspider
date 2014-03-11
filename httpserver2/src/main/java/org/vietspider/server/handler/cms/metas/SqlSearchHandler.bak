@@ -1,0 +1,58 @@
+/***************************************************************************
+ * Copyright 2003-2007 by VietSpider - All rights reserved.                *    
+ **************************************************************************/
+package org.vietspider.server.handler.cms.metas;
+
+import java.net.URLDecoder;
+
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.protocol.HttpContext;
+import org.headvances.vietspider.database.DatabaseService;
+import org.headvances.vietspider.database.DatabaseUtils;
+import org.headvances.vietspider.database.MetaList;
+import org.vietspider.server.WebRM;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Jun 26, 2007
+ */
+public class SqlSearchHandler extends MetaListHandler {
+  
+  public SqlSearchHandler(String type) {
+    super(type); 
+    name = "SEARCH"; 
+  }
+  
+  public String handle(final HttpRequest request, final HttpResponse response, 
+              final HttpContext context, String...params) throws Exception {
+    DatabaseUtils databaseUtils = DatabaseService.getUtil();
+    String pattern = params[1];
+    int idx = pattern.indexOf('=');
+    if(idx < 0  || idx >= pattern.length()-1) { 
+      throw new IndexOutOfBoundsException("Incorrect parammeter");
+    }
+    
+    String search = URLDecoder.decode(pattern.substring(idx+1), "UTF-8");
+    pattern = search;
+        
+    pattern = " "+pattern.trim()+" ";
+    pattern  = pattern.replaceAll(" and ", "%");
+    pattern = pattern.replaceAll(" or ", "%' OR CONTENT LIKE '%");
+    
+    MetaList metas = new MetaList();
+    metas.setAction("SEARCH");
+    metas.setCurrentPage(Integer.parseInt(params[0]));
+    
+    databaseUtils.searchMeta(pattern, metas);
+    
+    WebRM resources = new  WebRM();
+    StringBuilder  builder = new StringBuilder(resources.getLabel("search"));
+    metas.setTitle(builder.toString());
+    metas.setUrl(params[1]); 
+    
+    return write(request, response, context, metas, params);
+  }
+
+}

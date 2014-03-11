@@ -1,0 +1,696 @@
+package org.vietspider.gui.creator;
+
+import java.io.File;
+import java.util.List;
+import java.util.Properties;
+import java.util.prefs.Preferences;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.TabFolder;
+import org.eclipse.swt.widgets.TabItem;
+import org.vietspider.client.common.ClientConnector2;
+import org.vietspider.client.common.DataClientHandler;
+import org.vietspider.client.common.OrganizationClientHandler;
+import org.vietspider.client.common.source.SimpleSourceClientHandler;
+import org.vietspider.client.common.source.SourcesClientHandler;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.DataWriter;
+import org.vietspider.common.util.Worker;
+import org.vietspider.gui.browser.StatusBar;
+import org.vietspider.gui.source.ListSources;
+import org.vietspider.gui.source.SearchSource;
+import org.vietspider.gui.source.SourcesExplorer;
+import org.vietspider.gui.source.TreeSources;
+import org.vietspider.gui.workspace.Workspace;
+import org.vietspider.gui.workspace.XPWindowTheme;
+import org.vietspider.model.Group;
+import org.vietspider.model.Region;
+import org.vietspider.model.RegionUtils;
+import org.vietspider.model.Source;
+import org.vietspider.ui.htmlexplorer.HTMLExplorer;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.LiveSashForm;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.waiter.ThreadExecutor;
+import org.vietspider.user.AccessChecker;
+
+public class Creator extends Composite {
+
+  protected TreeSources treeSources;
+  private ListSources listSources;
+  private SearchSource searchSources;
+
+  //  private AdvSourceInfo advSourceInfo;
+  private SourceInfoControl infoControl1;
+
+  private Combo cboGroupType;
+  private Composite tab;
+
+  protected Workspace workspace_;
+
+  protected int lastSelectedTabItem = 0;
+
+  protected String selectedGroup = null;
+  protected String selectedCategory = null;
+  protected String selectedSource = null;
+
+  protected StatusBar statusBar;
+
+  private HTMLExplorer htmlExplorer;
+  private DataSelectorExplorer dataExplorer;
+  private TestViewer testViewer;
+
+  private LiveSashForm sashMain;
+  private Composite dataForm;
+
+  private Group cachedGroup;
+  
+  private Properties systemProperties;
+
+  public Creator(Composite parent, Workspace workspace){
+    super(parent, SWT.NONE);
+
+    this.workspace_ = workspace;
+    ApplicationFactory factory = new ApplicationFactory(this, "Creator", getClass().getName());
+
+    GridLayout gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    setLayout(gridLayout);
+
+    sashMain = new LiveSashForm(this, SWT.VERTICAL);
+    GridData gridData = new GridData(GridData.FILL_BOTH);
+    sashMain.setLayoutData(gridData);
+
+    dataForm = new Composite(sashMain, SWT.NONE);
+
+    sashMain.setMaximizedControl(dataForm);
+
+    gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    dataForm.setLayout(gridLayout);
+    SashForm sashForm = new SashForm(dataForm, SWT.HORIZONTAL);
+
+    gridData = new GridData(GridData.FILL_BOTH);      
+    sashForm.setLayoutData(gridData);
+
+    Composite composite = new Composite(sashForm, SWT.NONE);
+    gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 2;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 2;
+    composite.setLayout(gridLayout);
+    composite.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+    //    Composite composite2  = new Composite(composite, SWT.NONE);
+    //    gridLayout = new GridLayout(2, false);
+    //    gridLayout.marginHeight = 0;
+    //    gridLayout.horizontalSpacing = 0;
+    //    gridLayout.verticalSpacing = 2;
+    //    gridLayout.marginWidth = 0;
+    //    composite2.setLayout(gridLayout);
+    factory.setComposite(composite);
+    //    composite2.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+    cboGroupType = factory.createCombo(SWT.DROP_DOWN | SWT.READ_ONLY);
+    cboGroupType.setFont(UIDATA.FONT_9B);
+    cboGroupType.setVisibleItemCount(10);
+    cboGroupType.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+    cboGroupType.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        selectGroupType();
+      }      
+    });
+
+    composite.setBackground(new Color(getDisplay(), 255, 255, 255));
+
+    if(XPWindowTheme.isPlatform()) {
+      tab = new CTabFolder(composite, SWT.MULTI);
+      CTabFolder tabFolder = (CTabFolder)tab;
+      XPWindowTheme.setTabBrowserTheme(tabFolder);
+      tab.setCursor(new Cursor(getDisplay(), SWT.CURSOR_HAND));
+    } else {
+      tab = new TabFolder(composite, SWT.TOP);
+      tab.setCursor(new Cursor(getDisplay(), SWT.CURSOR_HAND));
+    }
+
+    tab.setBackground(new Color(getDisplay(), 255, 255, 255));
+    tab.setFont(UIDATA.FONT_10);
+    gridData = new GridData(GridData.FILL_BOTH);     
+    tab.setLayoutData(gridData);
+
+    treeSources = new TreeSources(factory, tab);
+    factory.setComposite(tab);
+    if(XPWindowTheme.isPlatform()) {
+      CTabFolder tabFolder = (CTabFolder)tab;
+      CTabItem item = new CTabItem(tabFolder, SWT.NONE);
+      item.setText(factory.getLabel("tab.explorer"));
+      item.setControl(treeSources);
+    } else {
+      TabFolder tabFolder = (TabFolder)tab;
+      TabItem item = new TabItem(tabFolder, SWT.NONE);
+      item.setText(factory.getLabel("tab.explorer"));
+      item.setControl(treeSources);
+    }
+    treeSources.setCreator(this);
+
+    listSources = new ListSources(factory, tab);
+    factory.setComposite(tab);
+    if(XPWindowTheme.isPlatform()) {
+      CTabFolder tabFolder = (CTabFolder)tab;
+      CTabItem item = new CTabItem(tabFolder, SWT.NONE);
+      item.setText(factory.getLabel("tab.list"));
+      item.setControl(listSources);
+    } else {
+      TabFolder tabFolder = (TabFolder)tab;
+      TabItem item = new TabItem(tabFolder, SWT.NONE);
+      item.setText(factory.getLabel("tab.list"));
+      item.setControl(listSources);
+    }
+    listSources.setCreator(this);
+
+    searchSources = new SearchSource(factory, tab);
+    factory.setComposite(tab);
+    if(XPWindowTheme.isPlatform()) {
+      CTabFolder tabFolder = (CTabFolder)tab;
+      CTabItem item = new CTabItem(tabFolder, SWT.NONE);
+      item.setText(factory.getLabel("tab.search"));
+      item.setControl(searchSources);
+    } else {
+      TabFolder tabFolder = (TabFolder)tab;
+      TabItem item = new TabItem(tabFolder, SWT.NONE);
+      item.setText(factory.getLabel("tab.search"));
+      item.setControl(searchSources);
+    }
+    searchSources.setCreator(this);
+
+    infoControl1 = new SourceInfoControl(sashForm, this, factory);
+
+    sashForm.setWeights(new int[]{150, 520});
+
+    SelectionAdapter tabSelector = new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent e) {
+        selectTabItem();
+
+        Preferences prefs_ = Preferences.userNodeForPackage(Creator.class);
+        if(tab instanceof TabFolder) {
+          TabFolder tabFolder = (TabFolder)tab;
+          prefs_.put("selectedTab", String.valueOf(tabFolder.getSelectionIndex()));
+          lastSelectedTabItem = tabFolder.getSelectionIndex(); 
+        } else if(tab instanceof CTabFolder) {
+          CTabFolder tabFolder = (CTabFolder)tab;
+          prefs_.put("selectedTab", String.valueOf(tabFolder.getSelectionIndex()));
+          lastSelectedTabItem = tabFolder.getSelectionIndex(); 
+        }
+      }
+    };
+
+    if(tab instanceof TabFolder) {
+      ((TabFolder)tab).addSelectionListener(tabSelector);    
+    } else if(tab instanceof CTabFolder) {
+      ((CTabFolder)tab).addSelectionListener(tabSelector);
+    }
+
+
+    try {
+      Preferences prefs = Preferences.userNodeForPackage(getClass());
+      lastSelectedTabItem = Integer.parseInt(prefs.get("selectedTab", ""));
+    } catch (Exception e) {
+      lastSelectedTabItem = 0;
+    }
+    if(tab instanceof TabFolder) {
+      ((TabFolder)tab).setSelection(lastSelectedTabItem);
+    } else if(tab instanceof CTabFolder) {
+      ((CTabFolder)tab).setSelection(lastSelectedTabItem);
+    }
+
+    final Listener listener =  new Listener() {
+      public void handleEvent(Event e) {
+        if(workspace_.getTab().getSelection().getControl() != Creator.this) return;
+        if ((e.stateMask & SWT.CTRL) != 0) {
+          char key = (char)e.keyCode;
+          if(key == 's' || key == 'S') {
+            infoControl1.save();
+          } else if(key == 'r' || key == 'R') {
+            infoControl1.reset(); 
+          } else if(key == 't' || key == 'T') {
+            infoControl1.test(); 
+          }
+        }
+      }
+    };
+
+    addDisposeListener(new DisposeListener() {
+      @SuppressWarnings("unused")
+      public void widgetDisposed(DisposeEvent evt) {
+        getDisplay().removeFilter(SWT.KeyDown, listener);
+      }
+    });
+
+    getDisplay().addFilter(SWT.KeyDown, listener);
+
+    statusBar = new StatusBar(dataForm);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    statusBar.setLayoutData(gridData);  
+    statusBar.setComponent(this);
+
+    Runnable timer = new Runnable () {
+      public void run () {
+        selectTabItem();
+      }
+    };
+    getDisplay().timerExec (500, timer);
+    
+    loadSystemProperties();
+  }	
+
+  public void setSelected(String group, String category, String name){
+//    System.err.println(" ====  >"+ group + " / "+ category+ " / "+ name);
+//    new Exception().printStackTrace();
+    selectedGroup = group;
+    selectedCategory = category;
+    selectedSource = name;
+    
+    Worker excutor = new Worker() {
+
+      private String error = null;
+      private String [] groups = null;
+      private AccessChecker accessChecker;
+      private File file; 
+
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+        file = new File(ClientConnector2.getCacheFolder("sources/type"), "groups");
+      }
+
+      public void execute() {
+        try {
+          if(file.exists()) {
+            byte [] bytes = new DataReader().load(file);
+            groups = new String(bytes, Application.CHARSET).trim().split("\n");
+          } else {
+            groups = new SimpleSourceClientHandler().loadGroups().getNames();
+            accessChecker = new OrganizationClientHandler().loadAccessChecker();
+          }
+        } catch(Exception exp) {
+          error = exp.toString();
+        } 
+      }
+
+      public void after() {
+        if(error != null && !error.isEmpty()) {
+          ClientLog.getInstance().setMessage(getShell(), new Exception(error));
+          return;
+        }
+
+        if(cboGroupType.isDisposed()) return;
+
+        setGroups(groups, accessChecker, file, false);
+
+        for(int i = 0; i < cboGroupType.getItemCount(); i++) {
+          if(cboGroupType.getItem(i).equals(selectedGroup)) {
+            cboGroupType.select(i);
+            selectGroupType();
+            break;
+          }
+        }
+
+      }
+    };
+    new ThreadExecutor(excutor, cboGroupType).start();
+  }
+
+  public void selectGroupType() {
+    int idx = cboGroupType.getSelectionIndex();
+    if(idx < 0) return ;
+    String name = cboGroupType.getItem(idx);
+
+    try {
+      infoControl1.setGroup(new SimpleSourceClientHandler().loadGroups().getGroup(name));
+    }catch(Exception exp){
+      ClientLog.getInstance().setException(getShell(), exp);
+    }  
+    selectTabItem();
+
+    Preferences prefs = Preferences.userNodeForPackage(SourcesExplorer.class);
+    try {
+      prefs.put("selectedGroup", String.valueOf(idx));
+    }catch (Exception e) {
+    }
+  }
+
+  public void createSource(Source source) {
+    if(tab instanceof TabFolder) {
+      TabFolder tabFolder = (TabFolder)tab;
+      if(tabFolder.getSelectionIndex() == 0) {
+        treeSources.setValues(true, true, null, source.getCategory(), source.getName());
+      } else if(tabFolder.getSelectionIndex() == 1) {
+        listSources.setValues(true, true, null, source.getCategory(), source.getName());
+      } else {
+        searchSources.setValues(true, true, null, source.getCategory(), source.getName());
+      }
+    } else if(tab instanceof CTabFolder) {
+      CTabFolder tabFolder = (CTabFolder)tab;
+      if(tabFolder.getSelectionIndex() == 0) {
+        treeSources.setValues(true, true, null, source.getCategory(), source.getName());
+      } else if(tabFolder.getSelectionIndex() == 1) {
+        listSources.setValues(true, true, null, source.getCategory(), source.getName());
+      } else {
+        searchSources.setValues(true, true, null, source.getCategory(), source.getName());
+      }
+    }
+  }
+
+  public void setSource(Source source) {
+    infoControl1.setSource(source, 0, true);
+  }
+
+  void createCategory() {
+    String group = getSelectedGroup();
+
+    if(tab instanceof TabFolder) {
+      TabFolder tabFolder = (TabFolder)tab;
+      if(tabFolder.getSelectionIndex() == 0) {
+        treeSources.setValues(false, false, group, null);
+      } else if(tabFolder.getSelectionIndex() == 1) {
+        listSources.setValues(false, false, group, null);
+      } else {
+        searchSources.setValues(false, false, group, null);
+      }
+    } else if(tab instanceof CTabFolder) {
+      CTabFolder tabFolder = (CTabFolder)tab;
+      if(tabFolder.getSelectionIndex() == 0) {
+        treeSources.setValues(false, false, group, null);
+      } else if(tabFolder.getSelectionIndex() == 1) {
+        listSources.setValues(false, false, group, null);
+      } else {
+        searchSources.setValues(false, false, group, null);
+      }
+    }
+
+
+  }
+
+  public void setCategory(String category) {
+    infoControl1.setCategory(category);
+  }
+
+  public void setSource(final String category, final String name, final boolean focus) {
+    Worker excutor = new Worker() {
+
+      private Source source = null;
+      private String group = null;
+      private String error = null;
+
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+        int idx = cboGroupType.getSelectionIndex();
+        if(idx < 0) idx = 0;
+        if(idx >= cboGroupType.getItemCount()) return;
+        group = cboGroupType.getItem(idx);
+      }
+
+      public void execute() {
+        try {
+          source = new SourcesClientHandler(group).loadSource(category, name);
+        }catch (Exception e) {
+          error = e.toString();
+        }
+      }
+
+      public void after() {
+        if(error != null && !error.isEmpty()) {
+          ClientLog.getInstance().setMessage(getShell(), new Exception(error));
+          return;
+        }
+        if(source != null) infoControl1.setSource(source, 0, focus);
+      }
+    };
+    new ThreadExecutor(excutor, cboGroupType).start();
+  }
+
+  public Workspace getWorkspace() { return workspace_; }
+
+  private String getSelectedCategory() {
+    if(selectedCategory != null) {
+      String value = selectedCategory;
+      selectedCategory = null;
+      return value;
+    }
+
+    return getDefaultSelectedCategory();
+  }
+
+  public String getDefaultSelectedCategory() {
+    if(lastSelectedTabItem == 0) {
+      return treeSources.getSelectedCategory();
+    } else if(lastSelectedTabItem == 1) {
+      return listSources.getSelectedCategory();
+    }
+    return searchSources.getSelectedCategory();
+  }
+
+  private String getSelectedGroup() {
+    if(selectedGroup != null) {
+      String value = selectedGroup;
+      selectedGroup = null;
+      return value;
+    }
+
+    if(cboGroupType == null || cboGroupType.isDisposed()) return null;
+    int idx = cboGroupType.getSelectionIndex();
+    if(idx < 0) return null;
+    return cboGroupType.getItem(idx);
+  }
+
+  private String[] getSelectedSources() {
+    if(selectedSource != null) {
+      String value = selectedSource;
+      return new String[]{value};
+    }
+
+    if(lastSelectedTabItem == 0) {
+      return treeSources.getSelectedSources();
+    } else if(lastSelectedTabItem == 1) {
+      return listSources.getSelectedSources();
+    }
+    return searchSources.getSelectedSources();
+  }
+
+  private void selectTabItem() {
+    String group = getSelectedGroup();
+    String category = getSelectedCategory();
+    String [] sources = getSelectedSources();
+
+    if(tab instanceof TabFolder) {
+      TabFolder tabFolder = (TabFolder)tab;
+      if(tabFolder.getSelectionIndex() == 0) {
+        treeSources.setValues(true, false, group, category, sources);
+      } else if(tabFolder.getSelectionIndex() == 1) {
+//        System.out.println(" chon "+ group + " / "+ category+ " / "+ sources);
+        listSources.setValues(true, false, group, category, sources);
+      } else {
+        searchSources.setValues(true, false, group, category, sources);
+      }
+    } else if(tab instanceof CTabFolder) {
+      CTabFolder tabFolder = (CTabFolder)tab;
+      if(tabFolder.getSelectionIndex() == 0) {
+        treeSources.setValues(true, false, group, category, sources);
+      } else if(tabFolder.getSelectionIndex() == 1) {
+//        System.out.println(" chon "+ group + " / "+ category+ " / "+ sources);
+        listSources.setValues(true, false, group, category, sources);
+      } else {
+        searchSources.setValues(true, false, group, category, sources);
+      }
+    }
+
+  }
+
+  private synchronized void setGroups(String [] groups, 
+      AccessChecker accessChecker, File file, boolean select) {
+//    System.err.println(" ====  >"+ selectedGroup + " / "+ selectedCategory + " / "+ selectedSource);
+//    new Exception().printStackTrace();
+    if(groups == null || groups.length < 1 || cboGroupType.isDisposed()) return;
+    cboGroupType.removeAll();
+    if(accessChecker != null) {
+      StringBuilder builder = new StringBuilder();
+      for(String group : groups) {
+        if(!accessChecker.isPermitGroup(group)) continue;
+        cboGroupType.add(group);
+        if(builder.length() > 0) builder.append('\n');
+        builder.append(group);
+      }
+      try {
+        byte [] bytes = builder.toString().getBytes(Application.CHARSET);
+        new DataWriter().save(file, bytes);
+      } catch (Exception e) {
+        file.delete();
+      }
+    } else {
+      for(String group : groups) {
+        cboGroupType.add(group);
+      } 
+    }
+
+    int selectedIndex = 0;
+    try {
+      Preferences prefs = Preferences.userNodeForPackage(SourcesExplorer.class);
+      selectedIndex = Integer.parseInt(prefs.get("selectedGroup", ""));
+    } catch (Exception e) {
+      selectedIndex = 0;
+    }
+
+    if(selectedIndex < 0) selectedIndex = 0;
+    if(selectedIndex >= cboGroupType.getItemCount()) {
+      if(cboGroupType.getItemCount() > 0) cboGroupType.select(0);
+      return;
+    }
+    cboGroupType.select(selectedIndex);
+    if(select) {
+      selectGroupType();
+      selectTabItem();
+    }
+  }
+
+  public void setTemplate(String template) {
+    treeSources.setTemplate(template);
+    listSources.setTemplate(template);
+    searchSources.setTemplate(template);
+  }
+
+  public StatusBar getStatusBar() { return statusBar; }
+
+  public HTMLExplorer getHtmlExplorer() {
+    if(htmlExplorer == null) {
+      htmlExplorer = new HTMLExplorer(sashMain);
+    }
+    htmlExplorer.reset();
+    return htmlExplorer; 
+  }
+
+  public DataSelectorExplorer getDataExplorer() { 
+    if(dataExplorer == null) {
+      dataExplorer = new DataSelectorExplorer(sashMain);
+    }
+    dataExplorer.reset();
+    return dataExplorer; 
+  }
+
+  public TestViewer getTestViewer() { 
+    if(testViewer == null) {
+      testViewer = new TestViewer(this, sashMain);
+    }
+    return testViewer; 
+  }
+
+  public void showHtmlExplorer() {
+    sashMain.setMaximizedControl(htmlExplorer);
+  }
+
+  public void showMainForm() {
+    sashMain.setMaximizedControl(dataForm);
+  }
+
+  public void showDataExplorer() {
+    sashMain.setMaximizedControl(dataExplorer);
+  }
+
+  public void showTestViewer() {
+    sashMain.setMaximizedControl(testViewer);
+  }
+
+  public List<Region> getSelectedRegions() {
+    return RegionUtils.cloneList(getSelectedGroupInstance()); 
+  }
+
+  public Group getSelectedGroupInstance() {
+    int idx = cboGroupType.getSelectionIndex();
+    String name = null;
+    if(idx > -1) name = cboGroupType.getItem(idx);
+    if(cachedGroup != null 
+        && cachedGroup.getType().equals(name)) return cachedGroup;
+
+    SimpleSourceClientHandler handler = new SimpleSourceClientHandler();
+    Group[] groups = null;
+    try {
+      groups = handler.loadGroups().getGroups();
+    } catch (Exception e) {
+      ClientLog.getInstance().setException(getShell(), e);
+    }
+
+    if(groups == null || groups.length < 1) {
+      groups = new Group[]{new Group()};
+    }
+
+    if(name == null) {
+      cachedGroup = groups[0];
+      return cachedGroup;
+    }
+
+
+    for(int i = 0; i < groups.length; i++) {
+      if(groups[i].getType().equals(name)){
+        cachedGroup = groups[i];
+        return cachedGroup;
+      }
+    }
+
+    cachedGroup = groups[0];
+    return cachedGroup;
+  }
+  
+  public void loadSystemProperties() {
+    Worker excutor = new Worker() {
+
+      public void abort() { }
+      public void before() { }
+
+      public void execute() {
+        try {
+          DataClientHandler handler = new DataClientHandler();
+          systemProperties = handler.getSystemProperties();
+        }catch (Exception e) {
+        }
+      }
+
+      public void after() {}
+    };
+    new ThreadExecutor(excutor, cboGroupType).start();
+  }
+  
+  public SourceInfoControl getInfoControl() { return infoControl1; }
+  
+  public Properties getSystemProperties() { return systemProperties;  }
+
+}

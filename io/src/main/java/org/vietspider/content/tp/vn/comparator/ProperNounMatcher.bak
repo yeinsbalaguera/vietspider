@@ -1,0 +1,88 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.miming.vn.comparator;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 28, 2009  
+ */
+public class ProperNounMatcherBak {
+  
+  public double compare(TpWordIndex2 wordIndex1, TpWordIndex2 wordIndex2, int min){
+    ProperNounMatchSearcher matcher = new ProperNounMatchSearcher();
+    List<Node> nodes = new ArrayList<Node>();
+    matcher.match(nodes, wordIndex1, wordIndex2);
+    
+    double compareNumber = compareNumber(nodes, wordIndex1, wordIndex2);
+    if(compareNumber < 10) return compareNumber;
+    if(nodes.size() < 3){
+      boolean small = true;
+      for(int i=0; i < nodes.size(); i++){
+        if(nodes.get(i).getTotal1() < 2) continue;
+        small = false;
+        break;
+      }
+      if(small) return compareNumber;
+    }
+//    System.out.println(" // compareNumber : " +compareNumber);
+    double compareTime = compareTime(nodes, wordIndex1, wordIndex2, min);
+//    System.out.println(" compareTime : " + compareTime);
+    return (compareNumber + (compareTime/2))/2;
+  }
+  
+  public double compareNumber(List<Node> nodes,
+      TpWordIndex2 wordIndex1, TpWordIndex2 wordIndex2){
+    double time  = nodes.size();
+    double total1 = wordIndex1.getWords().size();
+    double total2 = wordIndex2.getWords().size();
+    
+    if(time == 0 || total1 == 0 || total2 == 0) return 0;
+    
+    double rate = (Math.min(total1, total2)*100)/Math.max(total1, total2);
+//    System.out.println("==== > "+ total1+ " : total 2 day na "+ total2 + " :rate la  "+ rate);
+    if(rate < 10) return 0;
+    
+//    System.out.println(" ti le duoc la "+ time);
+    
+//    time = (time/size1) + (time/size2);
+    if(time == 1 && nodes.get(0).getTotal1() < 3) return 0;
+//    if(time == 2 
+//        && nodes.get(0).getTotal1() < 3
+//        && nodes.get(1).getTotal1() < 3 ) return 0;
+    
+//    System.out.println(total1 + " : "+ total2+ " / " + time);
+//    time = ((time*2)/(total1 + total2))*100;
+    time = (time/total1)*100 + (time/total2)*100 + ((time)/(total1 + total2))*100;
+//    System.out.println("=======>"+time + " | "+ (time/2));
+    return time/3;
+//    return time;
+  }
+  
+  public double compareTime(List<Node> nodes,
+      TpWordIndex2 wordIndex1, TpWordIndex2 wordIndex2, int min){
+    double total1 = wordIndex1.getTimeWord(min); 
+    double total2 = wordIndex2.getTimeWord(min);
+    
+    double time1 = 0;
+    double time2 = 0; 
+
+    for(int i = 0; i < nodes.size(); i++){
+      Node node = nodes.get(i);
+      if(node.getTotal1() < min ) continue;
+      time1 += node.getTime1();
+      time2 += node.getTime2();
+    }   
+    
+    if(total1 == 0 || total2 == 0) return 0; 
+    double time = time1 + time2;
+    double total = total1 + total2;
+    return (time*100)/total;
+//    return (time1*100)/total1 + (time2*100)/total2;
+  }
+}
+

@@ -1,0 +1,116 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.vn;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.Serializable;
+
+import org.vietspider.content.tp.model.TpWordIndex2;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 28, 2009  
+ */
+public class TpDocument implements Serializable {
+  
+  private final static long serialVersionUID = -1198272975486063235l;
+  
+  private String id;
+  private long longId = -1;
+  
+  private TpWordIndex2 phrases = new TpWordIndex2(0);
+  private TpWordIndex2 nouns = new TpWordIndex2(0);
+  
+  public TpWordIndex2 getPhrases() { return phrases; }
+  public void setPhrases(TpWordIndex2 data) { this.phrases = data; }
+  public void addPhrase(String value) {
+    phrases.add(value); 
+  }
+  
+  public TpWordIndex2 getNouns() { return nouns; }
+  public void setNouns(TpWordIndex2 nouns) { this.nouns = nouns; }
+  
+  public String getId() { return id; }
+  public void setId(String id) { this.id = id; }
+  
+  public long getLongId() {
+    if(longId == -1) {
+      if(id == null) return 0;
+      longId = Long.parseLong(id);
+    }
+    return longId; 
+  }
+  
+  public void write(DataOutputStream stream) throws Exception {
+    stream.writeLong(getLongId());
+    phrases.write(stream);
+    nouns.write(stream);
+  }
+  
+  public byte [] toBytes() throws Exception {
+    ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+    DataOutputStream outputStream = new DataOutputStream(byteOutput);
+    write(outputStream);
+    outputStream.flush();
+    return byteOutput.toByteArray();
+  }
+  
+  public static TpDocument read(byte[] bytes) throws Exception {
+    ByteArrayInputStream byteInput = new ByteArrayInputStream(bytes);
+    DataInputStream inputStream = new DataInputStream(byteInput);
+    return read(inputStream, bytes.length);
+  }
+  
+  public static TpDocument read(DataInputStream stream, long length) throws Exception {
+    long pos = 8;
+    long value = stream.readLong();
+    TpDocument tpDocument = new TpDocument();
+    tpDocument.longId = value;
+    tpDocument.setId(String.valueOf(value));
+    
+    int c = stream.readInt();
+    pos +=4;
+    if(c == -1) return null;
+    TpWordIndex2 wordIndex = new TpWordIndex2(c);
+    tpDocument.setPhrases(wordIndex);
+    
+    int tt = stream.readInt();
+    pos += 4;
+    if(tt == -1) return tpDocument;
+    wordIndex.setTotal(tt);
+    
+    int ti = stream.readInt();
+    pos += 4;
+    if(ti == -1) return tpDocument;
+    wordIndex.setTime(ti);
+    
+    wordIndex.read(stream, pos, length);
+    
+    c = stream.readInt();
+    pos +=4;
+    if(c == -1) return null;
+    wordIndex = new TpWordIndex2(c);
+    tpDocument.setNouns(wordIndex);
+    
+    tt = stream.readInt();
+    pos += 4;
+    if(tt == -1) return tpDocument;
+    wordIndex.setTotal(tt);
+    
+    ti = stream.readInt();
+    pos += 4;
+    if(ti == -1) return tpDocument;
+    wordIndex.setTime(ti);
+    
+    wordIndex.read(stream, pos, length);
+    
+    return tpDocument;
+  }
+   
+  
+}

@@ -1,0 +1,103 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.htmlexplorer;
+
+import java.util.List;
+
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.path2.HTMLExtractor;
+import org.vietspider.html.path2.NodePath;
+import org.vietspider.html.path2.NodePathParser;
+import org.vietspider.token.attribute.Attribute;
+import org.vietspider.token.attribute.Attributes;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Nov 5, 2009  
+ */
+class NodeEditorUtils {
+  
+  static String[] getChildrenNames(HTMLNode root, String path) {
+    return getChildrenNames(createNode(root, path));
+  }
+  
+  static String[] getChildrenNames(HTMLNode node) {
+    if(node == null) return new String[0];
+    List<HTMLNode> children = node.getChildren();
+    if(children == null 
+        || children.size() < 1) return new String[0];
+    String [] values = new String[children.size()];
+    for(int i = 0; i < children.size(); i++) {
+      HTMLNode child = children.get(i); 
+      StringBuilder builder = new StringBuilder();
+      builder.append(child.getName().toString());
+      builder.append('[').append(getIndex(children, child)).append(']');
+      values[i] = builder.toString();
+    }
+    return values;
+  }
+  
+  static int getIndex(List<HTMLNode> children, HTMLNode element){
+    int count = 0;
+    for(int i = 0; i < children.size(); i++){
+      if(children.get(i).isNode(element.getName())){
+        if(children.get(i) == element) return count;
+        count++;
+      }
+    }
+    return count;
+  }
+  
+  static HTMLNode createNode(HTMLNode root, String path) {
+    HTMLExtractor extractor  = new HTMLExtractor();
+    NodePathParser pathParser = new NodePathParser();
+    if(path.endsWith("[.")) {
+      path  = path.substring(0, path.length() - 2);
+    } else  if(path.endsWith("[")) {
+      path  = path.substring(0, path.length() - 1);
+    }
+    try {
+      NodePath nodePath = pathParser.toPath(path);
+      return extractor.lookNode(root, nodePath);
+    } catch (Exception e) {
+    }
+    return null;
+  }
+  
+  static boolean isValidAttributeSuggestion(String value, int index) {
+    if(index >= value.length()) {
+      index = value.length() - 1;
+    } else {
+      index--;
+    }
+    int counter = 0;
+    
+    while(index > -1) {
+      char c = value.charAt(index);
+      if(c == '.') break;
+      if(c == '[') counter++;
+      index--; 
+    }
+    return counter == 1;
+  }
+  
+  static String[] getAttributes(HTMLNode node) {
+    if(node == null) return new String[0];
+    try {
+      Attributes attributes = node.getAttributes(); 
+      String [] values = new String[attributes.size()];
+      for(int i = 0; i < attributes.size(); i++) {
+        Attribute attr = attributes.get(i);
+        values[i] = attr.getName()+"='" + attr.getValue()+"'";
+      }
+      return values;
+    } catch(Exception exp) {
+    }
+    return new String[0];
+  }
+  
+  
+  
+}

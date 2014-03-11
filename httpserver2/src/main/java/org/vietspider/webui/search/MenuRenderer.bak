@@ -1,0 +1,283 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.search;
+
+import java.io.OutputStream;
+import java.util.List;
+
+import org.vietspider.common.io.LogService;
+import org.vietspider.content.index3.SearchQuery;
+import org.vietspider.db.database.MetaList;
+import org.vietspider.webui.search.page.MenuSuggestion;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 23, 2009  
+ */
+public class MenuRendererBak {
+  
+//  private String cachedRegionOption  = null;
+  private MenuSuggestion menuTime;
+  private MenuSuggestion menuRegion;
+  private MenuSuggestion menuSuggestion;
+  private MenuSuggestion menuHistory;
+  
+  public MenuRendererBak() {
+    menuTime = new MenuSuggestion("menu_time.xml", null, null) {
+      @SuppressWarnings("unused")
+      public void write(OutputStream output, String [] elements) {
+        loadData();
+        try {
+          output.write(top);
+          output.flush();
+        } catch (Exception e) {
+          LogService.getInstance().setMessage("SERVER", e, null);
+        }
+      }
+    };
+    menuSuggestion = new MenuSuggestion();
+    menuRegion = new MenuSuggestion("menu_region.xml", null, null) {
+      @SuppressWarnings("unused")
+      public void write(OutputStream output, String [] elements) {
+        loadData();
+        try {
+          output.write(top);
+          output.flush();
+        } catch (Exception e) {
+          LogService.getInstance().setMessage("SERVER", e, null);
+        }
+      }
+    };
+    menuHistory = new MenuSuggestion("menu_history.xml", "menu_suggestion_item.xml", null);
+  }
+
+  @SuppressWarnings("unused")
+  public void write(OutputStream output, MetaList list, SearchQuery query, int size) {  
+    try {
+      //      append(out, "<div class=\"menu\">");
+      /*append(output, "<div class=\"menu\"><a class=\"menu\" href=\"/site/search/1/?query=");
+      append(output, query.getEncodePattern()); append(output, "\">");
+      append(output, "<strong><dfn>&nbsp;›&nbsp;</dfn>Toàn bộ kết quả</a></strong></div>");
+      append(output, "<div class=\"menu\"><strong><dfn>&nbsp;›&nbsp;</dfn>Thời điểm lưu trữ</strong></div>");
+      generateLinkDate(output, query, -1, "Tất cả");
+      if(size >= 10) {
+        generateLinkDate(output, query, 1, "Hôm nay");
+        generateLinkDate(output, query, 2, "Hai ngày");
+        generateLinkDate(output, query, 3, "Ba ngày");
+        generateLinkDate(output, query, 7, "Một tuần");
+      }
+
+      generateLinkDate(output, query, 30, "Một tháng");
+      if(size >= 10) {
+        generateLinkDate(output, query, 90, "Ba tháng");
+        generateLinkDate(output, query, 180, "Sáu tháng");
+      }
+      generateLinkDate(output, query, 365, "Một năm");*/
+      
+      menuTime.write(output, (String[])null);
+      menuRegion.write(output, (String[])null);
+      
+      /*append(output, "<div class=\"menu\"><strong><dfn>&nbsp;›&nbsp;</dfn>Khu vực</strong></div>");
+      generateLinkRegion(output, query, "", "Tất cả");
+      generateLinkRegion(output, query, "thành phố hồ chí minh", "Tp Hồ Chí Minh");
+      generateLinkRegion(output, query, "Hà Nội");
+      if(size >= 10) {
+        generateLinkRegion(output, query, "Đà Nẵng");
+        generateLinkRegion(output, query, "Cần Thơ");
+        generateLinkRegion(output, query, "Hải Phòng");
+        generateLinkRegion(output, query, "Bình Dương");
+      }
+      if(cachedRegionOption == null) {
+        try {
+          cachedRegionOption = generateRegionOption(query);
+        } catch (Exception e) {
+          cachedRegionOption = "";
+        }
+      }
+      append(output, cachedRegionOption);
+      append(output, "<br>");*/
+      
+      /*HashMap<String,String> suggestions = null;
+      if(size >=10)  suggestions = getSugguestion(query.getPattern());
+      if(suggestions != null) {
+        append(out, "<br>");
+        append(out, "<div class=\"menu\"><strong><dfn>&nbsp;›&nbsp;</dfn>Gợi ý</strong></div>");
+        Iterator<Map.Entry<String,String>> iterator = suggestions.entrySet().iterator();
+        while(iterator.hasNext()) {
+          Map.Entry<String,String> entry = iterator.next();
+          generateLinkSuggestion(out, query, entry.getKey(), entry.getValue());
+        }
+      }*/
+      
+      menuSuggestion.write(output, query.getPattern());
+      
+      List<String> histories = query.getHistory();
+      menuHistory.write(output, histories.toArray(new String[0]));
+      
+//      if(histories != null) {
+//        append(output, "<br>");
+//        append(output, "<div class=\"menu\"><strong><dfn>&nbsp;›&nbsp;</dfn>Đã tìm</strong></div>");
+//        for(int i = 0; i < histories.size(); i++) {
+//          generateLinkSuggestion(output, query, histories.get(i), histories.get(i));
+//        }
+//      }
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+  }
+
+//  private void generateLinkRegion(OutputStream out, SearchQuery query, String region) throws Exception {
+//    generateLinkRegion(out, query, region.toLowerCase(), region);
+//  }
+//
+//  private void generateLinkRegion(OutputStream out, 
+//      SearchQuery query, String key, String region) throws Exception {
+//    append(out, "<div class=\"menu\"><a class=\"menu\" href=\"/site/search/1/?query=");
+//    append(out, query.getEncodePattern()); append(out, "&region=");
+//    append(out, URLEncoder.encode(key, Application.CHARSET));
+//    if(query.getDate() > 0) {
+//      append(out, "&sdate="); append(out, String.valueOf(query.getDate())); 
+//    }
+//    if(query.getAction() != null) {
+//      append(out, "&search="); append(out, URLEncoder.encode(query.getAction(), Application.CHARSET));
+//    }
+//    append(out, "\">&nbsp;&nbsp;&nbsp;"); append(out, region) ;append(out, "</a></div>");
+//  }
+//
+//  private void generateLinkDate(OutputStream out, 
+//      SearchQuery query, int sdate, String label) throws Exception {
+//    append(out, "<div class=\"menu\"><a class=\"menu\" href=\"/site/search/1/?query=");
+//    append(out, query.getEncodePattern()); 
+//    if(query.getRegion() != null && query.getRegion().length() > 0) {
+//      append(out, "&region="); append(out, URLEncoder.encode(query.getRegion(), Application.CHARSET));
+//    }
+//    if(query.getAction() != null) {
+//      append(out, "&search="); append(out, URLEncoder.encode(query.getAction(), Application.CHARSET));
+//    }
+//    append(out, "&sdate="); append(out, String.valueOf(sdate)); 
+//    append(out, "\">&nbsp;&nbsp;&nbsp;"); append(out, label) ;append(out, "</a></div>");
+//  }
+//  
+//  private void generateLinkSuggestion(OutputStream out, 
+//      SearchQuery query, String key, String label) throws Exception {
+//    append(out, "<div class=\"menu\"><a class=\"menu\" href=\"/site/search/1/?query=");
+//    append(out, URLEncoder.encode(key, Application.CHARSET));
+//    if(query.getRegion() != null && query.getRegion().length() > 0) {
+//      append(out, "&region="); append(out, URLEncoder.encode(query.getRegion(), Application.CHARSET));
+//    }
+//    if(query.getAction() != null) {
+//      append(out, "&search="); append(out, URLEncoder.encode(query.getAction(), Application.CHARSET));
+//    }
+//    if(query.getDate() > 0) {
+//      append(out, "&sdate="); append(out, String.valueOf(query.getDate()));
+//    }
+//    append(out, "\" title=\""); append(out, label); append(out, "\" ");
+//    append(out, ">&nbsp;&nbsp;&nbsp;"); append(out, cutLabel(label, 10)) ;append(out, "</a></div>");
+//  }
+//  
+//  private String cutLabel(String label, int size) {
+//    StringBuilder builder = new StringBuilder();
+//    int index =  0;
+//    while(index < label.length()) {
+//      char c = label.charAt(index);
+//      if(c == ' ' && builder.length() >= size) {
+//        builder.append("...");
+//        break;
+//      }
+//      builder.append(c);
+//      index++;
+//    }
+//    return builder.toString();
+//  }
+//
+//  protected void append(OutputStream output, String text) throws Exception { 
+//    try {
+//      output.write(text.getBytes(Application.CHARSET));
+//      output.flush();
+//    } catch (Exception e) {
+//      LogService.getInstance().setMessage("SERVER", e, null);
+//    }
+//  }
+//  
+//  private String generateRegionOption(SearchQuery query)  throws Exception {
+//    StringBuilder builder = new StringBuilder("&nbsp;&nbsp;&nbsp;<select style=\"visibility: visible;\" ");
+//    builder.append(" onchange=\"window.location = this.options[this.selectedIndex].value;\" ");
+//    builder.append(" id=\"boxmenu\" class=\"boxmenu\" name=\"select\">");
+//    builder.append("<option selected=\"selected\" value=\"#\">Vùng khác</option>");
+//    
+//    String [] names = CityCodes.getInstance().getNames();
+//    for(int i = 0; i < names.length; i++) {
+//      if(i == 0) {
+//        generateLinkRegion(builder, query, names[i], "Tp HCM");
+//      } else if(i == 6) {
+//        generateLinkRegion(builder, query, names[i], "BR-VT");
+//      } else if(i == 56) {
+//        generateLinkRegion(builder, query, names[i], "TT-Huế");
+//      } else {
+//        generateLinkRegion(builder, query, names[i], null);
+//      }
+//    }
+//    builder.append("</select>");
+//    return builder.toString();
+//  }
+//  
+//  private void generateLinkRegion(StringBuilder builder, 
+//      SearchQuery query, String key, String label) throws Exception {
+//    builder.append("<option  value=\"/site/search/1/?query=");
+//    builder.append(query.getEncodePattern()).append("&region=");
+//    builder.append(URLEncoder.encode(key, Application.CHARSET));
+//    if(query.getDate() > 0) {
+//      builder.append("&sdate=").append(String.valueOf(query.getDate())); 
+//    }
+//    
+//    if(query.getAction() != null) {
+//      builder.append("&search=").append(URLEncoder.encode(query.getAction(), Application.CHARSET)); 
+//    }
+//    builder.append("\">");
+//    
+//    if(label != null) {
+//      builder.append(label).append("</option>");
+//      return;
+//    }
+//    
+//    int index = 0; 
+//    boolean upper = true;
+//    while(index < key.length()) {
+//      char c = key.charAt(index);
+//      if(upper) {
+//        builder.append(Character.toUpperCase(c));
+//      } else {
+//        builder.append(c);
+//      }
+//      upper = Character.isWhitespace(c) || c == '-';
+//      index++;
+//    }
+//    
+//    builder.append("</option>");
+//  }
+//  
+//  private HashMap<String, String> getSugguestion(String pattern) {
+//    String lpattern = pattern.toLowerCase();
+//    if(lpattern.indexOf("nhà") > -1) return null;
+//    if(lpattern.indexOf("chung cư") > -1) return null;
+//    if(lpattern.indexOf("căn hộ") > -1) return null;
+//    if(lpattern.indexOf("phòng") > -1) return null;
+//    if(lpattern.indexOf("đất") > -1) return null;
+//    if(lpattern.indexOf("biệt thự") > -1) return null;
+//    if(lpattern.indexOf("cửa hàng") > -1) return null;
+//    HashMap<String, String> map = new HashMap<String, String>();
+//    pattern = MetaRenderer.uppercase(pattern);
+//    map.put("nhà "+ pattern, "Nhà "+ pattern);
+//    map.put("chung cư "+ pattern, "Chung cư "+ pattern);
+//    map.put("căn hộ "+ pattern, "Căn hộ "+ pattern);
+//    map.put("phòng "+ pattern, "Phòng "+ pattern);
+//    map.put("đất "+ pattern, "Đất "+ pattern);
+//    map.put("biệt thự "+ pattern, "Biệt thự "+ pattern);
+//    map.put("cửa hàng "+ pattern, "Cửa hàng "+ pattern);
+//    return map;
+//  }
+  
+
+}

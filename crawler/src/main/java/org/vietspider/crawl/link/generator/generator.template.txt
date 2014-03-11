@@ -1,0 +1,50 @@
+Tạo chỉ số trang:
+
+index
+http://ddth.vn/showthread.php?t=[index]
+1->1000
+
+Duyệt theo từ truyền vào:
+
+word
+http://ddth.vn/showthread.php?t=[word]
+
+Tạo link từ các hàm javascript:
+
+onclick
+fn_LoadEntry_Lst_ByEntryId('*','*')
+http://chuyendong.gdc.vn/Controls/CDG/NewsCat/XML_Entry_List.aspx?ic={1}&p={2}
+
+
+Dạng trang chủ của cấu hình:
+
+homepage
+http://*.blog.360.yahoo.com/blog-*?cq=1
+http://*.blog.360.yahoo.com/blog-*
+
+Tìm kiếm trang chủ và lưu tới một nguồn khác:
+
+homepage
+BLOG.BLOG VIET NAM.360 YAHOO
+
+Nhiều mẫu LinkGenerator, dùng dấu # để phân biệt, ví dụ:
+
+word
+http://ddth.vn/showthread.php?t=[word]
+#
+homepage
+http://*.blog.360.yahoo.com/blog-*?cq=1
+http://*.blog.360.yahoo.com/blog-*
+
+update document from javascript
+type org.vietspider.link.generator.UpdateDocumentGenerator
+http://www.google.com/maps?f=q&source=s_q&output=*&hl=*&geocode=&q=*&btnG=*&vps=*&jsv=*&sll=*&sspn=*&abauth=*&absince=*
+onload
+
+type org.vietspider.crawl.link.generator.FunctionFormGenerator
+javascript:__doPostBack('*','')
+__EVENTTARGET={1}
+
+
+
+

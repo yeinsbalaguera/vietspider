@@ -1,0 +1,166 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.io;
+
+import java.io.File;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.prefs.Preferences;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.store.RAMDirectory;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.content.index.IndexEntry;
+import org.vietspider.crawl.DbCleanerService;
+import org.vietspider.index.DbIndexer;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 28, 2008  
+ */
+class DbIndexerService implements Runnable {
+  
+  private volatile static DbIndexerService INSTANCE = null;
+  
+  public static DbIndexerService getInstance() { return INSTANCE; }
+  
+  synchronized static void createInstance() {
+    INSTANCE = new DbIndexerService(); 
+    new Thread(INSTANCE).start();
+  }
+  
+  private ConcurrentLinkedQueue<IndexEntry> dqueue;
+  private DbIndexer dbIndexer; 
+  private int deleteIndex = 10000;
+  
+  private DbIndexEntry dbIndexEntry;
+  
+  public DbIndexerService() {
+    dqueue = new ConcurrentLinkedQueue<IndexEntry>();
+    dbIndexer = new DbIndexer();
+    dbIndexEntry = new DbIndexEntry();
+    
+    try {
+      Preferences prefs = Preferences.userNodeForPackage(DbIndexerService.class);
+      String value = prefs.get("delete.index", "");
+      deleteIndex = Integer.parseInt(value);
+    } catch (Exception e) {
+    }
+    
+    if(deleteIndex < 0) deleteIndex = 0;
+    
+    Application.addShutdown(new Application.IShutdown() {
+      public void execute() {
+        Preferences prefs = Preferences.userNodeForPackage(DbIndexerService.class);
+        prefs.put("delete.index", String.valueOf(deleteIndex));
+        
+        while(!dqueue.isEmpty()) {
+          dbIndexer.index(dqueue.poll());
+        }
+        
+        dbIndexer.commit();
+        dbIndexer.close();
+      }
+    });
+  }
+  
+//  public void add(IndexEntry entry) { queue.add(entry); }
+  
+  public void deleleIndexedById(String id) {
+    IndexEntry entry = new IndexEntry();
+    entry.setId(id);
+    entry.setStatus(IndexEntry.DELETE);
+    dqueue.add(entry);
+  }
+  
+  public void deleleIndexedByDate(String date) {
+    IndexEntry entry = new IndexEntry();
+    entry.setDate(date);
+    entry.setStatus(IndexEntry.DELETE);
+    dqueue.add(entry);
+  }
+  
+  public void optimize() { dbIndexer.optimize(); }
+  
+  public void run() {
+    while(true) {
+     /* File file = UtilFile.getFolder("content/dbindexed/text/");
+      File [] files = file.listFiles();
+      DataReader reader = new DataReader();
+      */
+      for(int i = 0; i < 20; i++) {
+        IndexEntry entry = dbIndexEntry.read();
+        if(entry == null) break;
+        dbIndexer.index(entry);
+      }
+      
+      while(!dqueue.isEmpty()) {
+        dbIndexer.index(dqueue.poll());
+      }
+      
+      dbIndexer.commit();
+      
+      try {
+        Thread.sleep(15*1000);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+  }
+  
+  public void clean() {
+    File file  = UtilFile.getFolder("content/dbindexed/index/");
+
+    RAMDirectory ramDir = null;
+    IndexReader reader = null;
+    IndexSearcher indexSearcher = null;
+    
+    try {
+      ramDir = new RAMDirectory(file);
+      reader = IndexReader.open(ramDir);
+      
+      int size = Math.min(reader.numDocs(), deleteIndex + 100);
+      
+      DbCleanerService dbCleaner = new DbCleanerService();
+      for (; deleteIndex < size; deleteIndex++) {
+        if(reader.isDeleted(deleteIndex)) continue;
+        Document doc = reader.document(deleteIndex);
+        dbCleaner.add(doc.get(DocumentIndexer.FIELD_ID));
+      }
+//      dbCleaner.clean();
+//      System.out.println(" thay co "+deleteIndex+ " : "+ reader.numDocs());
+      if(deleteIndex < reader.numDocs()) return;
+      dbIndexer.optimize();
+      deleteIndex = -1;
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    } finally {
+      try {
+        if(indexSearcher != null) indexSearcher.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+
+      try {
+        if(reader != null) reader.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+
+      try {
+        if(ramDir != null) ramDir.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+  }
+  
+  public DbIndexEntry getDbIndexEntry() { return dbIndexEntry; }
+
+  
+}

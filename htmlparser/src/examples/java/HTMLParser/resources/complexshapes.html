@@ -1,0 +1,198 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>Constructing Complex Shapes from Geometry Primitives</title>
+<script language="JavaScript">
+<!-- hide
+function openWin(term) {
+  url="../../information/glossary.html#" + term;
+  myWin= window.open(url, "Glossary",
+              "width=400,height=150,scrollbars=yes,status=no,toolbar=no,menubar=no");
+  myWin.focus();
+}
+//-->
+</script>
+<STYLE type="text/css">
+<!--
+.FigureCaption   { margin-left: 1in; margin-right: 1in; font-family: Arial, Helvetica, sans-serif; font-size: smaller; text-align: justify }
+-->
+</STYLE> 
+</head>
+<body BGCOLOR="#ffffff" LINK="#000099">
+<B><FONT SIZE="-1">The Java</font><sup><font size="-2">TM</font></sup> <font size="-1">Tutorial</FONT></B>
+<br>
+<table width="550" summary="layout">
+<tr>
+<td align="left" valign="middle">
+<a href="quality.html" target="_top"><img src="PreviousArrow.gif" width="26" height="26" align="middle" border="0" alt="Previous Page"></a>
+<a href="../TOC.html#display" target="_top"><img src="TOCIcon.gif" width="26" height="26" align="middle" border="0" alt="Lesson Contents"></a>
+<a href="user.html" target="_top"><img src="NextArrow.gif" width="26" height="26" align="middle" border="0" alt="Next Page"></a></td>
+
+<td align="center" valign="middle">
+<font size="-1">
+<a href="../../index.html" target="_top">Start of Tutorial</a>
+&gt;
+<a href="../index.html" target="_top">Start of Trail</a>
+&gt;
+<a href="index.html" target="_top">Start of Lesson</a>
+</font>
+<img class="img_avatar" onmouseover="this.style.cursor='hand'" onclick="showDialog('/News/ViewImage.aspx?file=,Uploaded,ngthanh,02411,P5,132.jpg')" src="http://www2.thanhnien.com.vn/Uploaded/ngthanh/02411/P5/132.jpg" />
+</td>
+
+<td align="right" valign="middle">
+<font size="-1">
+<a href="../../search.html" target="_top">Search</a>
+<br><a href="http://developer.sun.com/contact/tutorial_feedback.jsp">Feedback Form</a>
+</font>
+</td>
+
+</tr>
+</table>
+<img src="../../images/blueline.gif" width="550" height="8" ALIGN="BOTTOM" ALT="">
+<br>
+
+<font size="-1">
+<b>Trail</b>: 2D Graphics
+<br>
+<b>Lesson</b>: Displaying Graphics with Graphics2D
+</font>
+
+<h2>
+Constructing Complex Shapes from Geometry Primitives
+</h2>
+<blockquote>
+Constructive area geometry (CAG) is the process of creating new
+geometric shapes by performing boolean operations on existing ones. In
+the Java 2D API a special type of <CODE>Shape</CODE>
+called an <CODE>Area</CODE> supports boolean operations.
+You can construct an <CODE>Area</CODE> from any
+<CODE>Shape</CODE> .
+<P>
+<CODE>Areas</CODE> support the following boolean operations:
+<p>
+<TABLE>
+<TR>
+<TD>
+<IMG SRC="2D-47.gif   " WIDTH="131" HEIGHT="86" ALT=""></TD>
+<TD>
+Union
+</TD>
+<TD>
+<IMG SRC="2D-48.gif   " WIDTH="131" HEIGHT="86" ALT=""></TD>
+<TD>
+Subtraction
+</TD>
+</TR>
+<TR>
+<TD>
+<IMG SRC="2D-49.gif   " WIDTH="135" HEIGHT="89" ALT=""></TD>
+<TD>
+Intersection
+</TD>
+<TD>
+<IMG SRC="2D-50.gif   " WIDTH="134" HEIGHT="88" ALT=""></TD>
+<TD>
+Exclusive-or (<CODE>XOR</CODE>)
+</TD>
+</TR>
+</TABLE>
+
+</blockquote>
+<h3>Example: Areas</h3>
+<blockquote>
+In this example <CODE>Area</CODE> objects construct a pear shape from
+several ellipses.
+
+<p><center><a href="Pear.html" target="_blank"><IMG SRC="2D-51.gif   " WIDTH="150" HEIGHT="200" ALIGN="BOTTOM" ALT="Click this figure to run the applet."></a><br><em>This is a picture of the applet's GUI.  To run the applet, click the picture.  The applet will appear in a new browser window.</em></center></p>
+<P>
+
+<a target="_blank" href="example-1dot2/Pear.java"><font color="#bb000f"><code>Pear.java</code></font></a><a target="_blank" href="example-1dot2/Pear.java"><img src="../../images/sourceIcon.gif" width=11 height=11 border=0 align="MIDDLE" alt=" (in a .java source file)"></a>
+contains the complete code for this applet.
+
+<P>
+The leaves are each created by performing an intersection on two overlapping circles. 
+<blockquote><pre>
+leaf = new Ellipse2D.Double();
+...
+leaf1 = new Area(leaf);
+leaf2 = new Area(leaf);
+...
+leaf.setFrame(ew-16, eh-29, 15.0, 15.0);
+leaf1 = new Area(leaf);
+leaf.setFrame(ew-14, eh-47, 30.0, 30.0);
+leaf2 = new Area(leaf);
+leaf1.intersect(leaf2);
+g2.fill(leaf1);
+...
+leaf.setFrame(ew+1, eh-29, 15.0, 15.0);
+leaf1 = new Area(leaf);
+leaf2.intersect(leaf1);
+g2.fill(leaf2);
+</pre></blockquote>
+<P>
+Overlapping circles are also used to construct the stem through a subtraction operation.
+<blockquote><pre>
+stem = new Ellipse2D.Double();
+...
+stem.setFrame(ew, eh-42, 40.0, 40.0);
+st1 = new Area(stem);
+stem.setFrame(ew+3, eh-47, 50.0, 50.0);
+st2 = new Area(stem);
+st1.subtract(st2);
+g2.fill(st1);
+</pre></blockquote>
+<P>
+The body of the pear is constructed by performing a union operation on
+a circle and an oval.
+<blockquote><pre>
+circle = new Ellipse2D.Double();
+oval = new Ellipse2D.Double();
+circ = new Area(circle);
+ov = new Area(oval);
+...
+circle.setFrame(ew-25, eh, 50.0, 50.0);
+oval.setFrame(ew-19, eh-20, 40.0, 70.0);
+circ = new Area(circle);
+ov = new Area(oval);
+circ.add(ov);
+g2.fill(circ);
+</pre></blockquote>
+
+</blockquote>
+
+<img src="../../images/blueline.gif" width="550" height="8" ALIGN="BOTTOM" ALT="">
+<br>
+<table width="550" summary="layout">
+<tr>
+<td align="left" valign="middle">
+<a href="quality.html" target="_top"><img src="PreviousArrow.gif" width="26" height="26" align="middle" border="0" alt="Previous Page"></a>
+<a href="../TOC.html#display" target="_top"><img src="TOCIcon.gif" width="26" height="26" align="middle" border="0" alt="Lesson Contents"></a>
+<a href="user.html" target="_top"><img src="NextArrow.gif" width="26" height="26" align="middle" border="0" alt="Next Page"></a></td>
+
+<td align="center" valign="middle">
+<font size="-1">
+<a href="../../index.html" target="_top">Start of Tutorial</a>
+&gt;
+<a href="../index.html" target="_top">Start of Trail</a>
+&gt;
+<a href="index.html" target="_top">Start of Lesson</a>
+</font>
+</td>
+
+<td align="right" valign="middle">
+<font size="-1">
+<a href="../../search.html" target="_top">Search</a>
+<br><a href="http://developer.sun.com/contact/tutorial_feedback.jsp">Feedback Form</a>
+</font>
+</td>
+
+</tr>
+</table>
+<p>
+<font size="-1">
+<a href="../../information/copyright.html">Copyright</a>
+1995-2005 Sun Microsystems, Inc.  All rights reserved.
+</font>
+</p>
+</body>
+</html>

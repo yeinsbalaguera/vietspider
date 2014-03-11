@@ -1,0 +1,153 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.io;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.text.DateFormat;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.vietspider.common.io.DataOfDay;
+import org.vietspider.common.io.ExceptionWriter;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.LogSource;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.CalendarUtils;
+import org.vietspider.db.source.monitor.MonitorDataSaver;
+import org.vietspider.db.source.monitor.SourceLogHandler;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 10, 2007  
+ */
+public class SourceExceptionWriter extends ExceptionWriter {
+  
+  private String sourceCode ;
+  private String sourceName;
+  private HashMap<String, Integer> logs = new HashMap<String, Integer>();
+
+  public SourceExceptionWriter(String folder, String sourceCode, String sourceName) {
+    super(folder);
+    this.sourceCode = sourceCode;
+    this.sourceName = sourceName;
+    traces = new ConcurrentLinkedQueue<TraceObject>();
+    this.folder = folder;
+  }
+
+  protected FileOutputStream getOutput() {
+    FileOutputStream output = null;
+    String fileName = DataOfDay.getDateFoder();
+    File parent = UtilFile.getFolder(folder+ "/"+fileName+"/");
+    File file = new File(parent, sourceCode+".log");
+    
+    if(file.length() >= 100*1024*1024l) file.delete();
+    
+    try {
+      if(!file.exists()) file.createNewFile();
+      output = new FileOutputStream(file, true);
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+
+    try {
+      if(!print) System.setErr(new PrintStream(output));
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    return output;
+  }
+  
+  
+  public void run() {
+    while(execute) {
+      if(!traces.isEmpty())  write();
+      try {
+        Thread.sleep(2*60*1000);
+      }catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
+    
+//    System.out.println(" chuan bi ket thuc");
+    
+    write();
+    
+//    try {
+    String logMessage = getMessage();
+//    System.out.println(" xong mot hoi ta duoc "+ logMessage);
+    if(logMessage == null || logMessage.length() < 3) return;
+    DateFormat folderFormat = CalendarUtils.getFolderFormat();
+    String dateFolder = folderFormat.format(Calendar.getInstance().getTime());
+    MonitorDataSaver logSaver = SourceLogHandler.getInstance().getSaver();
+    logSaver.update(sourceName, dateFolder, 0, 0, 0, 0, 0, logMessage);
+//    } catch (Throwable e) {
+//      e.printStackTrace();
+//      // TODO: handle exception
+//    }
+  }
+  
+  public void putLog(String log) {
+//    System.err.println(" da put log "+ log);
+    Integer value  = logs.get(log);
+    if(value == null) {
+      logs.put(log, 1);
+      return;
+    }
+    logs.put(log, value + 1);
+  }
+  
+  private String getMessage() {
+//    LogSourceImpl logImpl = (LogSourceImpl)LogSource.getInstance();
+    StringBuilder builder = new StringBuilder();
+    
+    Iterator<Map.Entry<String,Integer>> iterator =  logs.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<String, Integer> entry  = iterator.next();
+//      System.out.println(" ====  >"+ entry.getKey()+ "  / "+ entry.getValue());
+      if(entry.getValue() < 10) continue;
+      if(entry.getKey().indexOf("document") < 0) continue;
+      if(builder.length() > 0) builder.append('\n');
+      builder.append(logImpl.getMessage(entry.getKey()));
+    }
+    
+    if(builder.length() > 0) return builder.toString();
+
+    Integer value = logs.get("link.downloaded");
+//    System.out.println(" ====  > linked downloaded "+value);
+    if(value != null && value > 10) return null;
+    
+    iterator =  logs.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<String, Integer> entry  = iterator.next();
+//      System.out.println(" ====2  >"+ entry.getKey()+ "  / "+ entry.getValue());
+      if(entry.getValue() < 3) continue;
+      if(entry.getKey().indexOf("document") < 0) continue;
+      if(builder.length() > 0) builder.append('\n');
+      builder.append(logImpl.getMessage(entry.getKey()));
+    }
+    
+    value = logs.get("link.downloaded");
+//    System.out.println(" ====  2> linked downloaded "+value);
+    if(value != null && value > 3) return null;
+    
+    value = logs.get("crawling.end");
+//    System.out.println(" ==== 4 > end "+value);
+    if(value == null || value < 1) return null;
+//    System.out.println(logImpl.getMessage("crawling.end"));
+    if(builder.length() > 0) builder.append('\n');
+    builder.append(logImpl.getMessage("crawling.end"));
+    builder.append(" - ").append(logImpl.getMessage("check.link.template"));
+//    System.out.println("cuoi cung thi co "+ builder);
+    return builder.toString();
+  }
+
+  
+}

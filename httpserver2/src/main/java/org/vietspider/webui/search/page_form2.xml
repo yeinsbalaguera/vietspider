@@ -1,0 +1,33 @@
+<form id="search" action="/site/search/1/" method="GET">
+	<tr>
+		<td>
+
+			<div style="border: 1px solid rgb(0, 64, 128); float: left;">
+				<img class="IconLanguageE" id="ENIcon" style="display: none;"
+					src="/site/file/blank.gif" onclick="setLanguage('vn')" />
+				<img class="IconLanguageV" style="display: block;" id="VNIcon"
+					src="/site/file/blank.gif" onclick="setLanguage('en')" />
+				<input name="query" value="$pattern" size="60"
+					style="border: 1px solid white;" />
+			</div>
+			<div style="padding: 0px 0px 0px 10px; float: left;">
+				<input name="search" value="Tìm Rao Vặt" type="submit" />
+			</div>
+
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<input name="action" value="Ban" type="checkbox" />
+			<font size="-1">Bán</font>
+			<input name="action" value="Thue" type="checkbox" />
+			<font size="-1">Cho thuê</font>
+			<input name="action" value="nhuong" type="checkbox" />
+			<font size="-1">Nhượng</font>
+			<input name="action" value="Thue" type="checkbox" />
+			<font size="-1">Cần thuê</font>
+			<input name="action" value="mua" type="checkbox" />
+			<font size="-1">Mua</font>
+		</td>
+	</tr>
+</form>

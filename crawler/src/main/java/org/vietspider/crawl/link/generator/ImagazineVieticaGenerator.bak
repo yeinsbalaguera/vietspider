@@ -1,0 +1,58 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.link.generator;
+
+import java.util.List;
+
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Feb 19, 2009  
+ */
+public class ImagazineVieticaGenerator {
+  
+  private Source source;
+  
+  private String prefix = "http://imagazine.vietica.com/im/view.htm?jid=";
+  
+  //http://imagazine.vietica.com/im/view.htm?jid=20090216010503_wtuws&cid=2
+  // http://imagazine.vietica.com/imagazinedata/2009/02/czmz4/published_vi.html 
+  public ImagazineVieticaGenerator (Source source, String...values) {
+    this.source = source;
+  }
+  
+  public void generate(List<String> list) {
+    for(int i = 0; i < list.size(); i++) {
+      String address = list.get(i).trim();
+      if(!address.startsWith(prefix)) continue;
+      StringBuilder builder = new StringBuilder();
+      builder.append("http://imagazine.vietica.com/imagazinedata/");
+      int index = prefix.length();
+      
+      if(index + 4 >= address.length()) continue;
+      builder.append(address.substring(index, index+4)).append('/');
+      index += 4;
+      
+      if(index + 2 >= address.length()) continue;
+      builder.append(address.substring(index, index+2)).append('/');
+      index += 2;
+      
+      index = address.indexOf('_', index);
+      if(index < 0) continue;
+      int end  = address.indexOf('&', index);
+      if(end < 0) continue;
+      builder.append(address.substring(index, end));
+      builder.append("/published_vi.html");
+      
+      System.out.println(builder.toString());
+      list.set(i, builder.toString());
+    }
+  }
+  
+  public short getType() { return LinkGeneratorInvoker.CREATE_LINK_GENERATOR; }
+  
+  public Source getSource() { return source; }
+}

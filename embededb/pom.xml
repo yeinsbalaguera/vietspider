@@ -1,0 +1,70 @@
+<project>
+	<parent>
+		<groupId>org.vietspider</groupId>
+		<artifactId>vietspider</artifactId>
+		<version>3.x</version>
+		<relativePath>../</relativePath>
+	</parent>
+
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>org.vietspider.embededb</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0</version>
+	<name>org.vietspider.embededb</name>
+	<url>http://binhgiang.sourceforge.net/</url>
+	<description>Vietspider DB Component</description>
+
+	<dependencies>
+	<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.vietspiderdb</artifactId>
+			<version>1.0</version>
+		</dependency>
+	
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.common</artifactId>
+			<version>1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.model</artifactId>
+			<version>1.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.offices</artifactId>
+			<version>1.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>babu</groupId>
+			<artifactId>BabuDB</artifactId>
+			<version>0.5.6</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>babu</groupId>
+			<artifactId>Foundation</artifactId>
+			<version>1.0</version>
+		</dependency>
+		
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>oracleReleases</id>
+			<name>Oracle Released Java Packages</name>
+			<url>http://download.oracle.com/maven</url>
+			<layout>default</layout>
+		</repository>
+		<repository>
+			<id>codehaus</id>
+			<name>Codehaus Released Java Packages</name>
+			<url>http://repository.codehaus.org/org/codehaus</url>
+			<layout>default</layout>
+		</repository>
+	</repositories>
+</project>

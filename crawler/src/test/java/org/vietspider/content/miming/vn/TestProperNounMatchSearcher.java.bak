@@ -1,0 +1,141 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.miming.vn;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import junit.framework.Assert;
+import junit.framework.TestCase;
+
+import org.junit.Test;
+import org.vietspider.content.tp.model.Node;
+import org.vietspider.content.tp.model.TpWordIndex2;
+import org.vietspider.content.tp.vn.comparator.NounMatcher;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 29, 2009  
+ */
+public class TestProperNounMatchSearcher extends TestCase {
+  
+  @Test
+  public void testTreeMap() throws Exception {
+    TpWordIndex2 wordIndex1 = new TpWordIndex2(0);
+    TpWordIndex2 wordIndex2 = new TpWordIndex2(0);
+    
+    wordIndex1.add("chia sẻ");
+    wordIndex1.add("sẻ chia");
+   
+    wordIndex2.add("chia sẻ");
+    wordIndex2.add("cuộc sống");
+    
+    NounMatcher properNounMatchSearcher = new NounMatcher();
+    List<Node> nodes = new ArrayList<Node>();
+    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 1);
+    
+    wordIndex2.add("chia sẻ");
+    wordIndex2.add("chuyên chính vô sản");
+    nodes.clear();
+    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 1);
+    Assert.assertEquals(nodes.get(0).getTotal1(), 2);
+    Assert.assertEquals(nodes.get(0).getTime1(), 1);
+    Assert.assertEquals(nodes.get(0).getTime2(), 2);
+    
+    wordIndex1.add("chia");
+    wordIndex1.add("chia");
+    wordIndex1.add("chia");
+    wordIndex1.add("chia");
+    wordIndex1.add("chuyên chính luận");
+    
+    Assert.assertEquals(wordIndex1.contains("chia"), true);
+    
+    wordIndex2.add("đường về");
+    wordIndex2.add("chia");
+    wordIndex2.add("chia");
+    
+//    System.out.println(" code chia "+ ("chia".hashCode()));
+    nodes.clear();
+    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 2);
+    Assert.assertEquals(nodes.get(1).getTotal1(), 1);
+    Assert.assertEquals(nodes.get(1).getTime1(), 4);
+    Assert.assertEquals(nodes.get(1).getTime2(), 2);
+    
+    wordIndex1.add("chuyên chính vô sản");
+    wordIndex1.add("chuyên chính");
+    wordIndex1.add("chuyên chính");
+    wordIndex1.add("chuyên chính");
+    wordIndex1.add("hào hứng");
+    
+    
+    wordIndex2.add("chuyên chính vô sản");
+    wordIndex2.add("su hào");
+    
+    nodes.clear();
+    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+    Assert.assertEquals(nodes.size(), 3);
+    Assert.assertEquals(nodes.get(2).getTotal1(), 4);
+    Assert.assertEquals(nodes.get(2).getTime2(), 2);
+    
+    
+//    wordIndex1.add("chuyên chính");
+//    wordIndex1.add("chính luận");
+//    wordIndex1.add("hay");
+//    wordIndex1.add("hào hứng");
+//    wordIndex1.add("su hào");
+//    wordIndex1.add("chuyên chính vô sản");
+//    wordIndex1.add("chuyên chở");
+//    wordIndex1.add("tuôn tràn");
+//    
+//    wordIndex2.add("chia sẻ lợi nhuận");
+//    wordIndex2.add("cuộc sống");
+//    wordIndex2.add("bình dị");
+//    wordIndex2.add("chuyên");
+//    wordIndex2.add("chuyên chở");
+//    wordIndex2.add("đi chùa");
+//    wordIndex2.add("thiên mụ");
+//    wordIndex2.add("trầm lắng nguôn");
+//    wordIndex2.add("câu hò");
+    
+  }
+  
+  @Test
+  public void testTreeMap2() throws Exception {
+    TpWordIndex2 wordIndex1 = new TpWordIndex2(0);
+    TpWordIndex2 wordIndex2 = new TpWordIndex2(0);
+    
+    String text = "2dB,392Nm,56dB,58dB,60R18,78dB,ABS,AUX,Azera,BMW,"
+                + "EBD,ECO,Grandeur,Hyundai,HyundaiVeracruzđã,LED,MP3,Style,TheoKar,USB,"
+                + "VDC,VGT,Veracruz,ViệtNamtrong,ZF,cd 06,ford everest 2.5,hyundai santa fe 2010," 
+                + "hàn quốc,santa fe, santa fe 2.0 slx 2010,santa fe 2009,santa fe 2010,santa fe "
+                + "slx 2.0,santa fe slx 2.0 2010,santa fe slx 2.0 2wd,santa fecó,santa femới,santa "
+                + "fenằm,santa fesử, santa feđược,stylish no1,toyota fortuner 2.5,toyota hilux 3.0,"
+                + "turbo vgt,tại hà nội,việc santa fe,Đức";
+    
+    String [] elements = text.split(",");
+    for(int i = 0;  i < elements.length; i++) {
+      wordIndex1.add(elements[i].trim());
+    }
+    
+    text = "CNN,Kênh,Obama,Richarson,Seoul,Thống đốc,bill clinton,bình nhưỡng,bộ thống,hàn quốc,"
+      + "kim dae jung,kim ki nam,new mexico,new mexico bill richardson,phía triều tiên,santa fe,"
+      + "theo afp,triều tiên,Đại sứ,đảng lao động,";
+    
+    elements = text.split(",");
+    for(int i = 0;  i < elements.length; i++) {
+      wordIndex2.add(elements[i].trim());
+    }
+    
+    NounMatcher properNounMatchSearcher = new NounMatcher();
+    List<Node> nodes = new ArrayList<Node>();
+    properNounMatchSearcher.match(nodes, wordIndex1, wordIndex2);
+    
+    System.out.println(nodes.size());
+  }
+
+}

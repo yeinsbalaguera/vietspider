@@ -1,0 +1,67 @@
+
+/*if("search.folder".equals(action)) {
+      java.io.File file = getFile(request);
+      if(file == null) {
+        output.write("".getBytes());
+        return;
+      }
+      DataReader reader  = new DataReader();
+      ByteArrayOutputStream input = reader.loadInputStream(getRequestBody(request));
+      byte [] bytes = input.toByteArray();
+      if(bytes == null || bytes.length < 0) return;
+      String value = new String(bytes, Application.CHARSET);
+      searchFolder(file, value, output);
+      return;
+    }*/
+    
+/*private void searchFolder(File folder, String value, OutputStream output) {
+    File [] files = folder.listFiles();
+    for(File file : files) {
+      if(file.isDirectory()) {
+        searchFolder(file, value, output);
+        continue;
+      } 
+      try {
+        if(!searchFile(file, value)) continue;
+        output.write(file.getName().getBytes());
+        output.write("\n".getBytes());
+      }catch (Exception e) {
+        LogService.getInstance().setException("SERVER", e);
+      }
+    }
+  }
+
+  private boolean searchFile(File file, String value) throws Exception {
+    Charset charset = Charset.forName(Application.CHARSET);
+    Pattern pattern = Pattern.compile(value, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    FileInputStream stream = null;
+    FileChannel channel = null;
+
+    boolean valueSearch = false;
+    try {
+      stream = new FileInputStream(file);
+      channel = stream.getChannel();
+
+      ByteBuffer bytes = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size( ));
+      CharBuffer chars = charset.decode(bytes);
+      Matcher matcher = pattern.matcher(chars);
+      valueSearch = matcher.find();
+
+      bytes.clear();
+    } finally {
+      try {
+        if(channel != null) channel.close();
+      } catch (Exception e) {
+        LogService.getInstance().setException("SERVER", e);
+      }
+
+      try {
+        if(stream != null) stream.close();
+      } catch (Exception e) {
+        LogService.getInstance().setException("SERVER", e);
+      }
+    }
+
+    return valueSearch;
+  }*/

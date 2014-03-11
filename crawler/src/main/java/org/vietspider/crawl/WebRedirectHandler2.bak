@@ -1,0 +1,62 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import java.net.URI;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.ProtocolException;
+import org.apache.http.impl.client.DefaultRedirectHandler;
+import org.apache.http.protocol.HttpContext;
+import org.vietspider.crawl.io.tracker.PageDownloadedTracker;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.LinkCreator;
+import org.vietspider.db.link.track.LinkLogStorages;
+import org.vietspider.model.ExtractType;
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jun 5, 2008  
+ */
+public class WebRedirectHandler2 extends DefaultRedirectHandler {
+  //ko dung
+  private String sourceFullName;
+  
+  public WebRedirectHandler2(String sourceFullName) {
+    this.sourceFullName = sourceFullName;
+  }
+  
+  public URI getLocationURI(final HttpResponse response, final HttpContext context) throws ProtocolException {
+    URI uri = super.getLocationURI(response, context);
+    
+    Source source = CrawlingSources.getInstance().getSource(sourceFullName);
+    if(source.getExtractType() != ExtractType.NORMAL) return uri;
+    
+    Link link = new Link(uri.toString(), null);
+    link.setSourceFullName(sourceFullName);
+    try {
+      if(PageDownloadedTracker.searchUrl(link, true)) {
+        //      System.out.println("da bi downloaded " + uri.toString());
+        throw new ProtocolException(uri.toString()+ " was  downloaded ");
+      } 
+    } catch (Throwable e1) {
+      LinkLogStorages.getInstance().save(source, e1);
+//      LogWebsite.getInstance().setThrowable(source, e1);
+      return uri;
+    }
+    
+    LinkCreator linkCreator = (LinkCreator)source.getLinkBuilder();
+    if(linkCreator.getDataPatterns().match(uri.toString())) {
+      try {
+        PageDownloadedTracker.saveUrl(link);
+      } catch (Throwable e1) {
+        LinkLogStorages.getInstance().save(source, e1);
+//        LogWebsite.getInstance().setThrowable(source, e1);
+      }
+    }
+    return uri;
+  }
+}

@@ -1,0 +1,39 @@
+<tr>
+	<td align="center" valign="center" style="border: 1px solid rgb(153, 153, 153);">
+		<h1>DÀNH CHO QUẢNG CÁO</h1>
+	</td>
+</tr>
+<tr>
+	<td height="12"></td>
+</tr>
+<tr>
+	<td align="center"
+		style="border: 1px solid rgb(153, 153, 153); margin: 12px; 
+            padding: 8px; background: rgb(221, 221, 221) none repeat scroll 0% 0%;
+            -moz-background-clip: border; -moz-background-origin: padding;
+            -moz-background-inline-policy: continuous; font-family: arial,sans-serif;
+            font-style: normal; font-variant: normal; font-size: 13px; line-height: 
+            normal; font-size-adjust: none; font-stretch: normal; -x-system-font: none;
+             color: rgb(0, 0, 0); font-weight: normal; ">
+		<p style="text-align: left;">
+			Đây chỉ là bản lưu tạm tại địa chỉ <a href="$url">$url</a> vào lúc $time. 
+			Hãy vào trang nguồn theo địa chỉ trên để thấy được nội dung cập nhật mới nhất.
+		</p>
+		<p>
+			<b style="color: red;text-align: center;">
+				Chúng tôi không có bất kỳ mối liên hệ nào với tác giả và không chịu trách	nhiệm về nội dung này.
+		  </b>
+		</p>
+	</td>
+</tr>
+<tr>
+	<td> 
+	  <table border="1">
+	    <tr>
+	      <td width="120">DÀNH CHO QUẢNG CÁO</td>
+	      <td>$article</td>
+	      <td width="120">DÀNH CHO QUẢNG CÁO</td>
+	    </tr>
+	   </table>
+</td>
+</tr>	    

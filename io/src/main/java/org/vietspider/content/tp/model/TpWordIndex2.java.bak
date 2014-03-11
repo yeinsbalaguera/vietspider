@@ -1,0 +1,317 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.tp.model;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.TreeSet;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 28, 2009  
+ */
+public class TpWordIndex2  implements Serializable {
+  
+  private final static long serialVersionUID = -1198272975486063436l;
+  
+  protected int time = 1;
+  protected int total = 0;
+  
+  protected int code = 0;
+
+  protected TreeSet<TpWordIndex2> children;
+  
+  private transient List<TpWordIndex2> tpWords = null;
+
+  public TpWordIndex2(int code) {
+    if(this.code == -1) code = 0;
+    this.code = code;
+    children = new TreeSet<TpWordIndex2>(new WordIndexComparator());
+  }
+  
+  public int getTime() { return time; }
+  public void setTime(int _time) { 
+    this.time = _time == -1 ? 0 : _time; 
+  }
+  
+  public int getTotal() { return total;  }
+  public void setTotal(int _total) { 
+    this.total = _total == -1 ? 0 : _total; 
+  }
+  
+  public void add(String value) {
+//    System.out.println(" ==> "+ value);
+    tpWords = null;
+    add(value, 1, 0);
+  }
+  
+  private void add(String value, int counter, int level)   {
+    if(level > 30) return;
+    //throw new StackOverflowError("To many add children (" + value+")");
+    int index = value.indexOf(' ');
+    if(index < 0) {
+      int newCode = value.hashCode();
+      TpWordIndex2 child = new TpWordIndex2(newCode);
+      TpWordIndex2 wordIndex = children.ceiling(child);
+      if(wordIndex != null && wordIndex.getCode() == child.getCode()) {
+        TpWordIndex2 zero = new TpWordIndex2(0);
+        TpWordIndex2 seft = wordIndex.getChildren().ceiling(zero);
+        if(seft != null && seft.getCode() == 0) {
+          seft.setTime(seft.getTime()+1);
+          return;
+        }
+//        System.out.println("pipi "+ wordIndex.hashCode() + "/ "+ wordIndex.getChildren().size());
+        zero.setTime(1);
+        zero.setTotal(counter);
+        wordIndex.getChildren().add(zero);
+//        System.out.println("pipi  2 " + wordIndex.hashCode() + "/ " + wordIndex.getCode() + " / "+ wordIndex.getChildren().size());
+        return;
+      }
+      
+      TpWordIndex2 zero = new TpWordIndex2(0);
+      zero.setTime(1);
+      zero.setTotal(counter);
+      
+      child.getChildren().add(zero);
+      children.add(child);
+      return;
+    }
+
+    int addCode = value.subSequence(0, index).hashCode();
+    value = value.substring(index+1, value.length());
+    TpWordIndex2 child = new TpWordIndex2(addCode);
+    TpWordIndex2 wordIndex = children.ceiling(child);
+    if(wordIndex != null && wordIndex.getCode() == child.getCode()) {
+      wordIndex.add(value, counter+1, level+1);
+      return;
+    }
+   
+    children.add(child);
+    child.add(value, counter+1, level+1);
+  }
+  
+  public int getTotalWord(int min) {
+    int totalWord = 0;
+    if(tpWords == null) searchWords();
+    for(int i = 0; i < tpWords.size(); i++) {
+      TpWordIndex2 word = tpWords.get(i);
+      if(word.getTotal() < min) continue;
+      totalWord += word.getTotal();
+    }
+    
+    return totalWord;
+  }
+  
+  public int getTotalWord2(int min) {
+    int totalWord = 0;
+    if(tpWords == null) searchWords();
+    for(int i = 0; i < tpWords.size(); i++) {
+      TpWordIndex2 word = tpWords.get(i);
+      if(word.getTotal() < min) continue;
+      totalWord += word.getTotal()*word.getTime();
+    }
+    
+    return totalWord;
+  }
+  
+ public int getTimeWord(int min) {
+   int totalWord = 0;
+   
+   if(tpWords == null) searchWords();
+   for(int i = 0; i < tpWords.size(); i++) {
+     TpWordIndex2 word = tpWords.get(i);
+     if(word.getTotal() < min) continue;
+     totalWord += word.getTime();
+   }
+  
+   return totalWord;
+ }
+ 
+ public List<TpWordIndex2> getWords() {
+   if(tpWords == null) searchWords();
+   return tpWords;
+ }
+
+ private void searchWords() {
+   tpWords = new ArrayList<TpWordIndex2>(children.size());
+   Iterator<TpWordIndex2> iterator = children.iterator();
+   while(iterator.hasNext()) {
+     searchWords(iterator.next());
+   }
+ }
+ 
+ private void searchWords(TpWordIndex2 word) {
+   if(word.getCode() == 0) {
+     tpWords.add(word);
+     return ;
+   }
+   Iterator<TpWordIndex2> iterator = word.getChildren().iterator();
+   while(iterator.hasNext()) {
+     searchWords(iterator.next());
+   }
+ }
+  
+ 
+ public int getCode() { return code; }
+ 
+ public TreeSet<TpWordIndex2> getChildren() { return children; }
+
+ public String toString() {
+   StringBuilder builder = new StringBuilder();
+   buildString(builder);
+   return builder.toString();
+ }
+
+ public void buildString(StringBuilder builder) {
+   builder.append(code).append(',').append(time).append(',').append(total).append('[');
+   Iterator<TpWordIndex2> iterator = children.iterator();
+   int counter = 0;
+   while(iterator.hasNext()) {
+     if(counter > 0) builder.append(',');
+     iterator.next().buildString(builder);
+     counter++;
+   }
+   builder.append(']');
+ }
+ 
+ 
+ public void write(DataOutputStream stream) throws Exception {
+   stream.writeInt(code);
+   stream.writeInt(total == -1 ? 0 : total);
+   stream.writeInt(time == -1 ? 0 : time);
+   Iterator<TpWordIndex2> iterator = children.iterator();
+   while(iterator.hasNext()) {
+     iterator.next().write(stream);
+   }
+   stream.writeInt(-1);
+   stream.flush();
+ }
+ 
+ public long read(DataInputStream stream, long pos, long length) throws Exception {
+   while(pos < length) {
+     int c = stream.readInt();
+//     System.out.println(c +" / "+ pos+" / "+length);
+     pos += 4;
+     if(c == -1) return pos;
+     TpWordIndex2 wordIndex = new TpWordIndex2(c);
+     
+     int tt = stream.readInt();
+     pos += 4;
+     if(tt == -1) return pos;
+     wordIndex.setTotal(tt);
+     
+     int ti = stream.readInt();
+     pos += 4;
+     if(ti == -1) return pos;
+     wordIndex.setTime(ti);
+     
+     pos = wordIndex.read(stream, pos, length);
+     children.add(wordIndex);
+   }
+   
+   return pos;
+ }
+ 
+ public static TpWordIndex2 readObject(DataInputStream stream, long pos, long length) throws Exception {
+   int c = stream.readInt();
+   pos +=4;
+   if(c == -1) return null;
+   TpWordIndex2 wordIndex = new TpWordIndex2(c);
+   
+   int tt = stream.readInt();
+   pos += 4;
+   if(tt == -1) return wordIndex;
+   wordIndex.setTotal(tt);
+   
+   int ti = stream.readInt();
+   pos += 4;
+   if(ti == -1) return wordIndex;
+   wordIndex.setTime(ti);
+   
+   wordIndex.read(stream, pos, length);
+   return wordIndex;
+ }
+ 
+ public boolean contains(String value) {
+   List<Integer> elements = split(value);
+   TreeSet<TpWordIndex2> _children = children;
+   for(int i = 0; i < elements.size(); i++) {
+     //      for(int k = 0; k < _children.size(); k++) {
+     //        System.out.println(_children.get(k).code  +" == "+ elements.get(i));
+     //      }
+     //      int index = Collections.binarySearch(_children, new WordIndex(elements.get(i)), COMPARATOR);
+     TpWordIndex2 word = new TpWordIndex2(elements.get(i));
+     TpWordIndex2 wordIndex = _children.ceiling(word);
+     if(wordIndex == null || wordIndex.code != word.code) return false;
+     //      System.out.println("search "+elements.get(i)+ " == > " +index);
+     //      if(index < 0) return false;
+     _children = wordIndex.children;
+   }
+   TpWordIndex2 seft = _children.ceiling(new TpWordIndex2(0));
+   return seft != null && seft.code == 0;
+ }
+ 
+ public boolean remove(String value) {
+   List<Integer> elements = split(value);
+   TreeSet<TpWordIndex2> _children = children;
+   for(int i = 0; i < elements.size(); i++) {
+     //      int index = Collections.binarySearch(_children, new WordIndex(elements.get(i)), COMPARATOR);
+     //      System.out.println("search "+elements.get(i)+ " == > " +index);
+     //      if(index < 0) return false;
+
+     TpWordIndex2 word = new TpWordIndex2(elements.get(i));
+     TpWordIndex2 wordIndex = _children.ceiling(new TpWordIndex2(elements.get(i)));
+     if(wordIndex == null || wordIndex.code != word.code) return false;
+
+     TpWordIndex2 seft = wordIndex.children.ceiling(new TpWordIndex2(0));
+     if( seft != null && seft.code == 0) {
+       wordIndex.children.remove(seft);
+       return true;
+     }
+     
+     _children = wordIndex.children;
+
+   }
+   return false;
+ }
+ 
+ private List<Integer> split(String value) {
+   int start = 0;
+   int length = value.length();
+   int index = 0;
+   List<Integer> values = new ArrayList<Integer>();
+   while(index < length) {
+     char c = value.charAt(index);
+     if(c == ' ') {
+       //        System.out.println(" thay |"+value.substring(start, index)+"|");
+       values.add(value.substring(start, index).hashCode());
+       start = index+1;
+     }
+     index++;
+   }
+   if(start < length) {
+     //      System.out.println(" thay |"+value.substring(start, length)+"|");
+     values.add(value.substring(start, length).hashCode());
+   }
+   return values;
+ }
+ 
+ public final static class WordIndexComparator  implements Serializable,Comparator<TpWordIndex2> {
+   
+   private final static long serialVersionUID = -9043676225081418946l;
+   
+   
+   public int compare(TpWordIndex2 o1, TpWordIndex2 o2) {
+     return o2.code - o1.code;
+   }
+ }
+  
+
+}

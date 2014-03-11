@@ -1,0 +1,180 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.db.tp;
+
+import java.io.File;
+import java.io.FileFilter;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.net.client.DataClientService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jul 14, 2009  
+ */
+public class TopicTrackingServices extends Thread {
+
+  private static volatile TopicTrackingServices INSTANCE;
+  
+  public static synchronized TopicTrackingServices createInstance() {
+    if(INSTANCE == null) {
+      INSTANCE  = new TopicTrackingServices();
+    }
+    return INSTANCE;    
+  }
+  
+//  public static synchronized void exitInstance() {
+//    if(INSTANCE == null) return;
+//    INSTANCE.execute = false;
+//    INSTANCE.tpTempDatabase.storeTemp();
+////  dbIndexers.commitIndexedContents();
+//    INSTANCE.iTpDatabases.closes();
+//    INSTANCE = null;
+//  }
+
+  public static TopicTrackingServices getInstance() { return INSTANCE; }
+
+  private volatile boolean execute = true;
+  private volatile long sleep = 5*1000l;
+
+//  protected volatile java.util.Queue<TpWorkingData> working = new ConcurrentLinkedQueue<TpWorkingData>();
+//  protected volatile java.util.Queue<TpWorkingData> temp = new ConcurrentLinkedQueue<TpWorkingData>();
+  
+  private TpDatabases tpDatabases = new TpDatabases();
+  private TpTempDatabase2 tpTempDatabase;
+//  private SyncSearchData syncSearchData;
+//  protected TpMemoryRelationComputor  memoryComputor;
+  
+//  protected CoreDbIndexers dbIndexers;
+//  protected MergeIndexFile mergeIndex;
+  
+  public TopicTrackingServices() {
+    Application.addShutdown(new Application.IShutdown() {
+      
+      public String getMessage() { return "Close Topic Tracking Database";}
+      
+      public void execute() {
+        execute = false;
+        
+        tpTempDatabase.storeTemp();
+//        dbIndexers.commitIndexedContents();
+        tpDatabases.closes();
+//        dbIndexers.closeIndexers();
+      }
+    });
+    
+   
+    tpTempDatabase = new TpTempDatabase2(tpDatabases);
+    
+//    if(CrawlerConfig.EXCUTOR_SIZE <= 5) {
+//      sleep = 1000;
+//      tpTempDatabase.setSizeOfWorking(100);
+//    } else if(CrawlerConfig.EXCUTOR_SIZE > 5 && CrawlerConfig.EXCUTOR_SIZE <= 15) {
+//      sleep = 5*1000;
+//      tpTempDatabase.setSizeOfWorking(150);
+//    } else if(CrawlerConfig.EXCUTOR_SIZE > 15 && CrawlerConfig.EXCUTOR_SIZE <= 20) {
+//      sleep = 15*1000;
+//      tpTempDatabase.setSizeOfWorking(200);
+//    } else if(CrawlerConfig.EXCUTOR_SIZE > 20 && CrawlerConfig.EXCUTOR_SIZE <= 25) {
+//      sleep = 30*1000;
+//      tpTempDatabase.setSizeOfWorking(250);
+//    } else if(CrawlerConfig.EXCUTOR_SIZE > 25 && CrawlerConfig.EXCUTOR_SIZE <= 30) {
+//      sleep = 60*1000;
+//      tpTempDatabase.setSizeOfWorking(350);
+//    } else if(CrawlerConfig.EXCUTOR_SIZE > 30 && CrawlerConfig.EXCUTOR_SIZE <= 50) {
+//      sleep = 3*60*1000;
+//      tpTempDatabase.setSizeOfWorking(450);
+//    } else {
+//      sleep = 5*60*1000;
+//      tpTempDatabase.setSizeOfWorking(500);
+//    }
+    
+//    String remote = SystemProperties.getInstance().getValue("sync.content.index.server");
+//    dbIndexers = new CoreDbIndexers(remote != null && !remote.trim().isEmpty());
+    
+//    syncSearchData = new SyncSearchData(); 
+//    memoryComputor = new TpMemoryRelationComputor();
+    this.start();
+  }
+
+  public void save(TpWorkingData workingData) {
+    if(workingData == null) return;
+    tpTempDatabase.add(workingData);
+//    temp.add(workingData);
+//    working.add(workingData);
+  }
+
+  public void run() {
+//    new TpDatabaseConverter() ;
+//    mergeIndex = new MergeIndexFile();
+    
+    while(execute) {
+     /* while(!temp.isEmpty()) {
+        try{
+          tpTempDatabase.save(temp.poll());
+        } catch (Throwable e) {
+          LogService.getInstance().setThrowable(e);
+        }
+      }*/
+      
+//      if(mergeIndex.isMerge())  mergeIndex.merge();
+      
+      
+      DataClientService client = tpTempDatabase.getClient();
+      if(client != null) {
+        try {
+          Thread.sleep(tpTempDatabase.sync() ? 1*1000 : 30*1000);
+        } catch (Exception e) {
+        }
+      } else {
+        tpTempDatabase.compute();
+      }
+      
+      
+//      dbIndexers.commitIndexedContents();
+      
+      tpDatabases.closeExpires();
+//      dbIndexers.closeExpires();
+      
+      try {
+        Thread.sleep(sleep);
+      } catch (Exception e) {
+      }
+    }
+    
+    tpTempDatabase.sync();
+//    dbIndexers.commitIndexedContents();
+  }
+  
+  public void deleteExpireDate1(File folder, int expire) {
+    File[] files = UtilFile.listFiles(folder, new FileFilter() {
+      public boolean accept(File f) {
+        if (!f.isDirectory()) return false;
+        return UtilFile.validate(f.getName());
+      }
+    });
+
+    for (int i = expire; i < files.length; i++) {
+      TpDatabase tpdatabase = tpDatabases.getHolder().get(files[i].getAbsolutePath());
+      if(tpdatabase != null) tpdatabase.close();
+      UtilFile.deleteFolder(files[i]);
+    }
+  }
+  
+//  public void index(ContentIndex contentIndex) {
+//    if(contentIndex == null) return;
+//    if(dbIndexers.isSync()) {
+//      SyncService.getInstance().sync(SyncContentIndex.class, contentIndex);
+//    } else {
+//      dbIndexers.index(contentIndex);
+//    }
+//  }
+  
+//  public CoreDbIndexers getDbIndexers() { return dbIndexers;  }
+  
+//  public void setSleep(long sleep) { this.sleep = sleep; }
+}

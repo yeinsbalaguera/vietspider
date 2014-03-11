@@ -1,0 +1,235 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.Calendar;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+
+import org.vietspider.chars.CharsUtil;
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.RandomAccess;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.NameConverter;
+import org.vietspider.crawl.io.access.AccessTrackerService;
+import org.vietspider.io.SystemProperties;
+import org.vietspider.io.model.GroupInputOuput;
+import org.vietspider.model.Group;
+import org.vietspider.model.Source;
+import org.vietspider.parser.xml.XMLDocument;
+import org.vietspider.parser.xml.XMLParser;
+import org.vietspider.pool.SessionQueue;
+import org.vietspider.serialize.XML2Bean;
+
+import static org.vietspider.model.SourcePropertyKey.*; 
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Nov 19, 2007  
+ */
+public class SourceQueueBak extends RandomAccess implements SessionQueue<String, Source>  {
+
+  private volatile boolean loadTemp = true;
+  
+  protected volatile RandomAccessFile random;
+  
+  protected volatile boolean changedSession = false;
+  
+  protected volatile int weightPriority = 30;
+  
+  protected ConcurrentSkipListMap<String, Source> data; 
+  
+  public SourceQueueBak() {
+    data = new ConcurrentSkipListMap<String, Source>();
+    
+//    File file = UtilFile.getFile("system", "load.temp");
+//    try {
+//      random = new RandomAccessFile(file, "r");
+//      random.seek(0);
+//      loadTemp = true;
+//    } catch (Exception e) {
+//      LogService.getInstance().setException(e);
+//    }
+    
+    try {
+      SystemProperties system = SystemProperties.getInstance();
+      weightPriority = Integer.parseInt(system.getValue(Application.WEIGHT_PRIORITY_EXECUTOR));
+    } catch (Exception e) {
+      weightPriority = 30;
+    }
+  }
+
+  public synchronized void next(String value) {
+    if(value  == null) return;
+    String line = "";
+    try {
+      random.seek(0);
+      long pointer = 0;
+      while((line = readLine(random)) != null) {
+        if(value.equals(line)) {
+          random.seek(pointer);
+          break;
+        }
+        pointer = random.getFilePointer(); 
+      }
+    } catch (IOException e) {
+      LogService.getInstance().setException(e);
+    } 
+  }
+  
+  public synchronized String next() {
+    try {
+      if(random.getFilePointer() >= random.length()) {
+        if(loadTemp) {
+          try {
+            if(random != null) random.close();  
+          } catch (Exception e2) {
+            LogService.getInstance().setException(e2);
+          }
+          
+          File file = UtilFile.getFile("system", "load");
+          random = new RandomAccessFile(file, "r");
+          loadTemp = false;
+          
+          SystemProperties systemProperties = SystemProperties.getInstance();
+          String value = systemProperties.getValue(Application.LAST_DOWNLOAD_SOURCE);
+          try {
+            random.seek(Long.parseLong(value));
+          } catch (Exception e) {   
+            random.seek(0);
+          }
+        } else {
+          random.seek(0);
+        }
+      }
+      
+      while(random.getFilePointer() < random.length()) {
+        String line = readLine(random);
+        String pointer = String.valueOf(random.getFilePointer());
+        SystemProperties systemProperties = SystemProperties.getInstance();
+        systemProperties.putValue(Application.LAST_DOWNLOAD_SOURCE, pointer);
+
+        return line;
+      }
+      
+    } catch (IOException e) {
+      try {
+        random.seek(0);  
+      } catch (Exception e2) {
+        LogService.getInstance().setException(e2);
+      }
+      LogService.getInstance().setException(e);
+    }
+    return null;
+  }
+  
+  public boolean validate(String line, Source source) throws Exception {
+    boolean value = validateSource(line, source);
+    changedSession = value && !loadTemp;
+    return value;
+  }
+  
+  public boolean isChangedSession() { return changedSession; }
+
+  private boolean validateSource(String line, Source source)  throws Exception {
+    if(source  == null || source.getHome().length < 1) return false;
+    
+    try {
+      InetAddress.getByName(new URL(source.getHome()[0]).getHost());
+    } catch (MalformedURLException e) {
+      LogService.getInstance().setMessage(source, e.toString());
+      return false;
+    } catch (UnknownHostException e) {
+      LogService.getInstance().setMessage(source, e.toString());
+      throw e;
+    }
+    
+    if(loadTemp || source.getPriority() < 1) return true;
+    
+    StringBuilder builder = new StringBuilder(source.getGroup());
+    builder.append('.').append(source.getCategory()).append('.').append(source.getName());
+    String folderName  = new NameConverter().encode(builder.toString());
+    File folder = new File(UtilFile.getFolder("track/link/"), folderName);
+    File [] files = null;
+    if(folder.exists() && (files = folder.listFiles()) != null && files.length> 0) return true;
+    
+    long value = AccessTrackerService.getInstance().search(line.hashCode());
+    if(value == -1) return true;
+    
+    Calendar calendar = Calendar.getInstance();
+    Group group = new GroupInputOuput().loadGroups().getGroup(source.getGroup());
+
+    int startDownloadTime  = group.getStartTime();
+    int endDownloadTime = group.getEndTime();
+    int hour = calendar.get(Calendar.HOUR_OF_DAY);
+    
+    if(group.isDownloadInRangeTime()) {
+      if(hour < startDownloadTime || hour > endDownloadTime)  return false;
+    } else {
+      if(hour >= startDownloadTime && hour <= endDownloadTime)  return false;
+    }
+    
+    long currentTime = calendar.getTimeInMillis();
+    
+    Properties properties = source.getProperties();
+    String valueError = properties.getProperty(SOURCE_CONFIG_ERROR);
+    if(valueError != null 
+        && !(valueError = valueError.trim()).isEmpty()) {
+      try {
+        int errorTime = Integer.parseInt(valueError) + 1;
+        return currentTime - value >= Math.min(errorTime, 5)*4*60*60*1000;
+      } catch (Exception e) {
+        LogService.getInstance().setException(source, e);
+      }
+    }
+   
+    return currentTime - value >= source.getPriority()*weightPriority*60*1000;
+  }
+  
+  public Source createValue(String line) {
+    if(line == null) return null;
+    String [] elements = line.split("\\.");
+    if(elements.length < 3) return null;
+    
+    NameConverter converter = new NameConverter();
+    String group = converter.encode(CharsUtil.cutAndTrim(elements[1]));
+    String category = converter.encode(CharsUtil.cutAndTrim(elements[2]));
+    String name  = category+"."+converter.encode(CharsUtil.cutAndTrim(elements[0]));
+    
+    File folder = UtilFile.getFolder("sources/sources/"+group+"/"+category+"/");
+    if(!folder.exists()) return null;
+    File file = new File(folder, name);
+    if(!file.exists()) return null;
+    
+    try {
+      String xml = new String(new DataReader().load(file), Application.CHARSET);
+      if(xml == null || xml.trim().length() < 1) return null;
+      XMLDocument document = XMLParser.createDocument(xml, null);
+      Source source = XML2Bean.getInstance().toBean(Source.class, document);
+      if(Application.LICENSE == Install.SEARCH_SYSTEM) return source;
+      if(source.getPriority() > 48) source.setPriority(24);
+      return source;
+    } catch (Exception e) {
+      LogService.getInstance().setException(e);
+      return null;
+    }
+  }
+
+  public void setChangedSession(boolean changedSession) {
+    this.changedSession = changedSession;
+  }
+
+}

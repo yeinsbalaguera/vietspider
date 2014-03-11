@@ -1,0 +1,17 @@
+﻿<html>
+	<head>
+		<script>
+			function longCalc(id)
+			{
+				var a = 1;
+				for(var i = 0;i<100;i++)
+				{
+					a = Math.sqrt(a * a);
+					console.log("running " + id);
+				}
+			}		
+			setTimeout(function(){longCalc(1)},1);
+			setTimeout(function(){longCalc(2)},1);
+		</script>
+	</head>
+</html>

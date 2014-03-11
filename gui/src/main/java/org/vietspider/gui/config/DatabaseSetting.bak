@@ -1,0 +1,293 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.gui.config;
+
+import java.util.Properties;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.vietspider.bean.DatabaseConfig;
+import org.vietspider.client.common.ClientConnector2;
+import org.vietspider.client.common.DataClientHandler;
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.common.util.Worker;
+import org.vietspider.serialize.XML2Object;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.InformationViewer;
+import org.vietspider.ui.widget.waiter.WaitLoading;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 5, 2008  
+ */
+public class DatabaseSetting extends Composite {
+  
+  private Button butDeleteOldTable;
+  private Button butCreateNewTable;
+  
+  private Button butRDBMsType;
+  private Button butRemoteType;
+  private Button butSolrType;
+  
+  private DatabaseInfo dataInfo;
+  
+  private Button butOk, butCancel;
+  
+  private DatabaseConfig config;
+  private InformationViewer viewer;
+//  private Properties properties;
+  
+  public DatabaseSetting(Composite parent, ApplicationFactory factory) {
+    super(parent, SWT.NONE);
+    GridLayout gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 5;
+    gridLayout.horizontalSpacing = 5;
+    gridLayout.verticalSpacing = 5;
+    gridLayout.marginWidth = 5;
+    setLayout(gridLayout);
+    
+    Composite typeComposite = new Composite(this, SWT.NONE);
+    gridLayout = new GridLayout(3, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 5;
+    gridLayout.verticalSpacing = 5;
+    gridLayout.marginWidth = 0;
+    typeComposite.setLayout(gridLayout);
+    
+    factory.setComposite(typeComposite);
+    
+    GridData gridData = new GridData(GridData.FILL_HORIZONTAL);
+    typeComposite.setLayoutData(gridData);
+    
+    butRDBMsType = factory.createButton("butRDBMsDatabase", SWT.CHECK,  new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        setEnable(0, butRDBMsType.getSelection());
+      }   
+    });
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    butRDBMsType.setLayoutData(gridData);
+    
+    butRemoteType = factory.createButton("butRemoteDatabase", SWT.CHECK,  new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        setEnable(1, butRemoteType.getSelection());
+      }   
+    });
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    butRemoteType.setLayoutData(gridData);
+    butRemoteType.setVisible(Application.LICENSE == Install.SEARCH_SYSTEM);
+    
+    butSolrType = factory.createButton("butSolrDatabase", SWT.CHECK,  new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        setEnable(2, butSolrType.getSelection());
+      }   
+    });
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    butSolrType.setLayoutData(gridData);
+    butSolrType.setVisible(Application.LICENSE == Install.SEARCH_SYSTEM);
+    
+    factory.setComposite(this);
+    
+    dataInfo = new DatabaseInfo(this, factory);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    dataInfo.setLayoutData(gridData);
+    
+    Composite tableComposite = new Composite(this, SWT.NONE);
+    gridLayout = new GridLayout(2, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 5;
+    gridLayout.verticalSpacing = 5;
+    gridLayout.marginWidth = 0;
+    tableComposite.setLayout(gridLayout);
+    
+    factory.setComposite(tableComposite);
+    
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    tableComposite.setLayoutData(gridData);
+    
+    butDeleteOldTable = factory.createButton("butDeleteOldTable", SWT.CHECK, null);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    butDeleteOldTable.setLayoutData(gridData);
+    
+    butCreateNewTable = factory.createButton("butCreateNewTable", SWT.CHECK, null);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    butCreateNewTable.setLayoutData(gridData);
+    
+    Composite bottom = new Composite(this, SWT.NONE);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    bottom.setLayoutData(gridData);
+    RowLayout rowLayout = new RowLayout();
+    rowLayout.justify = true;
+    bottom.setLayout(rowLayout);
+    
+    factory.setComposite(bottom);
+    butOk = factory.createButton("butOk", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        if(config == null) config = new DatabaseConfig();
+        dataInfo.getData(config);
+        config.setDeleteOldTable(butDeleteOldTable.getSelection());
+        config.setCreateNewTable(butCreateNewTable.getSelection());
+        if(type() == 0) test();
+        if(type() == 1) config.setType(8);
+      }   
+    });
+//    butOk.setEnabled(Application.LICENSE != Install.PERSONAL);
+    
+    butCancel = factory.createButton("butCancel", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        config = null;
+        load();
+      }   
+    });
+    
+    load();
+  }
+  
+  public DatabaseConfig getConfig() {
+    if(type() == 1) {
+      if(config == null) config = new DatabaseConfig();
+      dataInfo.getData(config);
+      config.setType(8);
+    }
+    return config; 
+  }
+
+  public void setConfig(DatabaseConfig config) { this.config = config; }
+  
+  private void test() {
+    Worker excutor = new Worker() {
+
+      private String value;
+
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+      }
+
+      public void execute() {
+        try {
+          value = DataClientHandler.getInstance().checkDatabaseConnection(config);
+        } catch (Exception e) {
+          value = e.toString();
+        }
+      }
+
+      public void after() {
+        String [] buttons = new String[] { butOk.getText() };
+        SelectionAdapter [] listeners = new SelectionAdapter[]{new SelectionAdapter() {
+          @SuppressWarnings("unused")
+          public void widgetSelected(SelectionEvent evt) {
+            viewer.close();
+          } 
+        }};
+        viewer = new InformationViewer(getShell(), value, buttons, listeners);
+        
+      }
+    };
+    WaitLoading waitLoading =  new WaitLoading(this, excutor, SWT.TITLE);
+    waitLoading.open();
+  }
+  
+  void load() {
+    Worker excutor = new Worker() {
+
+      private String value;
+
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+      }
+
+      public void execute() {
+        try {
+          value = DataClientHandler.getInstance().loadDatabaseSetting();
+        } catch (Exception e) {
+          value = e.toString();
+        }
+      }
+
+      public void after() {
+        try {
+          DatabaseConfig dc = XML2Object.getInstance().toObject(DatabaseConfig.class, value);
+          dataInfo.setData(dc);
+          butCreateNewTable.setSelection(dc.isCreateNewTable());
+        } catch (Exception e) {
+          if(butOk.isDisposed()) return;
+          String [] buttons = new String[] {butOk.getText()};
+          SelectionAdapter [] listeners = new SelectionAdapter[]{new SelectionAdapter() {
+            @SuppressWarnings("unused")
+            public void widgetSelected(SelectionEvent evt) {
+              viewer.close();           
+            } 
+          }};
+          viewer = new InformationViewer(getShell(), e.getMessage()+"\n"+value, buttons, listeners);
+        }
+      }
+    };
+    WaitLoading waitLoading =  new WaitLoading(this, excutor, SWT.TITLE);
+    waitLoading.open();
+  }
+  
+
+  private void setEnable(int type, boolean enable) {
+    if(type == 0) {
+      butCreateNewTable.setEnabled(enable);
+      butDeleteOldTable.setEnabled(enable);
+      butOk.setEnabled(enable);
+      butCancel.setEnabled(enable);
+      
+      butRemoteType.setSelection(false);
+      butSolrType.setSelection(false);
+    } else if(type == 1) {
+      butOk.setEnabled(enable);
+      
+      butRDBMsType.setSelection(false);
+      butSolrType.setSelection(false);
+    } else if(type == 2) {
+      butRemoteType.setSelection(false);
+      butRDBMsType.setSelection(false);
+    }
+    dataInfo.setEnable(type, enable);
+  }
+  
+  
+  public void setDatabaseType(Properties properties) {
+//    this.properties = properties;
+    String url = properties.getProperty("dataSaver");
+    butRDBMsType.setSelection(url.indexOf(".jdbc2.") > -1);
+    setEnable(0, butRDBMsType.getSelection());
+    if(butRDBMsType.getSelection()) return;
+    
+    butRemoteType.setSelection(url.indexOf(".remote.") > -1);
+    setEnable(1, butRemoteType.getSelection());
+    if(butRemoteType.getSelection()) return;
+    
+    url = properties.getProperty("databases.type");
+    butSolrType.setSelection(url.indexOf(".solr2.") > -1);
+    if(butSolrType.getSelection()) return;
+  }
+  
+  public int type() { 
+    if(butRDBMsType.getSelection()) return 0;
+    if(butRemoteType.getSelection()) return 1;
+    if(butSolrType.getSelection()) return 2;
+    return -1;
+  }
+}

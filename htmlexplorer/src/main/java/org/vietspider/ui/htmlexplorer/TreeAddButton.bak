@@ -1,0 +1,148 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.htmlexplorer;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.FocusAdapter;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.events.ShellAdapter;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.TreeItem;
+import org.vietspider.generic.ColorCache;
+import org.vietspider.ui.services.ImageLoader;
+import org.vietspider.ui.widget.AlphaDialog;
+import org.vietspider.ui.widget.ImageHyperlink;
+import org.vietspider.ui.widget.action.HyperlinkAdapter;
+import org.vietspider.ui.widget.action.HyperlinkEvent;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jul 7, 2009  
+ */
+public class TreeAddButton extends AlphaDialog {
+  
+  private ImageHyperlink add;
+  private Image addNormal, addDown;
+  
+  private HtmlExplorerListener _explorer;
+  
+  public TreeAddButton(HtmlExplorerListener explorer) {
+    super(explorer.getShell(), SWT.NO_TRIM | SWT.ON_TOP | SWT.BORDER);
+    this._explorer = explorer;
+    
+    _explorer.getShell().addShellListener(new ShellAdapter() {
+      @SuppressWarnings("unused")
+      public void shellDeiconified(ShellEvent e) {
+        popup.setAlpha(0);
+      }
+    });
+    
+    _explorer.getShell().addShellListener(new ShellAdapter() {
+      @SuppressWarnings("unused")
+      public void shellDeiconified(ShellEvent e) {
+        popup.setAlpha(0);
+      }
+    });
+    
+    _explorer.getTree().addFocusListener(new FocusAdapter() {
+      @SuppressWarnings("unused")
+      public void focusGained(FocusEvent e) {
+        popup.setAlpha(getFinalAlpha());
+        popup.redraw();
+      }
+      @SuppressWarnings("unused")
+      public void focusLost(FocusEvent e) {
+        popup.setAlpha(0);
+      }
+    });
+    
+    _explorer.getTree().addPaintListener(new PaintListener() {
+      @SuppressWarnings("unused")
+      public void paintControl(PaintEvent e) {
+        popup.setAlpha(0);
+      }
+    }) ;
+    
+    displayTime = 5*1000;
+    
+    popup.setBackgroundMode(SWT.INHERIT_DEFAULT);
+    Color borderColor = ColorCache.getInstance().getColor(200, 200, 200);
+    popup.setBackground(borderColor);
+    
+    GridLayout gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.marginBottom = 1;
+    gridLayout.marginTop = 0;
+    gridLayout.marginLeft = 0;
+    gridLayout.marginRight = 0;
+    
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    popup.setLayout(gridLayout);
+    
+    add = new ImageHyperlink(popup, SWT.CENTER);
+    ImageLoader imageLoader = new ImageLoader();
+    addNormal = imageLoader.load(popup.getDisplay(), "add2.png");
+    addDown = imageLoader.load(popup.getDisplay(), "add3.png");
+    add.setImage(addNormal);
+    add.addHyperlinkListener(new HyperlinkAdapter(){
+      @SuppressWarnings("unused")
+      public void linkEntered(HyperlinkEvent e) {
+        add.setImage(addNormal);
+        add.redraw();
+      }
+
+      @SuppressWarnings("unused")
+      public void linkExited(HyperlinkEvent e) {
+        add.setImage(addNormal);
+        add.redraw();
+      }
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e) {
+        add.setImage(addNormal);
+        add.redraw();
+      }
+    });
+    add.addMouseListener(new MouseAdapter() {
+      @SuppressWarnings("unused")
+      public void mouseUp(MouseEvent e) {
+       _explorer.addItems();
+      }
+      @SuppressWarnings("unused")
+      public void mouseDown(MouseEvent e) {
+        add.setImage(addDown);
+        add.redraw();
+      }
+    });
+    
+    popup.pack();
+  }
+  
+  public void computeShowArea(TreeItem list) {
+    Display display = list.getDisplay();
+      popup.setBackground(list.getParent().getBackground());
+    Rectangle parentRect = display.map (list.getParent(), null, list.getBounds ());
+    Rectangle displayRect = list.getBounds();
+    
+    int x = parentRect.x+ displayRect.width + 3;
+    int y = parentRect.y;//- comboSize.y;
+    popup.setLocation(x, y);
+    
+    popup.setAlpha(getFinalAlpha());
+    popup.setVisible(true);
+//    showFadeIn();
+  }
+
+}

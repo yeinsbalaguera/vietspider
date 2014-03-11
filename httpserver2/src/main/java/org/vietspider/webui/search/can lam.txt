@@ -1,0 +1,23 @@
+    HI
+    Co ban phan search thi ngon roi, minh thay rat on
+    Tuy nhien minh co mot so gop y bo sung sau nhe:
+    + Them phan chon: mua, ban, thue, sang nhuong
+     
+    + Qudan tri co the thay doi va dua noi dung vao "lien he", "dang tin quang cao" "gioi thieu bigbell" (co the thay doi duoc ca tieu de)
+    
+    + Co the thay doi duoc phan goi y trong phan quan tri: them xoa sua cac goi y
+     
+    + Bo xung lai thong ke tu khoa da tim
+    
+    + Them quang cao 2 ben phan kq tin luu tam
+    + Quan tri them xoa sua cac quang cao (co the add duoc nhieu quang cao, cac quang cao se luan phien xuat hien trong cac tin view)
+    
+    - Bo sung them dang ky user, pass de dang nhap vao website nhe (chi can dang ky: Ten, email, so dt, password, phan quan tri co the kich hoat tai khoan)
+    
+    - Phan quan tri moi ngay xuat ra cho minh 1 file danh sach cac so dien thoai
+    
+    Co gang giup minh nhanh nhe.
+    Hom truoc minh thay Thuan noi la co the lam duoc soft tu dong dang tin rao vat tren cac site raovat, THuan tinh toan xem chi phi the nao giup minh nhe.
+
+    Tran trong
+    Nguyen Dinh Hung

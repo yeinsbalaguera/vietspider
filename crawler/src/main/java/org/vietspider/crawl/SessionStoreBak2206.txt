@@ -1,0 +1,239 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import static org.vietspider.link.generator.Generator.HOMEPAGE_GENERATOR;
+import static org.vietspider.link.generator.LinkGeneratorInvoker.invoke;
+
+import java.net.SocketException;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+
+import org.apache.http.MalformedChunkCodingException;
+import org.headvances.storage.v3.MD5Hash;
+import org.vietspider.browser.HttpSessionUtils;
+import org.vietspider.browser.form.Param;
+import org.vietspider.chars.URLEncoder;
+import org.vietspider.common.io.LogService;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.LinkCreator;
+import org.vietspider.crawl.link.SourceResource;
+import org.vietspider.crawl.link.cache.LinkCacher;
+import org.vietspider.crawl.link.cache.LinkCacherService;
+import org.vietspider.crawl.link.queue.LinkQueue;
+import org.vietspider.crawl.link.queue.UrlList;
+import org.vietspider.io.SystemProperties;
+import org.vietspider.link.pattern.LinkPatterns;
+import org.vietspider.model.Source;
+import org.vietspider.model.SourceProperties;
+import org.vietspider.net.client.WebClient;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 7, 2007  
+ */
+public final class SessionStore {
+  
+  protected volatile Set<MD5Hash> codes;
+  protected volatile LinkQueue linkQueue;
+  protected volatile SessionTempLink tempLink;
+  
+  protected SourceResource sourceResource;
+
+  SessionStore(CrawlExecutor executor, Source source, boolean newSession)  throws Throwable {
+    codes = SessionCodesManager.get(source.getFullName());
+    this.linkQueue = new LinkQueue(source);
+    
+    this.sourceResource = executor.getResource(SourceResource.class);
+    
+    this.tempLink = new SessionTempLink(this);
+    
+    if(source == null || sourceResource == null) return;
+    WebClient webClient = executor.getResource(WebClient.class);
+    Properties properties = source.getProperties();
+
+    String userAgent = null;
+    if(properties.containsKey(SourceProperties.USER_AGENT)) {
+      userAgent = properties.getProperty(SourceProperties.USER_AGENT).trim();
+      if(userAgent != null && userAgent.trim().isEmpty()) userAgent = null;
+    }
+    webClient.setUserAgent(userAgent);
+
+    String [] addresses = source.getHome();
+    
+    List<Object> linkGenerator = sourceResource.getLinkGenerators();
+    List<String> listHomepage = new ArrayList<String>();
+    invoke(linkGenerator, HOMEPAGE_GENERATOR, listHomepage);
+    if(listHomepage.size() > 0) {
+      addresses = listHomepage.toArray(new String[listHomepage.size()]);
+    }
+    
+    URL url = null; 
+    try {
+      url = new URL(addresses[0]);
+    } catch (Exception e) {
+      LogService.getInstance().setMessage(source, e, addresses[0]);
+    }
+    if(url == null) return;
+    
+    String referer = sourceResource.getLinkCreator().getRefererURL();
+    String proxy = properties.getProperty(HttpSessionUtils.PROXY);
+    try {
+      if(proxy != null && proxy.trim().startsWith("blind")) {
+        webClient.setURL(referer, url, proxy);
+        proxy = null;
+      } else { 
+        webClient.setURL(referer, url);
+      }
+    } catch (MalformedChunkCodingException e) {
+      LogService.getInstance().setMessage(source, e, addresses[0]);
+      return;
+    } catch (IllegalStateException e) {
+      LogService.getInstance().setMessage(source, e, addresses[0]);
+      return;
+    } catch (UnknownHostException e) {
+      LogService.getInstance().setMessage(source, e, addresses[0]);
+      CrawlerPoolPing.getInstance().increaTime();
+    } catch (SocketException e) {
+      LogService.getInstance().setMessage(source, e, addresses[0]);
+      return;
+    } catch (Exception e) {
+      LogService.getInstance().setMessage(source, e, addresses[0]);
+      return;
+    }
+    
+    //set proxy and login to site 
+    Properties systemProperties = SystemProperties.getInstance().getProperties();
+    HttpSessionUtils httpSessionUtils = new HttpSessionUtils(webClient, source);
+    httpSessionUtils.setProxy(systemProperties, proxy);
+    try {
+      if(!httpSessionUtils.login(properties, source.getEncoding(), url, referer)) {
+        LogService.getInstance().setMessage(source, null, "Cann't login to website");
+      }
+    } catch (Exception e) {
+      LogService.getInstance().setMessage(source, e, "Cann't login to website");
+    }
+
+    String host = webClient.getHost();
+    if(newSession) loadFile(source);
+    if(linkQueue.size() < SessionTempLink.MAX_SIZE_LINK) {
+      addHomepages(host, referer, addresses);
+    }
+  }
+  
+  public LinkQueue createLink(boolean save, UrlList urlList) {
+    LinkQueue newQueue = null;
+    List<Link> list = urlList.getList();
+
+    LinkCreator linkCreator = sourceResource.getLinkCreator();
+    for(int i = 0; i < list.size(); i++) {
+      Link referer = urlList.getReferer();
+      Source source = referer.getSource();
+
+      if(newQueue == null)  newQueue = new LinkQueue(source);
+      Link link = list.get(i);
+      if(link == null) continue;
+
+      String host = urlList.getHost();
+      String address = link.getAddress();
+      List<Param> params = link.getParams();
+
+      link = linkCreator.create(host, address, referer.getLevel()+1);
+      if(link == null) continue;
+      if(!codes.add(link.getUrlId())) continue;
+      link.setParams(params);
+
+      LinkPatterns dataTempl = linkCreator.getDataPatterns();
+      LinkPatterns visitTempl = linkCreator.getVisitPatterns();
+
+      if(source.getDepth() > 1) {
+        link.setIsLink(visitTempl == null || visitTempl.match(address));
+      } else {
+        link.setIsLink(false);
+      }
+      link.setIsData(dataTempl == null || dataTempl.match(address));
+//    System.out.println(link.getAddress());
+//    System.out.println("is data "+link.isData()+ ", is link "+ link.isLink());
+      if(!link.isLink() && !link.isData()) continue;
+
+      link.setReferer(referer.getAddress());
+
+      newQueue.push(link);
+      if(save) continue;
+    }
+    return newQueue;
+  }
+
+  protected void loadFile(Source source) {
+    if(source == null || sourceResource == null) return;
+//  JdbmWebCacher webCacher = JdbmWebCacherService.getCacher(source);
+    List<Link> list = new ArrayList<Link>();
+    LinkCacher cacher = LinkCacherService.getCacher(source);
+    if(cacher != null) list = cacher.load();
+    LinkCreator linkCreator = sourceResource.getLinkCreator();
+
+//  JdbmLinkCacher linkCacher = JdbmLinkCacherService.getCacher(source);
+//  list.addAll(linkCacher.load(MAX_SIZE_LINK - list.size()));
+
+    if(list.size() < 1) return;
+
+    LinkPatterns dataTempl = linkCreator.getDataPatterns();
+    LinkPatterns visitTempl = linkCreator.getVisitPatterns();
+
+    for(int i = 0; i< list.size(); i++) {
+      Link link  = list.get(i);
+      if(!codes.add(link.getUrlId())) continue;
+
+      link.setIsData(dataTempl == null || dataTempl.match(link.getAddress()));
+      link.setIsLink(visitTempl == null || visitTempl.match(link.getAddress()));
+
+      if(!link.isData() && !link.isLink())  continue;
+
+      linkQueue.push(link);
+//    size++;
+    }
+  }
+
+  protected void addHomepages(String host, String refer, String [] addresses) {
+    LinkCreator linkCreator = sourceResource.getLinkCreator();
+    LinkPatterns dataTempl = linkCreator.getDataPatterns();
+    URLEncoder encoder = new URLEncoder();
+    for(String address : addresses) {
+      address = encoder.encode(address);
+      Link link = linkCreator.create(host, address, 0);
+      if(link == null) continue;
+
+      link.setIsLink(true);
+      link.setReferer(refer);
+      link.setIsData(dataTempl == null || dataTempl.match(link.getAddress()));
+
+      codes.add(link.getUrlId());
+      linkQueue.push(link);
+    }
+  }
+
+  LinkQueue getQueue() { return linkQueue; }
+
+  Set<MD5Hash> getCodes() { return codes; }
+
+  public SourceResource getSourceResource() { return sourceResource; }
+  
+  void endSession(Source source) {
+    tempLink.setExecute(false);
+    LinkCacher cacher = LinkCacherService.getCacher(source);
+    if(cacher != null) cacher.save(linkQueue.clone());
+    SessionCodesManager.remove(source.getFullName());
+  }
+  
+  void push(String host, Link referer, List<Link> list) {
+    tempLink.push(host, referer, list);
+  }
+  
+  void push(List<Link> list) { tempLink.push(list); }
+}

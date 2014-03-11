@@ -1,0 +1,748 @@
+package org.vietspider.ui.htmlexplorer;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.prefs.Preferences;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.browser.Browser;
+import org.eclipse.swt.browser.ProgressAdapter;
+import org.eclipse.swt.browser.ProgressEvent;
+import org.eclipse.swt.browser.StatusTextEvent;
+import org.eclipse.swt.browser.StatusTextListener;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.ScrollBar;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeItem;
+import org.mozilla.interfaces.nsIDOMElement;
+import org.mozilla.interfaces.nsIDOMEvent;
+import org.mozilla.interfaces.nsIDOMEventListener;
+import org.mozilla.interfaces.nsIDOMEventTarget;
+import org.mozilla.interfaces.nsIDOMWindow;
+import org.mozilla.interfaces.nsISupports;
+import org.mozilla.interfaces.nsIWebBrowser;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.Name;
+import org.vietspider.html.parser.HTMLParser2;
+import org.vietspider.html.util.HyperLinkUtil;
+import org.vietspider.token.attribute.Attributes;
+import org.vietspider.ui.browser.PageMenu;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.ImageHyperlink;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.action.HyperlinkAdapter;
+import org.vietspider.ui.widget.action.HyperlinkEvent;
+import org.vietspider.ui.widget.images.ToolbarResource;
+
+abstract class HTMLExplorerViewerBak extends HtmlExplorerListener {
+
+//  NodeEditor2 txtPath;
+//  org.eclipse.swt.widgets.List lstPath;
+//  StyledList lstPath;
+  //  protected  BrowserFunction function;
+  
+  protected PathBox box;
+
+  String charset, selectedAddress;  
+  HyperLinkUtil hyperlinkUtil;
+
+  protected HTMLExplorerToolbar toolbar;
+
+  int type = HTMLExplorer.CONTENT;
+
+  private boolean browserBusy = false;
+  @SuppressWarnings("unused")
+  private int browserIndex = 0;
+
+  protected TreeAddButton treeAddButton;
+
+  protected ImageHyperlink butOk, butCancel; 
+
+  protected java.util.List<NodeInfoViewer> nodeViewers = new ArrayList<NodeInfoViewer>();
+  
+  protected Label lblStatus;
+  protected Button butRemovePath;
+  protected String errorPath = null;
+
+  public HTMLExplorerViewerBak(Composite parent){
+    super(parent);
+
+    GridLayout gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    setLayout(gridLayout);
+
+    ApplicationFactory factory = new ApplicationFactory(this, "HTMLExplorer", getClass().getName()); 
+    
+    SashForm mainSash = new SashForm(this, SWT.VERTICAL);
+    mainSash.setBackground(getBackground());
+    GridData gridData= new GridData(GridData.FILL_BOTH);    
+    mainSash.setLayoutData(gridData);
+
+    SashForm sash0 = new SashForm(mainSash, SWT.HORIZONTAL);
+    sash0.setBackground(getBackground());
+    sash0.setLayoutData(new GridData(GridData.FILL_BOTH | GridData.VERTICAL_ALIGN_BEGINNING));
+
+    Composite browserComposite = new Composite(sash0, SWT.NONE);
+    browserComposite.setBackground(getBackground());
+    gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 0;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 0;
+    browserComposite.setLayout(gridLayout);
+
+    ToolbarResource.createInstance(getDisplay(), "HTMLExplorer", HTMLExplorer.class);
+//    toolbar = new HTMLExplorerToolbar(factory, browserComposite, this);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    toolbar.setLayoutData(gridData);
+    toolbar.setBackground(getBackground());
+
+    browser = ApplicationFactory.createBrowser(browserComposite, PageMenu.class);
+    if(ApplicationFactory.isMozillaBrowser()) {
+      browser.addProgressListener (new ProgressAdapter () {
+        @SuppressWarnings("unused")
+        public void completed (ProgressEvent event) {
+          nsIWebBrowser webBrowser = (nsIWebBrowser)browser.getWebBrowser ();
+          if(webBrowser == null) return;
+          nsIDOMWindow domWindow = webBrowser.getContentDOMWindow ();
+          if(domWindow == null) return;
+          nsIDOMEventTarget target = (nsIDOMEventTarget)domWindow.queryInterface (nsIDOMEventTarget.NS_IDOMEVENTTARGET_IID);
+          nsIDOMEventListener listener = new nsIDOMEventListener () {
+            public nsISupports queryInterface (String uuid) {
+              if (uuid.equals (nsIDOMEventListener.NS_IDOMEVENTLISTENER_IID) ||
+                  uuid.equals (nsIDOMEventListener.NS_ISUPPORTS_IID)) {
+                return this;
+              }
+              return null;
+            }
+            public void handleEvent (nsIDOMEvent devent) {
+              nsIDOMElement element = (nsIDOMElement)devent.getTarget().queryInterface(nsIDOMElement.NS_IDOMELEMENT_IID);
+              String text =  element.getFirstChild().getNodeValue();
+              if(text == null || text.trim().isEmpty() || "null".equalsIgnoreCase(text)) return;
+              search(text.trim());
+            }
+          };
+          target.addEventListener ("click", listener, false);
+        }
+      });
+    } 
+
+    gridData = new GridData(GridData.FILL_BOTH);
+    browser.setLayoutData(gridData);
+    browser.setBackground(getBackground());
+    browser.addProgressListener(new ProgressAdapter(){		
+      public void changed(ProgressEvent event){		 	
+        if(event.total == 0) return;				
+        int ratio = event.current * 100 / event.total;
+        toolbar.getProgressBar().setSelection(ratio);
+        browserBusy = event.current != event.total;
+        if(!browserBusy) browserIndex = 0;  
+        toolbar.showProgress();
+      }
+
+      @SuppressWarnings("unused")
+      public void completed(ProgressEvent event){		
+        /* browser.addLocationListener (new LocationAdapter () {
+          public void changed (LocationEvent event) {
+            browser.removeLocationListener (this);
+            function.dispose ();
+          }
+        });*/
+
+        toolbar.getProgressBar().setSelection(0);
+        browserBusy = false;
+        browserIndex = 0;     
+        String address = browser.getUrl();
+        toolbar.showInputAddress();
+        if(address == null || 
+            address.trim().length() == 0 || !address.startsWith("http")) return;
+        try {
+          new java.net.URL(address);
+          toolbar.setText(address);  
+          toolbar.addAddressToList(address);
+        }catch(Exception exp){         
+        }           
+      }
+    });
+
+    browser.addStatusTextListener( new StatusTextListener(){
+      @SuppressWarnings("unused")
+      public void changed(StatusTextEvent event){
+        String url = browser.getUrl();
+        if(url == null) return;
+        if(url.indexOf('/') < 0) return; 
+        toolbar.setText(browser.getUrl());   
+      }
+    });
+
+    factory.setComposite(browserComposite);  
+    tree = new Tree(sash0, SWT.MULTI | SWT.BORDER);
+    tree.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        selectTree();       
+      }		
+    });
+    tree.addMouseListener(new MouseAdapter() {
+      public void mouseDown(MouseEvent e) {
+        if(e.button == 2) addItems();
+      }
+    });
+
+
+    Object treeMenu ;
+//    if(XPWidgetTheme.isPlatform()) {  
+//      PopupMenu popupMenu = new PopupMenu(tree, XPWidgetTheme.THEME);
+//      treeMenu = new CMenu();
+//      popupMenu.setMenu((CMenu)treeMenu);
+//    } else {
+      treeMenu = new Menu(getShell(), SWT.POP_UP);
+      tree.setMenu((Menu)treeMenu);
+//    }
+
+    factory.createStyleMenuItem( treeMenu, "itemAdd", "+.gif", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        try {
+          traverseTree(TreeHandler.SELECT, addItems());
+        } catch (Exception e) {
+          ClientLog.getInstance().setMessage(tree.getShell(), e);
+        }
+      }   
+    });  
+
+    factory.createStyleMenuItem(treeMenu, "itemRemove", "-.gif", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        try {
+          traverseTree(TreeHandler.REMOVE, new String[]{});
+          removeItem();
+          traverseTree(TreeHandler.SELECT, box.getItems());
+        } catch (Exception e) {
+          ClientLog.getInstance().setMessage(tree.getShell(), e);
+        }
+      }   
+    });   
+
+    factory.createStyleMenuItem(treeMenu, SWT.SEPARATOR);
+
+    factory.createStyleMenuItem(treeMenu, "itemExpand", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        expand(true);
+      }   
+    });
+
+    factory.createStyleMenuItem(treeMenu, "itemCollapse", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        expand(false);
+      }   
+    });
+
+    factory.createStyleMenuItem(treeMenu, SWT.SEPARATOR);
+
+    factory.createStyleMenuItem(treeMenu, "itemExpandDataNode", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        expandDataNode();
+      }   
+    });
+
+    factory.createStyleMenuItem(treeMenu, "itemCollapseTree", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        TreeItem [] items = tree.getItems();
+        if(items == null) return;
+        for(TreeItem item : items) {
+          expand(item, false);
+        }
+      }   
+    });
+
+    factory.createStyleMenuItem(treeMenu, SWT.SEPARATOR);
+
+    factory.createStyleMenuItem( treeMenu, "itemView", "view.gif", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        viewItem();
+      }   
+    });   
+
+    sash0.setWeights( new int[]{500, 300});     
+    handler = new TreeHandler();        
+
+//    SashForm sashPath = new SashForm(this, SWT.VERTICAL);
+//    sashPath.setBackground(getBackground());
+//    gridData = new GridData(GridData.FILL_HORIZONTAL);    
+//    gridData.grabExcessHorizontalSpace = true;
+//    sashPath.setLayoutData(gridData);
+
+//    txtPath = new NodeEditor2(sashPath, this, factory);
+//    txtPath.setBackground(getBackground());
+//    txtPath.setFont(UIDATA.FONT_10B);
+//    gridData = new GridData(GridData.FILL_HORIZONTAL);
+//    gridData.heightHint = 70;
+//    if(UIDATA.isMacOS) {
+//      //      gridData.heightHint = 30;
+//      txtPath.setFont(UIDATA.FONT_11B);
+//    }
+//
+//    txtPath.setLayoutData(gridData);
+    
+    /*Composite bottom = new Composite(sashPath, SWT.NONE);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    bottom.setLayoutData(gridData);
+    factory.setComposite(bottom);
+    
+    gridLayout = new GridLayout(1, false);
+    gridLayout.marginHeight = 2;
+    gridLayout.horizontalSpacing = 5;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 2;
+    bottom.setLayout(gridLayout);*/
+    
+//    lstPath = new StyledList(factory, sashPath, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL); 
+//      //factory.createList(sashPath, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
+//    lstPath.setFont(UIDATA.FONT_10B);
+//    lstPath.getHorizontalBar().addListener(SWT.Selection, new Listener() {
+//      public void handleEvent(Event e) {
+//        ScrollBar bar = lstPath.getHorizontalBar();
+//        StyledText textViewer = txtPath.getTextViewer();
+//        ScrollBar bar1 = textViewer.getHorizontalBar();
+//        bar1.setSelection(bar.getSelection());
+//        bar1.notifyListeners(SWT.Selection, e);
+//      }
+//    });
+//     
+//    lstPath.addSelectionListener(new SelectionAdapter(){
+//      @SuppressWarnings("unused")
+//      public void widgetSelected(SelectionEvent e){
+//        int selectedIndex = lstPath.getSelectionIndex();
+//        if(selectedIndex < 0) return;
+//        String path  = lstPath.getItem(selectedIndex);
+//        txtPath.setText(path);
+//        List<String> removes = null;
+//        try {
+//          removes = traverseTree(TreeHandler.SELECT, new String[]{path});
+//        } catch (Exception exp) {
+//          ClientLog.getInstance().setMessage(tree.getShell(), exp);
+//        }
+//        if(removes == null) return ;
+//        for(String ele : removes) lstPath.remove(ele);
+//        if(removes.size() > 0 && lstPath.getItemCount() > 0) lstPath.select(0);
+//      }
+//    });
+
+    /*Object menu;
+
+    if(XPWidgetTheme.isPlatform()) {  
+      PopupMenu popupMenu = new PopupMenu(lstPath, XPWidgetTheme.THEME);
+      menu = new CMenu();
+      popupMenu.setMenu((CMenu)menu);
+    } else {
+      menu = new Menu(getShell(), SWT.POP_UP);
+      lstPath.setMenu((Menu)menu);
+    }
+
+    factory.createStyleMenuItem(menu, "menuClearSelected", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        lstPath.setSelection(new String[0]);
+      }
+    });
+
+    factory.createStyleMenuItem(menu, SWT.SEPARATOR);
+
+    factory.createStyleMenuItem(menu, "menuRemoveSelected", "-.gif", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        int idx = lstPath.getSelectionIndex();
+        if(idx < 0) return;
+        String path  = lstPath.getItem(idx);
+        lstPath.remove(idx);
+        try {
+          traverseTree(TreeHandler.REMOVE, new String[]{path});
+        } catch (Exception e) {
+          ClientLog.getInstance().setMessage(tree.getShell(), e);
+        }
+        txtPath.setText("");
+      }
+    });
+
+    factory.createStyleMenuItem(menu, "menuRemove", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        try {
+          traverseTree(TreeHandler.REMOVE, new String[]{});
+        } catch (Exception e) {
+          ClientLog.getInstance().setMessage(tree.getShell(), e);
+        }
+        lstPath.removeAll();
+        txtPath.setText("");
+      }
+    });*/
+    //    cboPath.setMenu(menu);
+
+//    gridData = new GridData(GridData.FILL_HORIZONTAL); 
+//    gridData.horizontalSpan = 6;
+//    gridData.heightHint = 120;
+    box = new PathBox(mainSash, factory);
+    box.setLayoutData(gridData);
+    String [] paths = {
+        "BODY[0].TABLE[0].TBODY[0].TR[0].TD[0].TABLE[5].TBODY[0].TR[0].TD[0].TABLE[0].TBODY[0].TR[0].TD[2].TABLE[2].TBODY[0].TR[0].TD[0].TABLE[1].TBODY[0].TR[0].TD[2]",
+        "BODY[0].TABLE[0].TBODY[0].TR[0].TD[0].TABLE[5].TBODY[0].TR[0].TD[0].TABLE[0].TBODY[0].TR[0].TD[2].TABLE[2].TBODY[0].TR[0].TD[0].TABLE[2].TBODY[0].TR[1]",
+        "BODY[0].DIV[0].DIV[4].DIV[0].DIV[0]",
+        "BODY[0].DIV[0].DIV[0].DIV[2].DIV[0].DIV[0].DIV[0].TABLE[0].TBODY[0].TR[1].TD[0].TABLE[0].TBODY[0].TR[1].TD[0].TABLE[0].TBODY[0].TR[0].TD[1].CONTENT[2]]"
+      };
+    box.setItems(paths);
+    
+//    lstPath.setLayoutData(gridData);
+//    lstPath.setBackground(getBackground());
+    
+    mainSash.setWeights(new int[]{80, 20});
+
+    Composite buttonComposite = new Composite(this, SWT.NONE);
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    buttonComposite.setLayoutData(gridData);
+    factory.setComposite(buttonComposite);
+    
+    gridLayout = new GridLayout(3, false);
+    gridLayout.marginHeight = 0;
+    gridLayout.horizontalSpacing = 15;
+    gridLayout.verticalSpacing = 0;
+    gridLayout.marginWidth = 10;
+    buttonComposite.setLayout(gridLayout);
+    
+    Composite removeComposite = new Composite(buttonComposite, SWT.NONE);
+    buttonComposite.setBackground(getBackground());
+    removeComposite.setLayout(new GridLayout(2, false));
+    gridData = new GridData(GridData.FILL_HORIZONTAL);
+    removeComposite.setLayoutData(gridData);
+    
+    factory.setComposite(removeComposite);
+
+    lblStatus = factory.createLabel(SWT.NONE);
+    lblStatus.setBackground(getBackground());
+    gridData = new GridData();
+//    gridData.widthHint = 305;
+    lblStatus.setLayoutData(gridData);
+    lblStatus.setFont(UIDATA.FONT_10B);
+    lblStatus.setForeground(getDisplay().getSystemColor(SWT.COLOR_RED));
+    
+    butRemovePath = factory.createButton(SWT.PUSH);
+    butRemovePath.setText(factory.getResources().getLabel("remove.path.yes"));
+    butRemovePath.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        if(errorPath != null) box.removePath(errorPath);
+        showErrorPath(null);
+      }      
+    });
+    butRemovePath.setVisible(false);
+    butRemovePath.setFont(UIDATA.FONT_9);
+    
+    factory.setComposite(buttonComposite);
+    
+    String tip = factory.getLabel("butOk");
+    final ToolbarResource resources = ToolbarResource.getInstance();
+    butOk = resources.createIcon(factory.getComposite(), 
+        resources.getImageGo(), tip, new HyperlinkAdapter(){ 
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e) {
+        butOk.setImage(resources.getImageGo());
+      }
+      @SuppressWarnings("unused")
+      public void linkExited(HyperlinkEvent e) {
+        butOk.setImage(resources.getImageGo());
+      }
+      @SuppressWarnings("unused")
+      public void linkEntered(HyperlinkEvent e) {
+        butOk.setImage(resources.getImageGo());
+      }
+    }); 
+    butOk.addMouseListener(new MouseAdapter() {
+      @SuppressWarnings("unused")
+      public void mouseUp(MouseEvent e) {
+        invisibleComponent();
+        clickOk();    
+      }
+
+      @SuppressWarnings("unused")
+      public void mouseDown(MouseEvent e) {
+        butOk.setImage(resources.getImageGo1());
+        butOk.redraw();
+      }
+    });
+
+    tip = factory.getLabel("butCancel");
+    butCancel = resources.createIcon(factory.getComposite(), 
+        resources.getImageCancel(), tip, new HyperlinkAdapter(){ 
+      @SuppressWarnings("unused")
+      public void linkActivated(HyperlinkEvent e) {
+        butCancel.setImage(resources.getImageCancel());
+      }
+      @SuppressWarnings("unused")
+      public void linkExited(HyperlinkEvent e) {
+        butCancel.setImage(resources.getImageCancel());
+      }
+      @SuppressWarnings("unused")
+      public void linkEntered(HyperlinkEvent e) {
+        butCancel.setImage(resources.getImageCancel());
+      }
+    }); 
+    butCancel.addMouseListener(new MouseAdapter() {
+      @SuppressWarnings("unused")
+      public void mouseUp(MouseEvent e) {
+        invisibleComponent();
+        clickCancel();    
+      }
+
+      @SuppressWarnings("unused")
+      public void mouseDown(MouseEvent e) {
+        butCancel.setImage(resources.getImageCancel1());
+        butCancel.redraw();
+      }
+    });
+
+//    factory.setComposite(bottom);
+    gridData = new GridData(GridData.HORIZONTAL_ALIGN_END);
+
+    String url = "";
+    try {
+      Preferences prefs = Preferences.userNodeForPackage(HTMLExplorer.class);
+      url  = prefs.get("url.address", "");
+    } catch (Exception e) {
+      url = "";
+    }
+    toolbar.setText(url);
+
+    treeAddButton = new TreeAddButton(this);
+    //    viewFunctions();
+  }  
+
+  public void addEditItem() {
+//    String path  = editItem();
+//    //    if(txtPath.isDropped() || path == null 
+//    //        || (path = path.trim()).charAt(path.length()-1) != ']') return;
+//
+//    java.util.List<String> removes = null;
+//    try {
+//      removes = traverseTree(TreeHandler.SELECT, new String[]{path});
+//    } catch (Exception e) {
+//      ClientLog.getInstance().setMessage(tree.getShell(), e);
+//    }
+//    if(removes == null) return;
+//    for(String ele : removes) box.removePath(ele);
+//    if(removes.size() > 0 && box.getItemCount() > 0) box.select(0);
+  }
+
+  abstract void selectTree();
+  abstract String openFile();
+  abstract public void goAddress() ;
+  abstract public void selectAddress(final String ...paths);
+//  abstract String editItem();
+  abstract void removeItem() throws Exception ;
+  abstract void viewItem();
+  abstract public List<String> traverseTree(int style, String[] paths) throws Exception; 
+  //  abstract void setBaseHref();
+  //  abstract void selectedNodeByText(String value);
+
+  public void clickOk(){
+    Iterator<NodeInfoViewer> iterator = nodeViewers.iterator();
+    while(iterator.hasNext()) {
+      NodeInfoViewer viewer = iterator.next();
+      if(viewer != null) viewer.close();
+      viewer.close();
+    }
+
+    if(box.getItemCount() < 1) { 
+      box.addItem();
+    }
+
+    HTMLExplorerEvent event = null;
+    event = new HTMLExplorerEvent(box.getItems(), toolbar.getText(),  document, charset);
+    try{
+      event.fire(this);
+    }catch(Exception exp){
+      ClientLog.getInstance().setException(getShell(), exp);
+    }
+  }
+
+  public void clickCancel(){
+    Iterator<NodeInfoViewer> iterator = nodeViewers.iterator();
+    while(iterator.hasNext()) {
+      NodeInfoViewer viewer = iterator.next();
+      if(viewer != null) viewer.close();
+      viewer.close();
+    }
+
+
+    HTMLExplorerEvent event = new HTMLExplorerEvent();
+    try{
+      event.fire(this);
+    }catch(Exception exp){
+      ClientLog.getInstance().setException(getShell(), exp);
+    }
+  }
+
+  public void setUrl(String url){
+    if( url == null || url.trim().length() < 1) return ;
+    toolbar.setText(url);
+    goAddress();
+  }
+
+  public void setCharset(String ch){
+    if(ch == null || ch.trim().length() == 0) return;
+    charset = ch;    
+  }
+
+  public void documentBrowserCompleted(String content, String address){
+    try{
+      document = new HTMLParser2().createDocument(content);
+      removeIFrameSource(document.getRoot());
+      //      try {
+      //        URL home = new URL(address);
+      //        Map<String,String> map = new HashMap<String,String>(); 
+      //        map.put("iframe", "src");
+      //        hyperlinkUtil.createFullLink(document.getRoot(), map, home, null);
+      //      } catch (Exception e) {
+      //        ClientLog.getInstance().setException(getShell(), e);
+      //      }
+      toolbar.setText(address);
+      tree.removeAll();
+      handler.createTreeItem(tree, document); 
+    } catch( Exception exp){
+      ClientLog.getInstance().setException(getShell(), exp);
+    }
+  }
+
+  protected void removeIFrameSource(HTMLNode node) {
+    if(node.isNode(Name.IFRAME)) {
+      Attributes attributes = node.getAttributes(); 
+      attributes.remove("src");
+    }
+    List<HTMLNode> children = node.getChildren();
+    if(children == null || children.size() < 1) return;
+    for(int i = 0; i < children.size(); i++) {
+      removeIFrameSource(children.get(i));
+    }
+  }
+
+  public void setEnableBrowser(boolean value) {
+    toolbar.setEnable(value);
+  }
+
+  public void setDocument(String address, HTMLDocument doc){
+    selectedAddress = address;
+    toolbar.setText(address);
+    setDocument(doc); 
+  }
+
+  public void setDocument(HTMLDocument doc){
+    this.document = doc;
+
+    if(hyperlinkUtil == null) hyperlinkUtil = new HyperLinkUtil();
+    removeIFrameSource(document.getRoot());
+    //    try {
+    //      String address = toolbar.getText();
+    //      URL home = new URL(address);
+    //      Map<String,String> map = new HashMap<String,String>(); 
+    //      map.put("iframe","src");
+    //      hyperlinkUtil.createFullLink(document.getRoot(), map, home, null);
+    //    } catch (Exception e) {
+    //      ClientLog.getInstance().setException(getShell(), e);
+    //    }
+    tree.removeAll();
+    handler.createTreeItem(tree, doc);
+    new AutoSelectDataNode2(this, doc, selectedAddress, handler, tree);
+  }
+
+  public Tree getTree() { return tree; }
+
+  private void expand(boolean expand) {
+    TreeItem [] items = tree.getSelection();
+    for(TreeItem item : items) {
+      expand(item, expand);
+    }
+  }
+
+  private void expandDataNode() {
+    java.util.List<TreeItem> items = handler.getSelectedItems();
+    for(TreeItem item : items) {
+      expandDataNode(item, false);
+    }
+  }
+
+  private void expandDataNode(TreeItem item, boolean expand) {
+    item.setExpanded(expand);
+    TreeItem parent = item.getParentItem();
+    if(parent == null || parent.isDisposed()) return;
+    expandDataNode(parent, true);
+  }
+
+
+  private void expand(TreeItem item, boolean expand) {
+    item.setExpanded(expand);
+    TreeItem [] children = item.getItems();
+    if(children == null) return;
+    for(TreeItem child : children) {
+      expand(child, expand);
+    }
+  }
+
+  public HTMLDocument getDocument() { return document; }
+
+  public void setType(int type) { 
+    this.type = type;
+    if(type == HTMLExplorer.NONE) {
+      toolbar.setVisible(false);
+    } else {
+      toolbar.setVisible(true);
+    }
+  }
+
+  public Browser getBrowser() { return browser; }
+
+  protected void invisibleComponent() {
+    treeAddButton.setVisible(false);
+  }
+
+  
+  public void showErrorPath(String path) {
+    errorPath = path;
+    butRemovePath.setVisible(false);
+    lblStatus.setVisible(false);
+    if(path == null) return;
+    Runnable timer = new Runnable () {
+      public void run () {
+        if(lblStatus.isDisposed()) return;
+        butRemovePath.setVisible(true);
+        lblStatus.setVisible(true);
+        lblStatus.setText(PathConfirmDialog.ERROR_PATH);
+        lblStatus.getParent().pack();
+      }
+    };
+    getDisplay().timerExec (500, timer);
+  }
+
+}

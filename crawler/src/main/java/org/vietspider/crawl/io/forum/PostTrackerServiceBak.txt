@@ -1,0 +1,75 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.io.forum;
+
+import java.io.File;
+
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.NameConverter;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 25, 2007  
+ */
+final class PostTrackerServiceBak {
+  
+//  private final static long MAX_FILE_SIZE = 2*1024*1024;
+
+  private PostTracker<?> postTracker;
+
+  PostTrackerServiceBak() {
+  }
+
+  void setSource(String source) {
+    File file = UtilFile.getFolder("track/private/FORUM");
+    file  = new File(file, new NameConverter().encode(source));
+    
+//    if(file.exists()) new PostForumDbConverter(file);
+    
+    /*try {
+      if(!file.exists()) file.createNewFile();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable("APPLICATION", e);
+      file = null;
+    }
+    
+    if(postTracker != null) postTracker.endSession();
+    
+    if(file.length() >= MAX_FILE_SIZE) {
+      postTracker = new FilePostTracker();
+    } else {
+//      postTracker = new FilePostTracker();
+      postTracker = new CachePostTracker();
+    }
+    postTracker.setFile(file);*/
+  }
+  
+  void endSession() {
+    if(postTracker == null) return;
+    postTracker.endSession(); 
+  }
+
+  void write(int addressCode, int post) {
+//    PostForumTrackerService2.getInstance().write(addressCode, post);
+//    System.out.println(" update "+ addressCode+ " : "+ post);
+//    postTracker.write(addressCode, post);
+  }
+  
+  int read(int addressCode) throws Exception {
+//    int post = PostForumTrackerService2.getInstance().read(addressCode);
+//    if(post > -1) return post;
+    return -1;
+    
+//    post = PostForumTrackerService.getInstance().read(addressCode);
+//    if(post > -1) return post;
+    
+//  int value = postTracker.read(addressCode);
+//  System.out.println("search thay" + addressCode +  " : "  + value);
+//  return value;
+//    if(postTracker == null) return -1;
+//    return postTracker.read(addressCode);
+  }
+
+}

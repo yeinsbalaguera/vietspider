@@ -1,0 +1,183 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.plugin;
+
+import java.sql.SQLException;
+import java.util.Calendar;
+import java.util.Iterator;
+import java.util.List;
+
+import org.vietspider.bean.Content;
+import org.vietspider.bean.Domain;
+import org.vietspider.bean.Meta;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.text.CalendarUtils;
+import org.vietspider.crawl.CrawlExecutor;
+import org.vietspider.crawl.HTMLDataExtractor;
+import org.vietspider.crawl.io.dowloaded.DownloadedTracker;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.SourceResource;
+import org.vietspider.crawl.plugin.desc.DirtyContentHandler;
+import org.vietspider.crawl.plugin.handler.CompleteDataHandler;
+import org.vietspider.crawl.plugin.handler.MergeTextNode;
+import org.vietspider.crawl.plugin.handler.WebPageMetaExtractor;
+import org.vietspider.crawl.plugin.locale.ViDateTimeExtractor;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.HTMLNode;
+import org.vietspider.html.js.JsHandler;
+import org.vietspider.html.parser.HTMLTokenUtils;
+import org.vietspider.html.parser.NodeImpl;
+import org.vietspider.html.path2.NodePathParser;
+import org.vietspider.html.util.NodeHandler;
+import org.vietspider.io.bean.DatabaseService;
+import org.vietspider.model.Source;
+import org.vietspider.pool.Worker;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * May 3, 2008  
+ */
+public final class WebPageProcessPlugin extends ProcessPlugin {
+  
+  private WebPageMetaExtractor metaExtractor;
+//  private RemoveDescImage removeDescImage;
+  private DirtyContentHandler dirtyContentHandler;
+  private MergeTextNode mergeTextNode;
+  
+  @SuppressWarnings("unchecked")
+  public WebPageProcessPlugin(Worker<?, Link> worker, Source source) {
+    setWorker((Worker<Source, Link>)worker);
+    worker.putResource("WEBPAGE", this);
+    setProcessRegion(source);
+    
+    CrawlExecutor executor = (CrawlExecutor)worker.getExecutor();
+    NodeHandler nodeHandler = worker.getResource(NodeHandler.class);
+    HTMLDataExtractor extractor = worker.getResource(HTMLDataExtractor.class);
+    ViDateTimeExtractor timeExtractor = new ViDateTimeExtractor(nodeHandler);
+    NodePathParser pathParser = executor.getResource(NodePathParser.class);
+    metaExtractor = new WebPageMetaExtractor(nodeHandler, pathParser, extractor, timeExtractor);
+    
+    dirtyContentHandler = new DirtyContentHandler();
+//    removeDescImage = new RemoveDescImage(nodeHandler);
+    mergeTextNode = new MergeTextNode();
+  }
+ 
+  @Override
+  public boolean handle(final PluginData pluginData) throws Throwable {
+    if(pluginData == null) return false;
+    Link link = pluginData.getLink();
+    Source source = link.getSource();
+
+    NodeHandler nodeHandler = worker.getResource(NodeHandler.class);
+    HTMLDocument document = link.<HTMLDocument>getDocument();
+    SourceResource srResource = worker.getExecutor().getResource(SourceResource.class);
+    List<String> jsDocWriters = srResource.getJsDocWriters();
+    if(jsDocWriters.size() > 0) {
+      try {
+        JsHandler.updateDocument(document, jsDocWriters);
+      } catch(Exception exp) {
+        LogService.getInstance().setThrowable(link.getSource(), exp);
+      }
+    }
+    
+    HTMLNode root = document.getRoot();
+    List<HTMLNode> contentNodes = metaExtractor.searchContents(root);
+    if(contentNodes == null || contentNodes.size() < 1) return false;
+    
+    mergeTextNode.mergeText(contentNodes);
+    
+    //CONTENT FILTER
+    if(contentFilters != null && !contentFilters.check(contentNodes)) {
+      saveDownloadedTracker(pluginData);
+      return false;
+    }
+    pluginData.setTextNodes(nodeHandler, contentNodes);
+    
+    dirtyContentHandler.clean(root, contentNodes);
+//    removeDescImage.removeDescImageNode(root, contentNodes);
+    
+    String desc = metaExtractor.extractDesc(contentNodes);
+    pluginData.getMeta().setDesc(desc);
+    
+    String title  = metaExtractor.extractTitle(root, contentNodes);
+    pluginData.getMeta().setTitle(title);
+    
+    if(pluginData.getGroup().isCheckTitle()) {
+      StringBuilder builderCode = new StringBuilder(source.getName()).append('.').append(title); 
+      int titleCode = builderCode.toString().hashCode();
+      link.setTitleCode(titleCode);
+      if(DownloadedTracker.search(source.getGroup(), titleCode)) return false;
+    }
+    
+    List<NodeImpl> tokens = link.getTokens();
+    if(tokens == null) return false;
+    
+    //CONTENT FILTER
+    if(contentFilters != null) contentFilters.mark(contentNodes);
+    
+    CompleteDataHandler completeHandler = worker.getResource(CompleteDataHandler.class);
+    pluginData.getMeta().setSource(completeHandler.completeURL(link.getAddress(), tokens));
+    
+    //save data
+    if(!saveData(pluginData, tokens)) return false;
+    
+    saveDownloadedTracker(pluginData);
+
+    //for indexing
+    contentNodes = pluginData.getCloneTextNodes();
+    if(contentNodes == null) return true;
+    
+    Iterator<HTMLNode> iterator = contentNodes.iterator();
+    while(iterator.hasNext()) {
+      HTMLNode contentNode = iterator.next();
+      if(metaExtractor.isLinkNode(contentNode, 0)) iterator.remove();
+    }
+    pluginData.setWebPage(true);
+    
+    indexMiningData(pluginData);
+    indexSearchData(pluginData);
+
+    return true;
+  }
+  
+  public boolean isCheckTitle() { return false; }
+
+  protected boolean saveData(PluginData pluginData, List<NodeImpl> tokens) {
+    Link link  = pluginData.getLink();
+    Source source = link.getSource();
+    Meta meta = pluginData.getMeta();
+    Calendar calendar = pluginData.getCalendar();
+    HTMLNode root = link.<HTMLDocument>getDocument().getRoot();
+    
+    if(!root.hasChildren()) return false;
+    
+    meta.setTime(CalendarUtils.getDateTimeFormat().format(calendar.getTime()));
+    String date = CalendarUtils.getDateFormat().format(calendar.getTime());
+    
+    Domain domain = new Domain(date, source.getGroup(), source.getCategory(), source.getName());
+    meta.setDomain(domain.getId());
+    
+    Content content = new Content(meta.getId(), date, HTMLTokenUtils.buildContent(tokens));
+    
+    if(meta.getTitle() == null || meta.getTitle().trim().isEmpty()) {
+      meta.setTitle("...");
+    }
+    
+    try {
+      DatabaseService.getSaver().save(meta, domain, content);
+    } catch (SQLException e) {
+      String address =  link.getAddress();
+      if(address.length() > 150) address = address.substring(0, 150) + "...";
+      LogService.getInstance().setMessage(link.getSource(), e, address);
+      return false;
+    } catch (Exception e) {
+      String address =  link.getAddress();
+      if(address.length() > 150) address = address.substring(0, 150) + "...";
+      LogService.getInstance().setMessage(link.getSource(), e, address);
+    }
+    return true;
+  }
+  
+}

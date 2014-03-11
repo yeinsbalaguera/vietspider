@@ -1,0 +1,60 @@
+
+  /*private void saveTpData(TpWorkingData tpData, String group) {
+//    TpDocument tpDoc = tpData.getTpDocument();
+//    if(tpDoc == null) return;
+
+    String dateFolder = null;
+//    String textDate = null;
+    try {
+      Date dateInstance = idFormat.parse(tpDoc.getId().substring(0, 8));
+      dateFolder = CalendarUtils.getFolderFormat().format(dateInstance);
+//      textDate = CalendarUtils.getDateFormat().format(dateInstance);
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable("INDEXER", e);
+      return;
+    }
+
+    if(dateFolder == null) return;
+
+//    String group = tpData.getGroup();
+    TpDatabase database = tpDatabases.getDatabase(group, dateFolder, true);
+    try {
+      database.save(tpDoc);
+    } catch (StackOverflowError e) {
+      LogService.getInstance().setMessage("TPDATABASE", 
+          new Exception(e), e.toString() + "  "  + tpDoc.getId());
+      return;
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable("TPDATABASE", e);
+      return;
+    }
+
+    try {
+      TpDocumentIndex tpDocumentIndex = new TpDocumentIndex(group);
+      tpDocumentIndex.setDate(textDate);
+      tpDocumentIndex.setTpWorkingData(tpData);
+
+      ContentIndexers.getInstance().getDbIndexers().index(tpDocumentIndex);
+    } catch (StackOverflowError e) {
+      LogService.getInstance().setMessage("TPDATABASE",
+          new Exception(e), e.toString() + "  " + tpDoc.getId());
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable("TPDATABASE", e);
+    }
+  }*/
+
+ /* private void deleteExpireDate1(File folder, int expire) {
+    File[] files = UtilFile.listFiles(folder, new FileFilter() {
+      public boolean accept(File f) {
+        if (!f.isDirectory()) return false;
+        return UtilFile.validate(f.getName());
+      }
+    });
+
+//    for (int i = expire; i < files.length; i++) {
+//      TpDatabase tpdatabase = tpDatabases.getHolder().get(files[i].getAbsolutePath());
+//      if(tpdatabase != null) tpdatabase.close();
+//      UtilFile.deleteFolder(files[i]);
+//    }
+  }
+*/

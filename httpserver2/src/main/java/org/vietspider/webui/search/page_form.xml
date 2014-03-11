@@ -1,0 +1,34 @@
+<tr>
+	<td rowspan="2">
+		<a href="/">
+			<img src="/site/file/Logo197x50.gif" border="0" />
+		</a>
+	</td>
+
+	<td valign="top">
+		<a class="meta_title" href="#">Đăng tin quảng cáo</a>
+		<span class="meta_title">&nbsp;&nbsp;|&nbsp;&nbsp;
+		</span>
+		<a class="meta_title" href="/site/file/about.html">Giới thiệu BigBell</a>
+		<span class="meta_title">&nbsp;&nbsp;|&nbsp;&nbsp;
+		</span>
+		<a class="meta_title" href="mailto:nhudinhthuan@yahoo.com">Liên hệ</a>
+	</td>
+</tr>
+<tr>
+	<td>
+		<form id="search" action="/site/search/1/" method="GET">
+			<div style="border: 1px solid rgb(0, 64, 128); float: left;">
+				<img class="IconLanguageE" id="ENIcon" style="display: none;"
+					src="/site/file/blank.gif" onclick="setLanguage('vn')" />
+				<img class="IconLanguageV" style="display: block;" id="VNIcon"
+					src="/site/file/blank.gif" onclick="setLanguage('en')" />
+				<input name="query" value="$pattern" size="50"
+					style="border: 1px solid white;" />
+			</div>
+			<div style="padding: 0px 0px 0px 10px; float: left;">
+				<input name="search" value="Tìm kiếm" type="submit" />
+			</div>
+		</form>
+	</td>
+</tr>

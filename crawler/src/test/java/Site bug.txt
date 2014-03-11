@@ -1,0 +1,10 @@
+http://forum.aspvn.net/ (site nay login ko duoc)
+http://www.raovatvungtau.com/?detect_cookie=1
+http://www.thienduongnhac.com/forum/index.php
+http://egov.laocai.gov.vn/home/vn/news/Pages/default.aspx (vung boc du lieu ko chinh xac)
+http://tuoitresoidong.com/diendan/ (noi dung la cac the bao lan nhau)
+http://www.yeuchungthuy.info/forum/ (mo ra ben IE)
+http://www.thucnghiemsupham.info/forum/index.php (thong bao loi java lang ben may moom)
+http://forum.c4evn.org/index.php?ie=ok (ko quet duoc du lieu vi co buc tuong lua chan)
+http://lanhdao.net/ (ko quet duoc vi chi doc duoc link site chuyen muc ko doc duoc link chi tiet)
+http://www.sggp.org.vn/ (site nay dung javascript ko the bat duoc link)

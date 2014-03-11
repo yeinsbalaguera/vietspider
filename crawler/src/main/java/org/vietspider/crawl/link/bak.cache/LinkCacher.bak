@@ -1,0 +1,159 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.link.cache;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.headvances.vietspider.SystemProperties;
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.crawl.link.Link;
+import org.vietspider.crawl.link.queue.LinkQueue;
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Feb 24, 2008  
+ */
+public class LinkCacher implements Runnable {
+  
+  private static long MIN_MEMORY = 5*1024*1024l;  
+  
+  static {
+    if(Application.LICENSE == Install.PROFESSIONAL) {
+      MIN_MEMORY = 10*1024*1024l;  
+    } else if(Application.LICENSE == Install.ENTERPRISE) {
+      MIN_MEMORY = 20*1024*1024l;  
+    } else if(Application.LICENSE == Install.SEARCH_SYSTEM) {
+      MIN_MEMORY = 50*1024*1024l;  
+    }
+  }
+
+  private volatile ConcurrentLinkedQueue<Link> queue;
+
+  private volatile boolean execute = true;
+//  private Application.IShutdown shutdown;
+  
+  private volatile boolean linkCached = true;
+  private volatile boolean webCached = true;
+  
+  private LinkSaver saver;
+  private LinkReader reader;
+
+  LinkCacher(Source source) {
+    queue = new ConcurrentLinkedQueue<Link>();
+
+    /*shutdown = new Application.IShutdown() {
+//      public boolean isNewThread() { return true; }
+      public void execute() {
+        while(!queue.isEmpty()) {
+          saver.write(queue);
+        }
+        saver.endSession();
+      }
+    };
+    Application.addShutdown(shutdown);*/
+    
+    String value = SystemProperties.getInstance().getValue("crawler.link.cached");
+    if(value == null) {
+      value = "true";
+      SystemProperties.getInstance().putValue("crawler.link.cached", "true");
+    }
+    linkCached = "true".equals(value);
+    
+    value = SystemProperties.getInstance().getValue("crawler.web.cached");
+    if(value == null) {
+      value = "true";
+      SystemProperties.getInstance().putValue("crawler.web.cached", "true");
+    }
+    webCached = "true".equals(value);
+
+    saver = new LinkSaver(source);
+    new Thread(this).start();
+  }
+
+  public void save(Link link) {
+    if(!linkCached) return;
+    if(!webCached) link.clearContent();
+    queue.add(link);
+  }
+
+  public void save(LinkQueue list) {
+    if(!linkCached) {
+      list.clear();
+      return;
+    }
+    
+    while(list.hasNext()) {
+      Link link  = list.pop();
+      if(!webCached) link.clearContent();
+      queue.add(link);
+    }
+  }
+
+  public void run() {
+    while(execute) {
+
+      write();
+
+      try {
+        Thread.sleep(5*1000);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+    
+//    Application.removeShutdown(shutdown);
+    
+    write();
+    saver.endSession();
+    
+    if(reader == null) return;
+    File folder = reader.getFolder();
+    if(folder == null) return;
+    if(folder.listFiles() == null 
+        || folder.listFiles().length < 1) {
+      UtilFile.deleteFolder(folder);
+    }
+  }
+
+  private void write() {
+    saver.write(queue);
+  }
+
+  void endSession() { execute = false; }
+
+  Source getSource() { return saver.getSource(); }
+
+  public synchronized List<Link> load() {
+    List<Link> values = new ArrayList<Link>();
+    Runtime runtime = Runtime.getRuntime();
+    
+    long max = runtime.maxMemory();
+    long total = runtime.totalMemory();
+    if(max - total >= MIN_MEMORY) return values;
+    
+    if(reader == null) reader = new LinkReader(saver.getSource());
+    if(!linkCached) return values;
+    while(!queue.isEmpty()) {
+      Link link = queue.poll();
+      if(link == null 
+          || values.size() >= LinkIO.SIZE) break;
+      values.add(link);
+    }
+
+    if(values.size() > LinkIO.SIZE) return values;
+
+    reader.load(values);
+
+    return values;
+  }
+
+}

@@ -1,0 +1,217 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.miming.vn;
+
+import java.io.File;
+import java.util.Iterator;
+import java.util.TreeSet;
+
+import junit.framework.Assert;
+import junit.framework.TestCase;
+
+import org.junit.Test;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.content.tp.vn.ViTopicTrackingAnalyzer;
+import org.vietspider.content.tp.vn.comparator.TpDocumentMatcher;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 30, 2009  
+ */
+public class TestDocumentComparator extends TestCase {
+  
+  static {
+    File file  = new File("D:\\Temp\\articles\\data\\");
+    try {
+      System.setProperty("vietspider.data.path", file.getCanonicalPath());
+    } catch (Exception e) {
+      e.printStackTrace();
+    } 
+    
+    UtilFile.deleteFolder(new File("D:\\Temp\\articles\\data\\content\\"));
+  }
+  
+  private  DataReader reader = new DataReader();
+  private ViTopicTrackingAnalyzer analyzer2 = new ViTopicTrackingAnalyzer();
+  private TpDocumentMatcher matcher = new TpDocumentMatcher();
+  
+  private TpWorkingData tpDocument1;
+  private TpWorkingData tpDocument2;
+  
+  private TpWorkingData loadContent(String name) throws Exception {
+    File file = new File("D:\\Temp\\articles\\temp\\", name);
+    byte [] bytes = reader.load(file);
+    String content = new String(bytes, "utf-8");
+    
+    TpWorkingData workingData = analyzer2.analyzeDocument(content);
+    workingData.getTpDocument().setId(name);
+    return workingData;
+  }
+  
+  private void printKeys(TpWorkingData working) {
+    TreeSet<String> keys = working.getKeys();
+    Iterator<String> iterator = keys.iterator();
+    int i = 0;
+    while(iterator.hasNext()) {
+      System.out.print(iterator.next()+",");
+      i++;
+      if(i%10 == 0) System.out.println();
+    }
+    System.out.println("\n\n");
+  }
+  
+  private void testDocument(String name1, String name2, boolean expect) throws Throwable {
+    tpDocument1 = loadContent(name1); 
+    tpDocument2 = loadContent(name2);
+    double value = matcher.compare(tpDocument1.getTpDocument(), tpDocument2.getTpDocument());
+    if(expect) {
+      System.out.println(matcher.getInfo());
+    } else {
+      System.out.println("###############"+matcher.getInfo());
+    }
+    System.out.println("================================================");
+    
+//    System.out.println("==== > "+ value);
+    try {
+      Assert.assertEquals(value >= 15, expect);
+    } catch (Throwable e) {
+      printKeys(tpDocument1);
+      printKeys(tpDocument2);
+      throw e;
+    }
+    System.out.println("\n");
+  }
+  
+  @Test
+  public void testComparator() throws Throwable {
+//    File file = new File("D:\\java\\headvances3\\trunk\\vietspider\\startup\\src\\test\\data\\");
+    
+    testDocument("1.txt", "2.txt", false);
+    testDocument("3.txt", "4.txt", false);
+    testDocument("3.txt", "5.txt", false); 
+    testDocument("4.txt", "5.txt", false);
+    testDocument("6.txt", "7.txt", false);
+    testDocument("8.txt", "9.txt", true);
+    testDocument("10.txt", "11.txt", false);
+    testDocument("13.txt", "14.txt", true);
+    testDocument("15.txt", "16.txt", true);
+    
+    testDocument("17.txt", "18.txt", true);
+    testDocument("19.txt", "18.txt", true);
+    testDocument("17.txt", "19.txt", true);
+    
+    testDocument("20.txt", "21.txt", true);
+    
+    testDocument("22.txt", "23.txt", false);
+
+    testDocument("24.txt", "25.txt", true);
+    testDocument("26.txt", "27.txt", true);
+
+    testDocument("28.txt", "29.txt", true);
+    
+    testDocument("30.txt", "31.txt", false);
+    
+    testDocument("32.txt", "33.txt", true);
+    testDocument("34.txt", "35.txt", true);
+    testDocument("36.txt", "37.txt", true);
+    
+    testDocument("38.txt", "39.txt", false);
+    testDocument("40.txt", "41.txt", false);
+    testDocument("42.txt", "43.txt", false);
+    testDocument("44.txt", "45.txt", false);
+    testDocument("46.txt", "47.txt", false);
+    testDocument("48.txt", "49.txt", false);
+    
+    testDocument("50.txt", "51.txt", false);
+    testDocument("50.txt", "52.txt", false);
+    testDocument("50.txt", "53.txt", false);
+    
+    testDocument("54.txt", "55.txt", true);
+    testDocument("56.txt", "57.txt", false);
+    testDocument("58.txt", "59.txt", false);
+    testDocument("60.txt", "61.txt", false);
+    testDocument("60.txt", "62.txt", false);
+    
+    testDocument("63.txt", "64.txt", false);
+    testDocument("63.txt", "65.txt", false);
+    testDocument("63.txt", "66.txt", false);
+    
+    testDocument("67.txt", "68.txt", false);
+    testDocument("69.txt", "70.txt", false);
+    testDocument("71.txt", "72.txt", false);
+    testDocument("71.txt", "73.txt", false);
+    
+    testDocument("74.txt", "75.txt", false);
+    testDocument("76.txt", "77.txt", false);
+    testDocument("78.txt", "79.txt", false);
+    testDocument("78.txt", "80.txt", false);
+    
+    testDocument("81.txt", "82.txt", false);
+    testDocument("83.txt", "84.txt", false);
+    testDocument("85.txt", "86.txt", false);
+    testDocument("87.txt", "88.txt", false);
+    
+    testDocument("89.txt", "90.txt", false);
+    testDocument("91.txt", "92.txt", false);
+    testDocument("93.txt", "94.txt", false);
+    
+    testDocument("95.txt", "96.txt", false);
+    testDocument("97.txt", "98.txt", false);
+    
+    testDocument("99.txt", "100.txt", false);
+    testDocument("102.txt", "101.txt", false);
+    
+    testDocument("103.txt", "104.txt", true);
+    testDocument("105.txt", "106.txt", false);
+    testDocument("107.txt", "108.txt", false);
+    testDocument("109.txt", "110.txt", false);
+    
+    testDocument("111.txt", "112.txt", false);
+    testDocument("113.txt", "114.txt", false);
+    
+    testDocument("115.txt", "116.txt", false);
+    testDocument("118.txt", "119.txt", true);
+    
+    testDocument("121.txt", "122.txt", false);
+    testDocument("123.txt", "124.txt", false);
+    
+    testDocument("125.txt", "126.txt", false);
+    
+    testDocument("127.txt", "128.txt", false);
+//    testDocument("129.txt", "130.txt", false);
+//    testDocument("129.txt", "131.txt", false);
+    
+    testDocument("132.txt", "133.txt", false);
+    testDocument("134.txt", "135.txt", true); 
+    testDocument("134.txt", "136.txt", false);
+    testDocument("137.txt", "138.txt", false);
+    testDocument("140.txt", "141.txt", false);
+    testDocument("142.txt", "143.txt", false);
+    
+    testDocument("144.txt", "145.txt", true);
+    testDocument("146.txt", "147.txt", false);
+    
+    testDocument("148.txt", "149.txt", false);
+    testDocument("150.txt", "151.txt", false);
+    testDocument("150.txt", "152.txt", false);
+    
+    testDocument("153.txt", "154.txt", false);
+    testDocument("155.txt", "156.txt", true);
+    testDocument("157.txt", "158.txt", false);
+    
+    testDocument("159.txt", "160.txt", false);    
+    testDocument("159.txt", "161.txt", false);
+    testDocument("162.txt", "163.txt", false);
+    
+    testDocument("164.txt", "165.txt", false);
+    
+    testDocument("166.txt", "167.txt", false);
+    testDocument("168.txt", "169.txt", true);
+  }
+
+}
+

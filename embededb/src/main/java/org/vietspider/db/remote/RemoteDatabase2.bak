@@ -1,0 +1,243 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.headvances.vietspider.remote;
+
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.headvances.cluster.ClusterClient;
+import org.headvances.cluster.organization.MemberId;
+import org.headvances.hdfs.document.HTMLMimeType;
+import org.headvances.hdfs.input.ImportService;
+import org.headvances.hdfs.input.Record;
+import org.headvances.hdfs.input.task.ImportTask;
+import org.headvances.hdfs.storage.WebShardMapper;
+import org.headvances.storage.shard.ShardIdMapper;
+import org.headvances.vietspider.SystemProperties;
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Content;
+import org.vietspider.bean.Domain;
+import org.vietspider.bean.Meta;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.text.CalendarUtils;
+import org.vietspider.model.Group;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 10, 2009  
+ */
+public final class RemoteDatabase2 {
+
+  private final static short ERROR  = -1;
+  private final static short NEW  = 0;
+  private final static short WORKING  = 1;
+
+  private short status = NEW;
+
+  private ClusterClient client;
+  //  private Map<Integer, List<Record>> temp = new HashMap<Integer, List<Record>>();
+
+  private String remote;
+
+  public RemoteDatabase2() {
+    remote = SystemProperties.getInstance().getValue("remote2.webdb.address");
+    if(remote != null && (remote = remote.trim()).isEmpty()) {
+      remote = null;
+    } 
+    
+    if(remote == null) return;
+    
+    if(!remote.startsWith("http://")) {
+      remote = "http://"+remote;
+    }
+    createClient();
+  }
+
+  private void add(Map<Integer, List<Record>> temp, Article article) {
+    Domain domain = article.getDomain();
+    Meta meta = article.getMeta();
+    Content content = article.getContent();
+    if(client == null || domain == null) return;
+    int clusterId  = getClusterId(domain.getGroup(), domain.getCategory());
+    String mimeType = getMimeType(clusterId) ;
+
+    Record record =  new Record();
+    record.setMimeType(mimeType);
+    record.setTitle(meta.getTitle());
+    record.setDescription(meta.getDesc());
+    record.setContent(content.getContent());
+    record.setSymbolicImage(meta.getImage());
+    
+
+    String sourceTime  = meta.getSourceTime();
+    if(sourceTime != null && sourceTime.trim().length() > 0) {
+      try {
+        SimpleDateFormat dateFormat = CalendarUtils.getDateTimeFormat();
+        Date date  = dateFormat.parse(sourceTime);
+        record.setPostdate(date.getTime());
+      } catch (Exception e) {
+        LogService.getInstance().setMessage(e, e.toString());
+      }
+    }
+
+    record.setUrl(meta.getSource());
+
+    List<Record> records = temp.get(clusterId);
+    if(records == null) {
+      records = new ArrayList<Record>();
+      temp.put(clusterId, records);
+    }
+    records.add(record);
+  }
+
+  public MemberId[] getMemberIds() throws Throwable {
+    if(remote == null || status == ERROR) return null;
+    try {
+      if(client.getClusterMembers(true).size() < 1) createClient();
+      return client.getServiceMember(ImportService.class) ;
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+      createClient();
+      throw e;
+    }
+  }
+  
+  public void sync(MemberId[] members, List<Article> articles)  throws Throwable {
+    if(articles.size() < 1) return;
+    
+    try {
+      Map<Integer, List<Record>> temp = new HashMap<Integer, List<Record>>();
+      for(int i = 0; i < articles.size(); i++) {
+        add(temp, articles.get(i));
+      }
+
+      Iterator<Entry<Integer, List<Record>>> iterator = temp.entrySet().iterator();
+      while(iterator.hasNext()) {
+        Entry<Integer, List<Record>> entry = iterator.next();
+        Integer clusterId = entry.getKey();
+        List<Record> tempRecords = entry.getValue();
+        if(tempRecords.size() < 1) continue;
+        List<Record> list = new ArrayList<Record>();
+
+        for(int i = 0; i < tempRecords.size(); i++) {
+          list.add(tempRecords.get(i));
+        }
+
+        Record [] records = list.toArray(new Record[list.size()]);
+        client.getIPC(members[0]).execute(new ImportTask(getTaskType(clusterId), records)) ;
+
+        if(status == NEW) {
+          LogService.getInstance().setMessage(null, "Synchronized "+ records.length +" data to " + remote + " successfull!");
+        }
+        status = WORKING;
+      } 
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+      createClient();
+      throw e;
+    }
+    //    LogService.getInstance().setMessage(null,  "remote 2 synchronized successfull!");
+  }
+
+  private void createClient() {
+    try {
+      if(client != null) client.close();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    
+    if(remote == null) return;
+    
+    try {
+      URL url = new URL(remote);
+      //"192.168.1.15", 5001 
+      //192.168.1.15:5001
+      client = new ClusterClient(url.getHost(), "/cluster/vsimport") ;
+      client.getClusterMembers(true);
+      status = NEW;
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(e);
+      status = ERROR;
+    }
+    LogService.getInstance().setMessage(null, "Data export to " + remote);
+  }
+
+
+  private int getClusterId(String group, String category) {
+    if("Trang vàng".equalsIgnoreCase(category)) {
+      return ShardIdMapper.WEBDATA_YELLOWPAGE;
+    }
+
+    if(group.equalsIgnoreCase(Group.ARTICLE)) {
+      return  WebShardMapper.ARTICLE;
+    } else if(group.equalsIgnoreCase(Group.BLOG)) {
+      return  WebShardMapper.BLOG;
+    } else if(group.equalsIgnoreCase(Group.CLASSIFIED)) {
+      return  WebShardMapper.CLASSIFIED;
+    } else if(group.equalsIgnoreCase(Group.FORUM)) {
+      return  WebShardMapper.FORUM;
+    } else if(group.equalsIgnoreCase(Group.JOB)) {
+      return  WebShardMapper.JOB;
+    } else if(group.equalsIgnoreCase(Group.LYRIC)) {
+      return  WebShardMapper.LYRIC;
+    } else if(group.equalsIgnoreCase(Group.POETRY)) {
+      return  WebShardMapper.POETRY;
+    } else if(group.equalsIgnoreCase(Group.PRODUCT)) {
+      return  WebShardMapper.PRODUCT;
+    } else if(group.equalsIgnoreCase(Group.PROFILE)) {
+      return  WebShardMapper.PROFILE;
+    } else if(group.equalsIgnoreCase(Group.SEARCHTIONARY)) {
+      return  WebShardMapper.SEARCHTIONARY;
+    } else if(group.equalsIgnoreCase(Group.SITE)) {
+      return  WebShardMapper.SITE;
+    } else if(group.equalsIgnoreCase(Group.STORY)) {
+      return  WebShardMapper.LITERATURE;
+    } 
+    //     else if(clusterId == WebShardMapper.YELLOWPAGE) mimeType = MimeType.YELLOWPAGE;
+    return  WebShardMapper.SITE;
+  }
+
+  private String getMimeType(int clusterId) {
+    if(clusterId == WebShardMapper.ARTICLE) return  HTMLMimeType.ARTICLE ;
+    else if(clusterId == WebShardMapper.BLOG) return  HTMLMimeType.BLOG ;
+    else if(clusterId == WebShardMapper.FORUM) return  HTMLMimeType.FORUM ;
+    else if(clusterId == WebShardMapper.POETRY) return  HTMLMimeType.POETRY ;
+    else if(clusterId == WebShardMapper.LYRIC) return  HTMLMimeType.LYRIC ;
+    else if(clusterId == WebShardMapper.LITERATURE) return  HTMLMimeType.LITERATURE;
+    else if(clusterId == WebShardMapper.PROFILE) return  HTMLMimeType.PROFILE;
+    else if(clusterId == WebShardMapper.CLASSIFIED) return  HTMLMimeType.CLASSIFIED;
+    else if(clusterId == WebShardMapper.JOB) return  HTMLMimeType.JOB;
+    else if(clusterId == WebShardMapper.PRODUCT) return  HTMLMimeType.PRODUCT;
+    else if(clusterId == WebShardMapper.SEARCHTIONARY) return  HTMLMimeType.SEARCHTIONARY;
+    else if(clusterId == WebShardMapper.YELLOWPAGE) return  HTMLMimeType.YELLOWPAGE;
+    else if(clusterId == WebShardMapper.SITE) return  HTMLMimeType.SITE;
+    return  HTMLMimeType.SITE;
+  }
+
+
+  private String getTaskType(int clusterId) {
+    if(clusterId == WebShardMapper.ARTICLE) return "ARTICLE" ;
+    else if(clusterId == WebShardMapper.BLOG)return "BLOG" ;
+    else if(clusterId == WebShardMapper.FORUM)return "FORUM" ;
+    else if(clusterId == WebShardMapper.POETRY)return "POETRY" ;
+    else if(clusterId == WebShardMapper.LYRIC)return "LYRIC" ;
+    else if(clusterId == WebShardMapper.LITERATURE)return "LITERATURE";
+    else if(clusterId == WebShardMapper.PROFILE)return "PROFILE";
+    else if(clusterId == WebShardMapper.CLASSIFIED)return "CLASSIFIED";
+    else if(clusterId == WebShardMapper.JOB)return "JOB";
+    else if(clusterId == WebShardMapper.PRODUCT)return "PRODUCT";
+    else if(clusterId == WebShardMapper.SEARCHTIONARY)return "SEARCHTIONARY";
+    else if(clusterId == WebShardMapper.YELLOWPAGE)return "YELLOWPAGE";
+    else if(clusterId == WebShardMapper.SITE) return "SITE";
+    return "SITE";
+  }
+}

@@ -1,0 +1,164 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.search.seo;
+
+import java.net.URL;
+
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Meta;
+import org.vietspider.common.Application;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 4, 2009  
+ */
+class SEOMetaRenderer {
+  
+  byte[] render(Article article, String query) throws Exception {  
+    Meta  meta  = article.getMeta();
+    if(meta  == null 
+        || meta.getId() == null 
+        || meta.getId().equals("null")) return new byte[0];
+    
+    StringBuilder builder = new StringBuilder();
+    builder.append("<li><a href=\"/site/cached/");
+    builder.append(meta.getId()).append("/?query=").append(query);
+    builder.append("\" class=\"meta_title\">");
+//    builder.append("<li><a href=\"").append(meta.getSource()).append("\" class=\"meta_title\">");
+    
+    //System.out.println("  " + meta.getTitle() + " || " + article.getStatus());
+    
+    Number score = (Number)article.getMeta().getPropertyValue("score");
+    if(score == null) score = -1;
+    
+    builder.append(meta.getTitle()).append(" (").append(score).append(')');
+    builder.append("</a><div>");
+    
+   
+    //build image if has
+    
+    boolean image  = meta.getImage() != null && !meta.getImage().trim().isEmpty();
+    if(image) {
+      builder.append("<table align=\"left\" border=\"0\" width=\"85\" cellpadding=\"0\" cellspacing=\"0\">");
+      builder.append("<tbody><tr><td class=\"LoadBox\">");
+      builder.append("<img src=\"").append(meta.getImage()).append("\" border=\"0\" height=\"80\" width=\"80\">");
+      builder.append("</td></tr> </tbody></table>");
+    }
+    
+    buildLink(builder, article);
+    builder.append("<span class=\"text\">").append(meta.getDesc()).append("...</span>");;
+    buildProperties(builder, article);
+    
+    if(image) {
+      builder.append("</div></li><div class=\"Separator2\"></div>");
+    } else {
+      builder.append("</div></li><div class=\"Separator\"></div>");
+    }
+    
+    return builder.toString().getBytes(Application.CHARSET);
+  }
+  
+  private String cutURL(String value, int total) {
+    int max = total - 10;
+    StringBuilder builder = new StringBuilder();
+    builder.append(value.subSequence(0, Math.min(max, value.length())));
+    int min = value.length() - 10;
+    if(min < 1) return  builder.toString(); 
+    builder.append("...");
+    builder.append(value.subSequence(min, value.length()));
+    return builder.toString();
+  }
+  
+  private void buildProperties(StringBuilder builder, Article article) {
+    Meta meta = article.getMeta();
+    
+    StringBuilder subBuilder = new StringBuilder();
+    if(meta.hasProperty()) {
+      String value = (String)meta.getPropertyValue("nlp.product");
+      if(value != null && value.length() > 0) {
+        subBuilder.append(Character.toUpperCase(value.charAt(0)));
+        subBuilder.append(value, 1, value.length());
+      }
+     
+      value = (String)meta.getPropertyValue("nlp.phone");
+      if(value != null && value.length() > 0) {
+        if(subBuilder.length() > 0) subBuilder.append(" - ");
+        subBuilder.append(value);
+      }
+      
+      value = (String)meta.getPropertyValue("nlp.address");
+      if(value == null || value.length() < 1) {
+        value = uppercase((String)meta.getPropertyValue("region"));
+        
+      }
+      
+      if(value != null && value.length() > 0) {
+        if(subBuilder.length() > 0) subBuilder.append(" - ");    
+        subBuilder.append(value);
+      } 
+      
+      /*value = (String)meta.getPropertyValue("region");
+      if(value != null && value.length() > 0) {
+        if(next) builder.append("  <b> >>> ");
+        builder.append(value).append("</b>");
+      }*/
+    }
+    
+    builder.append("<div class=\"properties\">");
+    builder.append(subBuilder);
+    builder.append("</div>");
+  }
+  
+  private void buildLink(StringBuilder builder, Article article) {
+    Meta meta = article.getMeta();
+    builder.append("<div class=\"othernews_link\">");
+    
+    builder.append("<a class=\"othernews_link\" href=\"").append(meta.getSource());
+    builder.append("\">");
+    String host = "";
+    try {
+      host = new URL(meta.getSource()).getHost();
+    } catch (Exception e) {
+      host = cutURL(meta.getSource(), 40);
+    }
+    builder.append(host);//cutURL(meta.getSource(), 50));
+    builder.append("</a>");
+    
+    String value = meta.getSourceTime();
+    if(value != null && value.length() > 0) {
+      int idx = value.indexOf(' ');
+      if(idx > 0) value = value.substring(0, idx);
+      builder.append(" - Rao ngày: ").append(value);
+    }
+    
+    String time = meta.getTime();
+    int index = time.indexOf(' ');
+    if(index > 0) time  = time.substring(0, index);
+    builder.append(" - Cập nhật: ").append(time);
+    
+    builder.append("</div>");
+  }
+  
+  
+  static String uppercase(String text) {
+    if(text == null) return null;
+    StringBuilder builder = new StringBuilder();
+    int index = 0; 
+    boolean upper = true;
+    while(index < text.length()) {
+      char c = text.charAt(index);
+      if(upper) {
+        builder.append(Character.toUpperCase(c));
+      } else {
+        builder.append(c);
+      }
+      upper = Character.isWhitespace(c) || c == '-';
+      index++;
+    }
+    return builder.toString();
+  }
+  
+ 
+}

@@ -1,0 +1,51 @@
+/***************************************************************************
+ * Copyright 2003-2007 by VietSpider - All rights reserved.                *    
+ **************************************************************************/
+package org.vietspider.server.handler.cms.metas;
+
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.protocol.HttpContext;
+import org.vietspider.bean.Article;
+import org.vietspider.common.io.ResourceManager;
+import org.vietspider.io.SystemProperties;
+import org.vietspider.io.bean.DatabaseService;
+import org.vietspider.io.bean.JdbcDataReader;
+import org.vietspider.io.bean.MetaList;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Jun 26, 2007
+ */
+public class ThreadHandler extends MetaListHandler {
+  
+  public ThreadHandler(String type) {
+    super(type); 
+    name = "THREAD";
+  }
+  
+  void handle(final HttpRequest request, final HttpResponse response, 
+      final HttpContext context, String...params) throws Exception {
+    MetaList metas = new MetaList();
+    ResourceManager resources = new ResourceManager(SystemProperties.getInstance().getProperties(), "VietSpider");
+    String thread = resources.getLabel("viewThread");
+    metas.setAction("THREAD");
+    metas.setTitle(thread);    
+    metas.setUrl(params[1]);
+
+    int currentPage  = Integer.parseInt(params[0]);
+    metas.setCurrentPage(currentPage);
+    
+    DatabaseService.getUtil().loadThread(params[1], metas);
+    if(metas.getTotalPage() < 1) {
+      JdbcDataReader dataGetter = DatabaseService.getLoader();
+      Article article = dataGetter.loadArticle(params[1]);
+      metas.getData().add(article);
+      metas.setTotalPage(1);
+    }
+    
+    write(request, response, context, metas, params);
+  }
+
+}

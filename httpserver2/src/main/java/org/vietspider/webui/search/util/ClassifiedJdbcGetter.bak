@@ -1,0 +1,157 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.search.util;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Content;
+import org.vietspider.bean.Domain;
+import org.vietspider.bean.Meta;
+import org.vietspider.bean.MetaRelation;
+import org.vietspider.common.io.LogService;
+import org.vietspider.index.result.DocEntry;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Sep 13, 2009  
+ */
+public class ClassifiedJdbcGetter {
+
+  private PreparedStatement mrStatement = null;
+
+  public List<ArticleEntry> loadArticles(Connection connection, List<DocEntry> entries) throws Exception {
+    StringBuilder builder = new StringBuilder("SELECT ");
+    builder.append("META.ID, META.TITLE, META.DES, META.TIME, META.SOURCE_TIME, META.URL, ");
+    builder.append(" CONTENT.CONTENT, DOMAIN.DATE, DOMAIN.CATEGORY, DOMAIN.NAME");
+    builder.append(" FROM META, CONTENT, DOMAIN ");
+    builder.append(" WHERE META.ID = CONTENT.META_ID AND META.DOMAIN_ID = DOMAIN.ID AND META.ID IN (");
+    boolean next = false;
+    for(int i = 0; i < entries.size(); i++) {
+      DocEntry entry = entries.get(i);
+      if(entry.getStatus() == -1) continue;
+      long longId = entry.getMetaId();
+      String metaId = String.valueOf(longId);
+      if(next) builder.append(',');
+      builder.append(metaId);
+      next = true;
+    }
+    builder.append(')');
+
+    //    System.out.println(builder);
+
+    HashMap<Long , ArticleEntry> set = new HashMap<Long, ArticleEntry>();
+    List<Article> articles = loadArticles(connection, builder.toString()); 
+    
+    for(int i = 0; i < entries.size(); i++) {
+      DocEntry entry = entries.get(i);
+      long id = entry.getMetaId();
+      if(set.get(id) != null) continue;
+      Article article = searchArticle(articles, String.valueOf(id));
+      ArticleEntry articleEntry = new ArticleEntry(entry, article);
+      set.put(id, articleEntry);
+    }
+    
+    List<ArticleEntry> articleEntries = new ArrayList<ArticleEntry>();
+    Iterator<Map.Entry<Long, ArticleEntry>> iterator = set.entrySet().iterator();
+    while(iterator.hasNext()) {
+      articleEntries.add(iterator.next().getValue());
+    }
+    return articleEntries;
+  }
+
+  public List<Article> loadArticles(Connection connection, String sql) throws Exception {
+    List<Article> articles = new ArrayList<Article>();
+    Statement statement = connection.createStatement();
+    ResultSet resultSet = statement.executeQuery(sql);
+    while(resultSet.next()){     
+      Article article = new Article();
+
+      try {
+        Meta meta = new Meta();
+        meta.setId(resultSet.getString(1));
+        meta.setTitle(resultSet.getString(2));
+        meta.setDesc(resultSet.getString(3));
+        meta.setTime(resultSet.getString(4));
+        meta.setSourceTime(resultSet.getString(5));
+        meta.setSource(resultSet.getString(6));
+
+        Content content = new Content();
+        content.setMeta(meta.getId());
+        content.setContent(resultSet.getString(7));
+
+        Domain domain = new Domain();
+        domain.setDate(resultSet.getString(8));
+        domain.setCategory(resultSet.getString(9));
+        domain.setName(resultSet.getString(10));
+
+
+        article.setDomain(domain);
+        article.setMeta(meta);
+        article.setContent(content);
+
+        articles.add(article);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+    return articles;
+  }
+  
+  private Article searchArticle(List<Article> articles, String id) {
+    for(int i = 0; i < articles.size(); i++) {
+      Article article = articles.get(i);
+      if(article == null) continue;
+      Meta meta = article.getMeta();
+      if(meta == null) continue;
+      if(meta.getId().equals(id)) return article;
+    }
+    return null;
+  }
+
+  List<MetaRelation> loadMetaRelation(Connection connection, String metaId) {
+    List<MetaRelation> relations = new LinkedList<MetaRelation>();
+    try {
+      if(mrStatement == null) createMetaRelationQuery(connection);
+      mrStatement.setString(1, metaId);
+
+      ResultSet resultSet = mrStatement.executeQuery();
+      while(resultSet.next()){     
+        MetaRelation meta = new MetaRelation();
+        meta.setId(resultSet.getString(1));
+        meta.setTitle(resultSet.getString(2));
+        meta.setDes(resultSet.getString(3));
+        meta.setImage(resultSet.getString(4));
+        meta.setTime(resultSet.getString(5));
+        meta.setDate(resultSet.getString(6));
+        meta.setName(resultSet.getString(7));
+        meta.setPercent(resultSet.getInt(8));
+        relations.add(meta);
+      }
+      return relations;
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+      return relations;
+    }
+  }
+
+  private void createMetaRelationQuery(Connection connection) throws Exception {
+    StringBuilder builder = new StringBuilder("SELECT ");
+    builder.append(" META.ID, META.TITLE, META.DES, META.IMAGE, META.TIME, ");
+    builder.append(" DOMAIN.DATE, DOMAIN.NAME, RELATION.PERCENT ");
+    builder.append(" FROM META, DOMAIN, RELATION  WHERE RELATION.META_ID = ? ");
+    builder.append(" AND META.ID = RELATION.RELATION_ID AND META.DOMAIN_ID = DOMAIN.ID");
+    mrStatement = connection.prepareStatement(builder.toString());
+  }
+}

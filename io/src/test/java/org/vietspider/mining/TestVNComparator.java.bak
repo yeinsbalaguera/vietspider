@@ -1,0 +1,112 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.mining;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.vietspider.chars.refs.RefsDecoder;
+import org.vietspider.common.Application;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.content.tp.DocumentFactory;
+import org.vietspider.content.tp.model.SummarizeDocument;
+import org.vietspider.content.tp.word.Word;
+import org.vietspider.content.tp.word.WordList;
+import org.vietspider.html.HTMLDocument;
+import org.vietspider.html.parser.HTMLParser2;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Jul 31, 2006
+ */
+public class TestVNComparator {
+  
+  DocumentFactory factory ;
+  RefsDecoder decoder ;  
+//  ContentBuilder contentBuilder ;
+  
+  public TestVNComparator() throws Exception {
+    factory = new DocumentFactory();
+    decoder = new RefsDecoder();
+//    contentBuilder = new ContentBuilder();
+  }
+  
+  @SuppressWarnings("unchecked")
+  public String printWord(Object obj, String name) throws Exception {    
+    File file = null;
+    if(name == null) file = new File("D:\\Temp\\articles\\mining\\words.txt");
+    else file = new File("D:\\Temp\\articles\\mining\\"+name);
+    if(!file.exists()) file.createNewFile();
+    StringBuilder text = new StringBuilder();
+    if(obj instanceof List){
+      List<CharSequence> list  = (List<CharSequence>)obj;
+      for(CharSequence ele: list) {
+        text.append("\n").append(ele);      
+      }    
+    }else if(obj instanceof WordList){
+      WordList list = (WordList)obj;
+      Word [] words = list.getWord();
+      for(Word word : words) {
+        text.append("\n").append(word.getValue()).append(" : ").append(word.getTime());      
+      }    
+    }
+    FileOutputStream output = new FileOutputStream(file); 
+    FileChannel fchan = output.getChannel();   
+    byte [] data = text.toString().getBytes(Application.CHARSET);
+    ByteBuffer buff = ByteBuffer.allocateDirect(data.length);
+    for(int j=0; j<data.length; j++) buff.put(data[j]);    
+    buff.rewind();
+    fchan.write(buff);        
+    buff.clear();        
+    fchan.close();
+    output.close();    
+    return text.toString();
+  }
+  
+  public String loadData(File file) throws Exception {
+    byte [] bytes = new DataReader().load(file);
+    return new String(bytes, "utf-8");
+//    HTMLDocument document = new HTMLParser2().createDocument(file, null);    
+//    List<char[]> contentValues = new ArrayList<char[]>();
+////    contentBuilder.build(document.getRoot(), contentValues);
+//    StringBuilder builder = new StringBuilder();
+//    for(char[] ele : contentValues){
+//     builder.append(ele).append('\n'); 
+//    }
+//    return builder.toString();
+  }
+  
+  public void test(File file1, File file2) throws Exception {
+    String text1 =  loadData(file1);
+    String text2 =  loadData(file2);
+    System.out.println("chuan bi parse");
+    SummarizeDocument document1 = factory.create("1", text1);
+    SummarizeDocument document2 = factory.create("2", text2);
+    
+    printWord(document1.getNouns(), "noun_doc1.txt");
+    printWord(document2.getNouns(), "noun_doc2.txt");
+    
+    printWord(document1.getSections(), "section_doc1.txt");
+    printWord(document2.getSections(), "section_doc2.txt");
+    
+    double b = factory.compare(document1, document2);
+    System.out.println(" ket qua la " + b);
+    System.out.println(factory.getInfo());
+  }
+    
+  public static void main(String[] args)  throws Exception {
+    TestVNComparator  test = new TestVNComparator();
+    File folder = new File("D:\\Temp\\articles\\mining\\");
+    File file1 = new File(folder, "1.txt");
+    File file2 = new File(folder, "2.txt");
+    test.test(file1, file2);
+  }
+
+}

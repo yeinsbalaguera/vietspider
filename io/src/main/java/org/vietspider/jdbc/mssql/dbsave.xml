@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<database>  
+  <saveDomain>
+    INSERT INTO DOMAIN
+    	(ID, DATE, CATEGORY, NAME) 
+      VALUES 
+    	($id, '$date', N'$group.category', N'$name')
+  </saveDomain>
+  <saveMeta>
+    INSERT INTO META 
+        (ID, DOMAIN_ID, TITLE, DES, IMAGE, TIME,  SOURCE_TIME, URL) 
+      VALUES 
+        ($id, $domain, N'$title', N'$des', '$image', '$time', '$source_time', '$url')
+  </saveMeta>
+  <saveContent>
+    INSERT INTO CONTENT
+        (META_ID, CONTENT, DATE) 
+      VALUES 
+        ($meta, ?, '$date')
+  </saveContent>
+  <saveRelation>
+    INSERT INTO RELATION 
+    	(META_ID, RELATION_ID, "PERCENT") 
+      VALUES 
+    	($meta, $relation, $percent)
+  </saveRelation>
+  <saveImage>
+    INSERT INTO IMAGE
+    	(ID, META_ID, CONTENT_TYPE, NAME, IMAGE) 
+      VALUES 
+    	('$id', $meta, '$type', '$name', ?)
+  </saveImage>  
+</database>

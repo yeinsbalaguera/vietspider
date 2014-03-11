@@ -1,0 +1,137 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.       *
+ **************************************************************************/
+package org.vietspider.content.db.tp;
+
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.       *
+ **************************************************************************/
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.text.CalendarUtils;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.content.tp.vn.TpDocument;
+import org.vietspider.db.database.DatabaseService;
+import org.vietspider.db.sync.SyncHandler;
+import org.vietspider.net.server.URLPath;
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Mar 30, 2009  
+ */
+
+public class TpTempDatabase2 extends SyncHandler<TpWorkingData> {
+
+//  protected TpMemoryRelationComputor  memoryComputor;
+  protected TpDatabases tpDatabases;
+//  private DataSaver dataSaver;
+
+  public TpTempDatabase2(TpDatabases tpDatabases) {
+    super("tp_temp", "sync.tp.data.server", "add.tp.data", URLPath.REMOTE_DATA_HANDLER);
+    memoryComputor = new TpMemoryRelationComputor();
+    this.tpDatabases = tpDatabases; 
+    dataSaver = new DataSaver(this.tpDatabases);
+    if(client == null) sizeOfWorking = 1000;
+  }
+
+  @Override()
+  public void add(TpWorkingData value) {
+    if(client != null) client.closeTimeout();
+    if(queue.size() >= sizeOfWorking) store1(queue);
+    save(value);
+  }
+
+  public synchronized boolean sync() {
+    return super.sync();
+  }
+  
+  public boolean compute() {
+    Queue<TpWorkingData> working = new ConcurrentLinkedQueue<TpWorkingData>();
+    try {
+      load(working);
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    if(working.size() < 1) return false;
+
+    SimpleDateFormat idFormat = new SimpleDateFormat("yyyyMMdd");
+    //    File folder = UtilFile.getFolder("content/tp/");
+
+    memoryComputor.compute(working);
+
+    while(!working.isEmpty()) {
+      TpWorkingData workingData = working.poll();
+      if(workingData == null) continue; 
+      TpDocument tpDocument = workingData.getTpDocument();
+      if(tpDocument == null) continue;
+      String dateFolder = null;
+      String id = tpDocument.getId();
+      if(id.length() < 10) continue;
+      id  = id.substring(0, 8);
+      String textDate = null;
+      try {
+        Date dateInstance = idFormat.parse(id);
+        dateFolder = CalendarUtils.getFolderFormat().format(dateInstance);
+        textDate = CalendarUtils.getDateFormat().format(dateInstance);
+      } catch (Throwable e) {
+        LogService.getInstance().setThrowable("INDEXER", e);
+        continue;
+      }
+
+      if(dateFolder == null) continue;
+
+      String group = workingData.getGroup();
+
+      /*File dbFolder = new File(folder, "/" + group + "/database3/"+ dateFolder+"/");
+      if(!dbFolder.exists()) {
+        dbFolder.mkdirs();
+        try {
+          dbFolder.createNewFile();
+        } catch (Exception e) {
+//          LogService.getInstance().setThrowable(e);
+        }
+      }
+      if(!dbFolder.exists()) continue;*/
+
+      //solr bug can xu ly duplicate gap
+//      List<Relation> duplicates = workingData.getDuplicates(); 
+//      if(duplicates.size() < 1) {
+      TpIndexingComputor indexComputor = 
+        new TpIndexingComputor(tpDatabases, group, workingData.getRange());
+      try {
+        indexComputor.compute(workingData);
+      } catch (Throwable e) {
+        LogService.getInstance().setThrowable(e);
+      }
+//      } 
+      //      else {
+      //        System.out.println(" o thay roi na "+ workingData.getTpDocument().getId());
+      //      }
+
+      dataSaver.saveDuplicates(group, textDate, dateFolder, workingData);
+
+      try {
+        DatabaseService.getSaver().save(workingData.getRelations());
+      } catch (Exception e) {
+        LogService.getInstance().setMessage(e, e.toString());
+      }
+    }
+    return true;
+  }
+
+  public void removeSuccessfullValue(ArrayList<TpWorkingData> list, String id) {
+    for(int i = 0; i < list.size(); i++) {
+      if(list.get(i).getTpDocument().getId().equals(id)) {
+        list.remove(i);
+        return;
+      }
+    }
+    return;
+  }
+}

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<database>
+  <driver>org.apache.derby.jdbc.EmbeddedDriver</driver>
+  <connection>jdbc:derby:$vietspider$/vsdb;create=true</connection>
+  <user>
+  </user>
+  <password>
+  </password>
+  <inited>true</inited>
+  <scripts>
+    <script>
+      CREATE TABLE DOMAIN (
+      	ID  							BIGINT PRIMARY KEY, 
+      	&#34;DATE&#34;		VARCHAR(50), 
+      	CATEGORY 					VARCHAR(1000), 
+      	NAME 							VARCHAR(1000)
+      )
+    </script>
+    <script>
+      CREATE TABLE META (
+      	ID 								BIGINT PRIMARY KEY, 
+      	DOMAIN_ID 				BIGINT,
+      	TITLE 						VARCHAR(2000), 
+      	DES 							VARCHAR(4000), 
+      	IMAGE 						VARCHAR(500), 
+        TIME 							VARCHAR(100), 
+        SOURCE_TIME 	    VARCHAR(100),
+        INDEX_STATUS 			INTEGER DEFAULT 0, 
+        URL 							VARCHAR(500),
+        CONSTRAINT META_FK FOREIGN KEY (DOMAIN_ID) REFERENCES DOMAIN (ID)
+      )
+    </script>
+    <script>
+      CREATE TABLE CONTENT(
+        META_ID 					BIGINT, 
+        &#34;DATE&#34;		VARCHAR(50), 
+        CONTENT 					CLOB,
+        CONSTRAINT CONTENT_FK FOREIGN KEY (META_ID) REFERENCES META(ID)
+      )
+    </script>
+    <script>
+      CREATE TABLE RELATION(
+        META_ID 					BIGINT, 
+        RELATION_ID 			BIGINT, 
+        PERCENT 					INTEGER
+      )
+    </script>
+    <script>
+      CREATE TABLE IMAGE(
+        ID 								VARCHAR(200) PRIMARY KEY, 
+        META_ID 					BIGINT, 
+        CONTENT_TYPE 			VARCHAR(200), 
+        NAME 							VARCHAR(200), 
+        IMAGE 						BLOB
+      )
+    </script>
+    <script>CREATE INDEX DOMAIN_INDEX ON DOMAIN (ID)</script>
+    <script>CREATE INDEX META_INDEX ON META (ID)</script>
+    <script>CREATE INDEX IMAGE_INDEX ON IMAGE (ID)</script>
+  </scripts>
+</database>

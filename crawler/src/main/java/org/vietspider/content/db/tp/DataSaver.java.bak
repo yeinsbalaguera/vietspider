@@ -1,0 +1,103 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.db.tp;
+
+import java.util.List;
+
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Relation;
+import org.vietspider.common.io.LogService;
+import org.vietspider.content.tp.TpWorkingData;
+import org.vietspider.content.tp.vn.TpDocument;
+import org.vietspider.db.ContentIndexers;
+import org.vietspider.db.CrawlerConfig;
+import org.vietspider.db.database.DatabaseService;
+import org.vietspider.db.idm2.EIDFolder2;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 22, 2009  
+ */
+class DataSaver {
+
+  private TpDatabases tpDatabases;
+
+  DataSaver(TpDatabases tpDatabases) {
+    this.tpDatabases = tpDatabases;
+  }
+
+  void saveDuplicates(String group, String textDate, String dateFolder, TpWorkingData workingData) {
+    List<Relation> duplicates = workingData.getDuplicates(); 
+    boolean hasDuplicate = duplicates.size() > 0;
+
+    if(hasDuplicate) {
+      //      System.out.println(" chuan bi save article na http://thuannd:9245/vietspider/DETAIL/"+ contentIndex.getId());
+      for(int i = 0; i < duplicates.size(); i++) {
+        Article article = new Article();
+        article.setId(duplicates.get(i).getRelation());
+        article.setStatus(Article.DELETE);      
+        try {
+          DatabaseService.getSaver().save(article);
+        } catch (Exception e) {
+          LogService.getInstance().setThrowable(e);
+        }
+        //        System.out.println(" thay co http://thuannd:9245/vietspider/DETAIL/"+ duplicates.get(i).getRelation() + "  / "+ duplicates.get(i).getPercent());
+      }
+      //      System.out.println("==========================================");
+    }
+
+    saveData(group, textDate, dateFolder, workingData);
+
+    if(CrawlerConfig.EXCUTOR_SIZE <= 20 && hasDuplicate) {
+      TpDocument tpDocument = workingData.getTpDocument();
+      EIDFolder2.write(null, tpDocument.getId(), Article.DELETE);
+    }
+
+    if(!hasDuplicate) return;
+
+    //    System.out.println(" da khong save va danh index " +tpDocument.getId());
+
+    try {
+      DatabaseService.getSaver().save(duplicates);
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+  }
+
+  void saveData(String group, String textDate, String dateFolder, TpWorkingData tpData) {
+    //  if(contentIndex != null) {
+    //    if(syncSearchData.sync(contentIndex.clone())) dbIndexers.index(contentIndex);
+    //  }
+
+    TpDatabase database = tpDatabases.getDatabase(group, dateFolder, true);
+    TpDocument tpDocument = tpData.getTpDocument();
+    try {
+      database.save(tpDocument);
+    } catch (StackOverflowError e) {
+      LogService.getInstance().setMessage("TPDATABASE", 
+          new Exception(e), e.toString() + "  "  + tpDocument.getId());
+      return;
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable("TPDATABASE", e);
+      return;
+    }
+
+    try {
+      TpDocumentIndex tpDocumentIndex = new TpDocumentIndex(group);
+      tpDocumentIndex.setDate(textDate);
+      tpDocumentIndex.setTpWorkingData(tpData);
+
+      ContentIndexers.getInstance().getDbIndexers().index(tpDocumentIndex);
+    } catch (StackOverflowError e) {
+      LogService.getInstance().setMessage("TPDATABASE",
+          new Exception(e), e.toString() + "  " + tpDocument.getId());
+      return;
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable("TPDATABASE", e);
+      return;
+    }
+  }
+
+}

@@ -1,0 +1,61 @@
+ @SuppressWarnings("unchecked")
+  public void loadThread(String metaId, MetaList data) throws Exception {
+    List<Article> articles = data.getData();
+    List<String> metas = new ArrayList<String>();
+    loadThread(metaId, metas);
+
+    Collections.sort(metas, String.CASE_INSENSITIVE_ORDER);
+
+    int total = metas.size();
+    int totalPage = total / DatabaseService.PAGE_SIZE ;
+    if (total % DatabaseService.PAGE_SIZE > 0) totalPage++ ;
+    data.setTotalPage(totalPage);
+
+    int currentPage = data.getCurrentPage();
+    int from = (currentPage - 1)*DatabaseService.PAGE_SIZE;
+    int to = Math.min(currentPage *DatabaseService.PAGE_SIZE, total);
+
+    String sql;
+    Connection connection = JdbcConnection.get();
+    try {
+      for(int i = from; i < to; i++){
+        sql = createSQL("$id", metas.get(i), "loadArticleForEvent");
+        Article article = loadArticle(sql, connection, Meta.class, Domain.class);
+        articles.add(article);
+      }
+    } finally {
+      JdbcConnection.release(connection);
+    }
+  }
+ 
+ 
+ private void loadThread(String metaId, List<String> list) throws Exception {
+    String sql = createSQL("$id", metaId, "loadRelationForThread") ;
+    loadThead(sql, list);
+    sql = createSQL("$id", metaId, "loadMetaForThread") ;
+    loadThead(sql, list);
+  }
+
+  private void loadThead(String sql, List<String> list) throws Exception {
+    Connection connection = JdbcConnection.get();
+    List<String> metas = new ArrayList<String>();
+    try {
+      metas = loadField(sql, connection);
+    } finally {
+      JdbcConnection.release(connection);
+    }
+    boolean add  = false;
+    for(String ele : metas){      
+      add = true;
+      for(String id : list){
+        if(id.equals(ele)){
+          add = false;
+          break;
+        }
+      }
+      if(add){
+        list.add(ele);
+        loadThread(ele, list);
+      }
+    }
+  }

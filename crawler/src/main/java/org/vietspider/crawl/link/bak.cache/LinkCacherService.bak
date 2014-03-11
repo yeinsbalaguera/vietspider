@@ -1,0 +1,92 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl.link.cache;
+
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.Install;
+import org.vietspider.model.Source;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 21, 2008  
+ */
+public class LinkCacherService extends Thread {
+  
+  private static LinkCacherService instance;
+  
+  static synchronized  public LinkCacherService getInstance() {
+    if(instance == null) instance = new LinkCacherService();
+    return instance;
+  }
+  
+  static public LinkCacher getCacher(Source source) {
+    if(Application.LICENSE != Install.SEARCH_SYSTEM) return null;
+    LinkCacherService service = getInstance();
+    return service.getInternalCacher(source);
+  }
+  
+  static public void endSessionCacher(Source source) {
+    LinkCacherService service = getInstance();
+    LinkCacher cacher = service.getInternalCacher(source);
+    if(cacher != null) service.endSession(cacher);
+  }
+  
+  private ConcurrentHashMap<LinkCacher, Long> hashtable;
+  private long timeout = 10*60*1000;
+  
+  private LinkCacherService() {
+    hashtable = new ConcurrentHashMap<LinkCacher, Long>();
+    start();
+  }
+  
+  public void run() {
+    while(true) {
+      Iterator<LinkCacher> iterator = hashtable.keySet().iterator();
+      long current  = System.currentTimeMillis();
+      while(iterator.hasNext()) {
+        LinkCacher cacher = iterator.next();
+        Long time = hashtable.get(cacher);
+        if(time - current < timeout) continue;
+        endSession(cacher);
+      }
+      
+      try {
+        Thread.sleep(60*1000);
+      } catch (Exception e) {
+      }
+    }
+  }
+  
+  private void endSession(LinkCacher cacher) {
+    cacher.endSession();
+    hashtable.remove(cacher);
+  }
+  
+  private LinkCacher getInternalCacher(Source source) {
+    if(source == null) return null;
+    String fullName  = source.getFullName();
+    
+    Iterator<LinkCacher> iterator = hashtable.keySet().iterator();
+    while(iterator.hasNext()) {
+      LinkCacher cacher = iterator.next();
+      Source cacherSource = cacher.getSource();
+      if(cacherSource == source 
+          || fullName.equals(cacherSource.getFullName())) {
+        hashtable.put(cacher, System.currentTimeMillis());
+        return cacher;
+      }
+    }
+    
+    LinkCacher cacher = new LinkCacher(source);
+    hashtable.put(cacher, System.currentTimeMillis());
+    return cacher;
+    
+  }
+  
+
+}

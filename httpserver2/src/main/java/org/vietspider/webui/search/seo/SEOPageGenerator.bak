@@ -1,0 +1,435 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.webui.search.seo;
+
+import java.io.File;
+import java.net.URLEncoder;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.db.database.DatabaseService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Feb 23, 2010  
+ */
+public class SEOPageGenerator /*extends Thread */{
+
+  private volatile static SEOPageGenerator instance;
+
+  public synchronized static SEOPageGenerator getInstance() {
+    createInstance();
+    return instance;
+  }
+
+  public synchronized static void createInstance() {
+    if(instance != null) return;
+    instance = new SEOPageGenerator();
+  }
+
+//  private int date;
+//  private int hour;
+
+  private String keywords;
+
+  private SEOPageGenerator() {
+//    this.start();
+  }
+
+  public String getKeywords() { return keywords; }
+
+//  public void run() {
+//    if(!(DatabaseService.isMode(DatabaseService.SEARCH))) return;
+//    File file  = UtilFile.getFile("system/cms/search/","keywords.txt");
+//    try {
+//      String value = new String(new DataReader().load(file), Application.CHARSET);
+//      keywords = generateKeyWords(value.split(","));
+//    } catch (Exception e) {
+//      LogService.getInstance().setThrowable(e);
+//    }
+//    
+////    Properties properties = loadConfig();
+////    try {
+////      hour = Integer.parseInt(properties.getProperty("search.seo.generate.page.hour"));
+////    } catch (Exception e) {
+////      hour = 0;
+////    }
+//
+//    while(true) {
+////      generate();
+//      try {
+//        Thread.sleep(15*60*1000);
+//      } catch (Exception e) {
+//      }
+//    }
+//  }
+
+  /*public void generate() {
+    Calendar calendar = Calendar.getInstance();
+    int h  = calendar.get(Calendar.HOUR_OF_DAY);
+    if(h != hour) return;
+    int d = calendar.get(Calendar.DATE);
+    if(d == date) return;
+    date = d;
+
+    File folder = UtilFile.getFolder("system/cms/search/seo/");
+    UtilFile.deleteFolder(folder, false);
+    
+    //generate index file
+    File indexFile = UtilFile.getFile("system/cms/search/seo/", "index.html");
+    
+    PageQueriesRenderer  pageQueries = new PageQueriesRenderer();
+    FileOutputStream output = null;
+    try {
+      output = new FileOutputStream(indexFile);
+      pageQueries.write(output);
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    } finally {
+      try {
+        if(output != null) output.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+    
+    
+    CMSService cms = CMSService.INSTANCE;
+    StringBuilder buildHost = new StringBuilder(SWProtocol.HTTP);
+    buildHost.append(cms.getHost());
+    if(cms.getWebPort() != 80) buildHost.append(':').append(cms.getWebPort());
+    String host = buildHost.toString();
+    
+    //site map
+    File siteMapFile = UtilFile.getFile("system/cms/search/", "sitemap.xml");
+    siteMapFile.delete();
+    
+    StringBuilder builder = new StringBuilder();
+    builder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+    builder.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
+//    builder.append(" xmlns=\"http://www.sitemaps.org/schemas/sitemap-image/1.1\"");
+//    builder.append(" xmlns=\"http://www.sitemaps.org/schemas/sitemap-video/1.1\">");
+    try {
+      new DataWriter().append(siteMapFile, builder.toString().getBytes());
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+
+
+    SEOPageRendererImpl render = new SEOPageRendererImpl();
+
+    Set<Query> queries = SearchMonitor.getInstance().getTopQuery();
+    Iterator<Query> iterator = queries.iterator();
+    while(iterator.hasNext()) {
+      try {
+        generate(render, host, siteMapFile, iterator.next().getPattern());
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+    
+    try {
+      new DataWriter().append(siteMapFile, "</urlset>".getBytes());
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+
+  }*/
+
+  /*private void generate(SEOPageRendererImpl render, String host, File siteMapFile, String pattern) throws Exception {
+    MetaList metas = new MetaList();
+    metas.setAction("search");
+    ClassifiedSearchQuery query = new ClassifiedSearchQuery(pattern);
+    
+    metas.setCurrentPage(1);
+    DatabaseService.getLoader().search(metas, query);
+    
+    MetaList metas2 = new MetaList();
+    metas2.setAction("search");
+    metas2.setCurrentPage(2);
+    DatabaseService.getLoader().search(metas2, query);
+    metas.getData().addAll(metas2.getData());
+
+    String name  = toFileName(pattern);
+    File file  = UtilFile.getFile("system/cms/search/seo/", name);
+    FileOutputStream output = null;
+    try {
+      output = new FileOutputStream(file); 
+      render.write(output, metas, query);
+    } finally {
+      if(output != null) output.close();
+    }
+    
+    StringBuilder builder = new StringBuilder();
+    builder.append("<url>");
+    builder.append("<loc>").append(host).append("/site/page_s/").append(name).append("</loc>");
+    builder.append("<changefreq>daily</changefreq>");
+    builder.append("<priority>1.0</priority>");
+    builder.append("</url>");
+
+    try {
+      new DataWriter().append(siteMapFile, builder.toString().getBytes());
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+
+  }*/
+
+
+//  private Properties loadConfig() {
+//    Properties properties = new Properties();
+//    PropertiesFile propertiesLoader = new PropertiesFile(true);
+//    File fileConfig = new File(UtilFile.getFolder("system"), "mail.config");
+//    if(!fileConfig.exists() || fileConfig.length() < 1) return null;
+//    try {
+//      properties = propertiesLoader.load(fileConfig);
+//    } catch (Exception e) {
+//      LogService.getInstance().setThrowable(e);
+//      return null;
+//    }
+//    return properties;
+//  }
+
+  static String toFileName(String text) {
+    StringBuilder builder = new StringBuilder();
+    for(int i = 0; i < text.length(); i++) {
+      char c = text.charAt(i);
+      switch (c) {
+      case 'À':
+      case 'Á':
+      case 'Ả':
+      case 'Ã':
+      case 'Ạ': 
+
+      case 'Ă': 
+      case 'Ằ': 
+      case 'Ắ': 
+      case 'Ẳ': 
+      case 'Ẵ': 
+      case 'Ặ': 
+
+      case 'Â': 
+      case 'Ầ': 
+      case 'Ấ': 
+      case 'Ẩ': 
+      case 'Ẫ': 
+      case 'Ậ':
+        builder.append('A');
+        break;
+
+      case 'à':
+      case 'á':     
+      case 'ả':
+      case 'ã':
+      case 'ạ':
+
+      case 'ă': 
+      case 'ằ': 
+      case 'ắ': 
+      case 'ẳ': 
+      case 'ẵ': 
+      case 'ặ':
+
+      case 'â': 
+      case 'ầ': 
+      case 'ấ': 
+      case 'ẩ': 
+      case 'ẫ': 
+      case 'ậ':
+        builder.append('a');
+        break;
+
+      case 'Đ': 
+        builder.append('D');
+        break;
+
+      case 'đ': 
+        builder.append('d');
+        break;
+
+      case 'È': 
+      case 'É': 
+      case 'Ẻ': 
+      case 'Ẽ': 
+      case 'Ẹ':
+
+      case 'Ê':
+      case 'Ề': 
+      case 'Ế': 
+      case 'Ể': 
+      case 'Ễ': 
+      case 'Ệ':
+        builder.append('E');
+        break;
+
+      case 'è': 
+      case 'é': 
+      case 'ẻ': 
+      case 'ẽ': 
+      case 'ẹ': 
+
+      case 'ê':
+      case 'ề': 
+      case 'ế': 
+      case 'ể': 
+      case 'ễ': 
+      case 'ệ':
+        builder.append('e');
+        break;
+
+      case 'Ì': 
+      case 'Í': 
+      case 'Ỉ': 
+      case 'Ĩ': 
+      case 'Ị':
+        builder.append('I');
+        break;  
+
+      case 'ì': 
+      case 'í': 
+      case 'ỉ': 
+      case 'ĩ': 
+      case 'ị':
+        builder.append('i');
+        break;     
+      case 'Ò': 
+      case 'Ó': 
+      case 'Ỏ': 
+      case 'Õ': 
+      case 'Ọ':
+
+      case 'Ô':
+      case 'Ồ': 
+      case 'Ố': 
+      case 'Ổ': 
+      case 'Ỗ': 
+      case 'Ộ':
+
+      case 'Ơ': 
+      case 'Ờ': 
+      case 'Ớ': 
+      case 'Ở': 
+      case 'Ỡ': 
+      case 'Ợ': 
+        builder.append('O');
+        break;
+
+      case 'ò': 
+      case 'ó': 
+      case 'ỏ': 
+      case 'õ': 
+      case 'ọ': 
+
+      case 'ô':
+      case 'ồ': 
+      case 'ố': 
+      case 'ổ': 
+      case 'ỗ': 
+      case 'ộ': 
+
+      case 'ơ': 
+      case 'ờ':
+      case 'ớ': 
+      case 'ở': 
+      case 'ỡ': 
+      case 'ợ': 
+        builder.append('o');
+        break;
+
+      case 'Ù': 
+      case 'Ú': 
+      case 'Ủ': 
+      case 'Ũ': 
+      case 'Ụ':
+
+      case 'Ư': 
+      case 'Ừ': 
+      case 'Ứ': 
+      case 'Ử': 
+      case 'Ữ': 
+      case 'Ự':
+        builder.append('U');
+        break;
+
+      case 'ù': 
+      case 'ú': 
+      case 'ủ':
+      case 'ũ': 
+      case 'ụ': 
+
+      case 'ư': 
+      case 'ừ':
+      case 'ứ': 
+      case 'ử': 
+      case 'ữ': 
+      case 'ự':
+        builder.append('u');
+        break;
+
+      case 'Ỳ': 
+      case 'Ý': 
+      case 'Ỷ':
+      case 'Ỹ': 
+      case 'Ỵ': 
+        builder.append('Y');
+        break;
+
+      case 'ỳ': 
+      case 'ý': 
+      case 'ỷ': 
+      case 'ỹ': 
+      case 'ỵ': 
+        builder.append('y');
+        break;
+      default: 
+        if(Character.isLetterOrDigit(c)) {
+          builder.append(c);
+        } else {
+          builder.append('_');
+        }
+        break;
+      }
+    }
+    builder.append(".html");
+    return builder.toString();
+  }
+  
+  private String generateKeyWords(String[] elements) throws Exception {
+    String [][] styles = {
+        {"<b>", "</b>"}, 
+        {"<font style=\"color:#000;font-size:0.9em;font-weight:normal\">", "</font>"},
+        {"<font style=\"color:#600;font-size:1em;font-weight:normal\">", "</font>"},
+        {"<font style=\"color:#c60;font-size:1.125em\">", "</font>"},
+        {"<font style=\"color:#900;font-size:1.85em\">", "</font>"},
+        {"<font style=\"color:#300;font-size:1.75em\">", "</font>"},
+        {"<font style=\"color:#930;font-size:1.5em\">", "</font>"},
+        {"<font style=\"color:#666;font-size:12px\">", "</font>"},
+        {"<font style=\"color:#67696B;font-size:1.3em;font-weight:normal\">", "</font>"},
+        {"<font style=\"color:#333333;font-size:8px;font-weight:bold\">", "</font>"},
+        {"<font style=\"color: blue;font-size:10px\">", "</font>"}
+//        {"<font style=\"color:#600;font-size:1em;font-weight:normal\">", "</font>"},
+//        {"<font style=\"color:#600;font-size:1em;font-weight:normal\">", "</font>"},
+        
+    };
+    StringBuilder builder = new StringBuilder("<p>");
+   
+    for(int i = 0; i < elements.length; i++) {
+//      if(i > 0 && i%5 == 0) builder.append("<br><br>");
+      builder.append("<span onclick=\"window.location='/site/search/1/?query=");
+      builder.append(URLEncoder.encode(elements[i].trim(), "utf-8")).append("'\">");
+      
+      int index = (int)(Math.random()*styles.length);
+      
+      builder.append(styles[index][0]).append(elements[i]).append(styles[index][1]);
+      builder.append("</span>").append(",  ");
+    }
+    builder.append("</p>");
+    return builder.toString();
+  }
+
+
+}

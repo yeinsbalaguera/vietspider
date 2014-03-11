@@ -1,0 +1,56 @@
+/***************************************************************************
+ * Copyright 2003-2006 by VietSpider - All rights reserved.  *
+ *    *
+ **************************************************************************/
+package org.vietspider.content.tp;
+
+import org.vietspider.content.tp.word.CharUtil;
+import org.vietspider.content.tp.word.Word;
+import org.vietspider.content.tp.word.WordList;
+
+/**
+ *  Author : Nhu Dinh Thuan
+ *          Email:nhudinhthuan@yahoo.com
+ * Aug 23, 2006
+ */
+public class SectionComparator {
+
+  public double compare(WordList list1, WordList list2){
+    Index index = getSimilars(list1, list2);    
+    return compareNumber(index, list1, list2);
+  }
+
+  public double compareNumber(Index index, WordList list1, WordList list2){
+    int time  = index.size()*100;
+//  System.out.println(index.size() + " / " +list1.getWord().length +" / "+list2.getWord().length);
+    if(list2.getWord().length == 0) return 0;
+    if(list1.getWord().length == 0) return 0;
+    time = (time/list1.getWord().length) + (time/list2.getWord().length);
+    return time/2;
+  }
+
+  public Index getSimilars(WordList list1, WordList list2){
+    int size = Math.min(list1.size(), list2.size());
+    Word [] words1 = list1.getWord();
+    Word [] words2 = list2.getWord();
+    Index indexs = new Index(size);
+    for(int i = 0; i < words1.length; i++){      
+      for(int j = 0; j < words2.length; j++){
+        if(check(words1[i], words2[j])) indexs.set(i, j);          
+      }
+    }
+    return indexs;
+  }
+
+  private boolean check(Word word1, Word word2){
+    String seq1 = word1.getValue();
+    String seq2 = word2.getValue();
+    if(CharUtil.equals(seq1, seq2)) return true;
+    if(word1.getCount() < 2 || word2.getCount() < 2) return false;
+    CharSequence max = seq1;
+    CharSequence min = seq1.length() > seq2.length() ? seq2 : seq1;
+    if(min == max) max = seq2;
+    return max.toString().indexOf(min.toString()) > -1;
+
+  }
+}

@@ -1,0 +1,340 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.gui.crawler;
+
+import java.util.Properties;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.swt.widgets.Spinner;
+import org.eclipse.swt.widgets.Table;
+import org.vietspider.client.common.CrawlerClientHandler;
+import org.vietspider.client.common.source.SimpleSourceClientHandler;
+import org.vietspider.client.util.ClientProperties;
+import org.vietspider.gui.creator.Creator;
+import org.vietspider.gui.source.SourcesViewer;
+import org.vietspider.gui.source.SourcesViewer.AddSourceListener;
+import org.vietspider.gui.source.SourcesViewer.CrawlSourceEvent;
+import org.vietspider.model.Group;
+import org.vietspider.net.server.CrawlerStatus;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.services.ClientRM;
+import org.vietspider.ui.widget.ApplicationFactory;
+import org.vietspider.ui.widget.InformationViewer;
+import org.vietspider.ui.widget.waiter.ThreadExecutor;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Nov 22, 2007  
+ */
+public abstract class UIPageDownloadListbak {
+
+  protected CrawlerUI crawler;
+
+  protected Table table;
+
+  protected Combo cboFilter;
+  protected Spinner spinPage;
+  
+  protected DownloadListClient downloadList;
+
+  public UIPageDownloadListbak(Composite composite, CrawlerUI uiCrawler, ApplicationFactory factory) {
+    this.crawler = uiCrawler;
+    
+    GridLayout gridLayout = new GridLayout(2, false);
+    gridLayout.marginHeight = 1;
+    gridLayout.horizontalSpacing = 2;
+    gridLayout.verticalSpacing = 2;
+    gridLayout.marginWidth = 2;
+    composite.setLayout(gridLayout); 
+    
+    factory.setComposite(composite);
+    
+    cboFilter = factory.createCombo(SWT.BORDER);
+    cboFilter.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+    cboFilter.addKeyListener( new KeyAdapter(){
+      public void keyPressed(KeyEvent e){       
+        if(e.keyCode == SWT.CR) loadSource(0, cboFilter.getText().trim(), false, -1);
+      }
+    });
+    cboFilter.addSelectionListener(new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt){
+        loadSource(0, cboFilter.getText().trim(), false, -1);
+      }      
+    });
+    
+    spinPage = factory.createSpinner(SWT.BORDER);
+    spinPage.setCursor(new Cursor(spinPage.getDisplay(), SWT.CURSOR_HAND));
+    spinPage.setIncrement(1);
+    spinPage.addModifyListener(new ModifyListener() {
+      @SuppressWarnings("unused")
+      public void modifyText(ModifyEvent event) {
+        loadSource(spinPage.getSelection(), cboFilter.getText().trim(), true, -1);
+      }
+    });
+
+    GridData gridData = new GridData(GridData.FILL_BOTH);
+    gridData.horizontalSpan = 2;
+    table = factory.createTable("tableSource",  null, SWT.FULL_SELECTION | SWT.MULTI);  
+    table.setLinesVisible(true);
+    table.setHeaderVisible(true);
+    table.setLayoutData(gridData);
+    table.addMouseListener(new MouseAdapter(){
+      @SuppressWarnings("unused")
+      public void mouseDoubleClick(MouseEvent e) {
+        crawler.showData(getSelectedSource());
+      }
+    });
+//    table.addSelectionListener(new SelectionAdapter(){
+//      @SuppressWarnings("unused")
+//      public void widgetSelected(SelectionEvent evt) {
+//        crawler.showData(getSelectedSource());
+//      }      
+//    });
+//    table.setFont(UIDATA.FONT_10B);
+
+    Menu menu = new Menu(factory.getComposite().getShell(), SWT.POP_UP);  
+    factory.createMenuItem(menu, "menuCrawlItem", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        handleItem(CrawlerStatus.GO_TO_ITEM);
+      }
+    });
+    
+    factory.createMenuItem(menu, "menuEditSource", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        editSource();
+      }   
+    });
+    
+    factory.createMenuItem(menu, "menuCrawlItemWithRedown", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        MessageBox msg = new MessageBox (table.getShell(), SWT.APPLICATION_MODAL | SWT.YES | SWT.NO);
+        ClientRM resource = new ClientRM("Crawler");
+        msg.setMessage(resource.getLabel("crawler.confirm.redownload"));
+        if(msg.open() != SWT.YES) return ;  
+        handleItem(CrawlerStatus.GO_TO_ITEM_WITH_REDOWNLOAD);
+      }
+    });
+    
+    factory.createMenuItem(menu, SWT.SEPARATOR);
+
+    factory.createMenuItem(menu, "menuAdd", "+.gif", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        addSources();
+      }   
+    });
+
+    factory.createMenuItem(menu, "menuRemove", "-.gif", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        removeSources(); 
+      }   
+    });
+
+    factory.createMenuItem(menu, "menuClear", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        MessageBox msg = new MessageBox (table.getShell(), SWT.APPLICATION_MODAL | SWT.YES | SWT.NO);
+        ClientRM resource = new ClientRM("Crawler");
+        msg.setMessage(resource.getLabel("org.vietspider.gui.crawler.Crawler.msgAlertClearSources"));
+        if(msg.open() != SWT.YES) return ;  
+        new ClearDownloadList();
+      }   
+    });
+
+    factory.createMenuItem(menu, SWT.SEPARATOR);
+
+    factory.createMenuItem(menu, "menuStopItem", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        MessageBox msg = new MessageBox (table.getShell(), SWT.APPLICATION_MODAL | SWT.YES | SWT.NO);
+        ClientRM resource = new ClientRM("Crawler");
+        msg.setMessage(resource.getLabel("org.vietspider.gui.crawler.Crawler.msgAlertStopItem"));
+        if(msg.open() != SWT.YES) return ;
+        handleItem(CrawlerStatus.STOP_ITEM);
+      }
+    });
+
+    factory.createMenuItem(menu, SWT.SEPARATOR);
+    
+    factory.createMenuItem(menu, "menuUpdate", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        loadSource(0, cboFilter.getText().trim(), true, -1);
+      }   
+    });
+    
+    factory.createMenuItem(menu, "menuViewPool", new SelectionAdapter(){
+      @SuppressWarnings("unused")
+      public void widgetSelected(SelectionEvent evt) {
+        new ViewPool();
+      }   
+    });
+    
+    table.setMenu(menu);
+    
+    new LoadGroups();
+  }
+  
+  protected void addSources() {
+    CrawlSourceFilter filter = new CrawlSourceFilter(downloadList);
+    SourcesViewer add = new SourcesViewer(table.getShell(), filter);
+    add.addAddListener(new AddSourceListener(){
+      public void add(CrawlSourceEvent addEvent){
+        String value = addEvent.getValue();
+        if("*".equals(value)) return;
+        try {
+          downloadList.append(value);
+          loadSource(-1, cboFilter.getText().trim(), false, 500);
+        } catch (Exception e) {
+          loadSource(-1, cboFilter.getText().trim(), true, 5*1000);
+        }
+      }
+    });
+    
+  }
+  
+  abstract void loadSource(int page, String pattern, boolean update, long sleep);
+  
+  abstract void handleItem(int style);
+
+  abstract void removeSources(); 
+
+  abstract String [] getSelectedSource(); 
+  
+  abstract void showCrawling(CrawlerStatus crawlStatus); 
+  
+  private void editSource() {
+    if(crawler.getWorkspace() == null) return;
+    String [] values =  getSelectedSource();
+    if(values == null) return ;
+    try{
+      Creator creator = crawler.getWorkspace().getTab().createTool(Creator.class, true, "small.createsource.png");
+      creator.setSelected(values[0], values[1], values[2]);
+    }catch (Exception e) {
+      ClientLog.getInstance().setException(crawler.getWorkspace().getShell(), e);
+    }
+  }
+  
+  private class LoadGroups extends BackgroupLoader {
+    
+    private  Group [] groups = null;
+    
+    private LoadGroups() {
+      super((Crawler)crawler, table);
+    }
+    
+    public void finish() {
+      if(groups == null || cboFilter.isDisposed()) return;
+      for(Group group : groups) {
+        if(group.getType().equals(Group.DUSTBIN)) continue;
+        cboFilter.add("."+group.getType()+".");
+      }
+    }
+
+    public void load() throws Exception {
+      groups = new SimpleSourceClientHandler().loadGroups().getGroups();
+    }
+  }
+  
+  private class ClearDownloadList extends BackgroupLoader {
+    
+    private ClearDownloadList() {
+      super((Crawler)crawler, table);
+    }
+    
+    public void finish() {
+      table.removeAll();
+      loadSource(0, cboFilter.getText().trim(), true, 2000);
+    }
+
+    public void load() throws Exception {
+      new CrawlerClientHandler().removeCrawlSource("*");
+    }
+  }
+  
+  private class ViewPool extends BackgroupLoader {
+
+    String value;
+    private InformationViewer viewer; 
+
+    private ViewPool() {
+      super((Crawler)crawler, table);
+    }
+
+    public void finish() {
+      if(table == null || table.isDisposed()) return;
+      ClientRM resources = new ClientRM("Crawler");
+      String [] buttons = {
+          resources.getLabel("pool.clear.queue"),
+          resources.getLabel("pool.update")
+      };
+      
+      SelectionAdapter [] adapters = {
+          new SelectionAdapter() {
+            @SuppressWarnings("unused")
+            public void widgetSelected(SelectionEvent evt) {
+              Properties properties_ = ClientProperties.getInstance().getProperties();
+              ClientRM resources_ = new ClientRM("Crawler");
+              int style = SWT.APPLICATION_MODAL | SWT.YES | SWT.NO;
+              MessageBox msg = new MessageBox (table.getShell(), style);
+              msg.setMessage(resources_.getLabel("pool.clear.queue.confirm"));
+              if(msg.open() != SWT.YES) return ;
+              new ClearPoolQueue();
+            }
+          },
+          new SelectionAdapter(){
+            @SuppressWarnings("unused")
+            public void widgetSelected(SelectionEvent evt) {
+              new ThreadExecutor(ViewPool.this, table).start();
+            }
+          } 
+      };
+      if(viewer == null) {
+        viewer = new InformationViewer(table.getShell(), value, buttons,  adapters);
+      } else {
+        viewer.setValue(value);
+      }
+    }
+
+    public void load() throws Exception {
+      value =  new CrawlerClientHandler().viewPool();
+    }
+  }
+  
+  private class ClearPoolQueue extends BackgroupLoader {
+
+    private ClearPoolQueue() {
+      super((Crawler)crawler, table);
+    }
+
+    public void finish() {
+    }
+
+    public void load() throws Exception {
+      new CrawlerClientHandler().clearPoolQueue();
+    }
+  }
+
+}

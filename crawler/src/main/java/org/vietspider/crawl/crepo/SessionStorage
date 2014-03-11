@@ -1,0 +1,75 @@
+
+  /* public LinkQueue createLink(boolean save, UrlList urlList) {
+    LinkQueue newQueue = null;
+    List<Link> list = urlList.getList();
+
+    LinkCreator linkCreator = sourceResource.getLinkCreator();
+    for(int i = 0; i < list.size(); i++) {
+      Link referer = urlList.getReferer();
+      Source source = referer.getSource();
+
+      if(newQueue == null)  newQueue = new LinkQueue(source);
+      Link link = list.get(i);
+      if(link == null) continue;
+
+      String host = urlList.getHost();
+      String address = link.getAddress();
+      List<Param> params = link.getParams();
+
+      link = linkCreator.create(host, address, referer.getLevel() + 1, referer.getRootCode());
+      if(link == null) continue;
+      if(codes.contains(link)) continue;
+      link.setParams(params);
+
+      LinkPatterns dataTempl = linkCreator.getDataPatterns();
+      LinkPatterns visitTempl = linkCreator.getVisitPatterns();
+
+      if(source.getDepth() > 1) {
+        link.setIsLink(visitTempl == null || visitTempl.match(address));
+      } else {
+        link.setIsLink(false);
+      }
+      link.setIsData(dataTempl == null || dataTempl.match(address));
+      //    System.out.println(link.getAddress());
+      //    System.out.println("is data "+link.isData()+ ", is link "+ link.isLink());
+      if(!link.isLink() && !link.isData()) continue;
+
+      link.setReferer(referer.getAddress());
+
+      codes.add(link);
+      newQueue.push(link);
+      if(save) continue;
+    }
+    return newQueue;
+  }*/
+
+ /* protected void loadFile(Source source) {
+    if(source == null || sourceResource == null) return;
+    //  JdbmWebCacher webCacher = JdbmWebCacherService.getCacher(source);
+    List<Link> list = new ArrayList<Link>();
+    LinkCacher cacher = LinkCacherService.getCacher(source);
+    if(cacher != null) list = cacher.load();
+    LinkCreator linkCreator = sourceResource.getLinkCreator();
+
+    //  JdbmLinkCacher linkCacher = JdbmLinkCacherService.getCacher(source);
+    //  list.addAll(linkCacher.load(MAX_SIZE_LINK - list.size()));
+
+    if(list.size() < 1) return;
+
+    LinkPatterns dataTempl = linkCreator.getDataPatterns();
+    LinkPatterns visitTempl = linkCreator.getVisitPatterns();
+
+    for(int i = 0; i< list.size(); i++) {
+      Link link  = list.get(i);
+      if(codes.contains(link.getUrlId())) continue;
+
+      link.setIsData(dataTempl == null || dataTempl.match(link.getAddress()));
+      link.setIsLink(visitTempl == null || visitTempl.match(link.getAddress()));
+
+      if(!link.isData() && !link.isLink())  continue;
+
+      codes.add(link);
+      linkQueue.push(link);
+      //    size++;
+    }
+  }*/

@@ -1,0 +1,52 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.crawl;
+
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+
+import org.headvances.storage.v3.MD5Hash;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jan 9, 2009  
+ */
+public class SessionCodesManager {
+
+  private final static SessionCodesManager instances = new SessionCodesManager();
+
+  public static synchronized Set<MD5Hash> get(String fullName) {
+    return instances.getSet(fullName);
+  }
+  
+  public static synchronized Set<MD5Hash> remove(String fullName) {
+    return instances.codes.remove(fullName);
+  }
+
+  private volatile Map<String, Set<MD5Hash>> codes;
+
+  private SessionCodesManager() {
+    codes  = new ConcurrentHashMap<String, Set<MD5Hash>>();
+  }
+
+  public synchronized Set<MD5Hash> getSet(String fullName) {
+    if(fullName == null) return null;
+    Set<MD5Hash> set = codes.get(fullName);
+    if(set != null) return set;
+    set = new ConcurrentSkipListSet<MD5Hash>(new Comparator<MD5Hash>() {
+      @Override
+      public int compare(MD5Hash m1, MD5Hash m2) {
+        return m1.compare(m2);
+      }
+    });
+    codes.put(fullName, set);
+    return set;
+  }
+
+
+}

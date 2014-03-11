@@ -1,0 +1,5 @@
+<div class="menu">
+	<a class="menu" href="/site/search/1/?query=$encodePattern"
+		title="$pattern">&nbsp;&nbsp;&nbsp;$pattern
+	</a>
+</div>
