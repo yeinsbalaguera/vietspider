@@ -1,0 +1,46 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.nlp.impl;
+
+import org.vietspider.bean.NLPData;
+import org.vietspider.nlp.INlpFilter;
+import org.vietspider.nlp.TextElement;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Feb 6, 2011  
+ */
+public class ActionObjectFilter  implements INlpFilter {
+  
+  public static boolean TEST = false;
+
+  public void filter(TextElement element) {
+    if(element.getValue().length() < 4) return;
+    int counter = 0;
+    int index = 0;
+    String text = element.getValue();
+    while(index < text.length()) {
+      char c = text.charAt(index);
+      if(Character.isWhitespace(c)
+          || Character.isSpaceChar(c)) {
+        counter++;
+      }
+      
+      if(counter >= 2) {
+        element.putPoint(type(), 1, -1, -1);
+        return;
+      }
+      index++;
+    }
+    
+    
+  }
+
+  @Override
+  public short type() { return NLPData.ACTION_OBJECT; }
+  
+  
+
+}

@@ -1,0 +1,260 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.vietspider.solr2.search;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.lucene.analysis.CachingTokenFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
+import org.apache.lucene.search.highlight.TextFragment;
+import org.apache.lucene.search.highlight.TokenSources;
+import org.apache.solr.common.SolrException;
+import org.apache.solr.common.params.HighlightParams;
+import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.common.util.NamedList;
+import org.apache.solr.common.util.SimpleOrderedMap;
+import org.apache.solr.highlight.DefaultSolrHighlighter;
+import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.schema.IndexSchema;
+import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.DocIterator;
+import org.apache.solr.search.DocList;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.vietspider.common.io.LogService;
+
+/**
+ * 
+ * @since solr 1.3
+ */
+public class ArticleHighlighter extends DefaultSolrHighlighter {
+
+  @SuppressWarnings("unchecked")
+  public NamedList<Object> doHighlighting(DocList docs, Query query, 
+      SolrQueryRequest req, String[] defaultFields) throws IOException {
+//    SolrParams params1 = req.getParams();
+//    Iterator<Entry<String, Object>> iterator1 = params1.toNamedList().iterator();
+//    while(iterator1.hasNext()) {
+//      Entry<String, Object> entry = iterator1.next();
+//      System.out.println(entry.getKey() + " : "+ entry.getValue());
+//    }
+//    System.out.println("tia day ta thu co "+ req.getParams().get("q"));
+//    System.out.println("hihihi "+query.toString("region"));
+    
+//    if(query instanceof  NewBoostingQuery) {
+//      query = ((NewBoostingQuery)query).getMatchQuery();
+//    }
+    
+    if(query instanceof BooleanQuery) {
+      BooleanQuery mainQuery = (BooleanQuery) query;
+      if(mainQuery.getHighlightQuery() != null) query = mainQuery.getHighlightQuery();
+    }
+    
+    
+    SolrParams params = req.getParams(); 
+    if (!isHighlightingEnabled(params)) return null;
+
+    SolrIndexSearcher searcher = req.getSearcher();
+    IndexSchema schema = searcher.getSchema();
+    NamedList fragments = new SimpleOrderedMap();
+    String[] fieldNames = getHighlightFields(query, req, defaultFields);
+    Set<String> fset = new HashSet<String>();
+
+//    System.out.println(" thay co pattern "+ query.toString());
+    
+    // pre-fetch documents using the Searcher's doc cache
+    for(String f : fieldNames) { 
+      fset.add(f); 
+    }
+    // fetch unique key if one exists.
+    SchemaField keyField = schema.getUniqueKeyField();
+    if(null != keyField) fset.add(keyField.getName());  
+
+    // Highlight each document
+    DocIterator iterator = docs.iterator();
+    for (int i = 0; i < docs.size(); i++) {
+      int docId = iterator.nextDoc();
+      Document doc = searcher.doc(docId, fset);
+      
+      Map<String, String> realData = new HashMap<String, String>();
+      String title  = doc.getField("title").stringValue();
+      if(title != null) title  = title.toLowerCase();
+      String text = doc.getField("text").stringValue();
+      if(title != null) text  = text.toLowerCase();
+      realData.put("title", title);
+      realData.put("text", text);
+      
+      NamedList docSummaries = new SimpleOrderedMap();
+      for (String fieldName : fieldNames) {
+        fieldName = fieldName.trim();
+        String[] docTexts = doc.getValues(fieldName);
+        if (docTexts == null) continue;
+        
+        TokenStream tstream = null;
+        int numFragments = getMaxSnippets(fieldName, params);
+        boolean mergeContiguousFragments = isMergeContiguousFragments(fieldName, params);
+
+        String[] summaries = null;
+        List<TextFragment> frags = new ArrayList<TextFragment>();
+        TermOffsetsTokenStream tots = null;
+        
+        String fieldKey = fieldName;
+        
+        for (int j = 0; j < docTexts.length; j++) {
+          String highlightValue = docTexts[j];
+//          System.out.println(" highlight Value "+ highlightValue);
+          // create TokenStream
+          try {
+            // attempt term vectors
+            if( tots == null ) {
+              TokenStream tvStream = TokenSources.getTokenStream(searcher.getReader(), docId, fieldName);
+              if (tvStream != null) {
+                tots = new TermOffsetsTokenStream(tvStream);
+                tstream = tots.getMultiValuedTokenStream(docTexts[j].length() );
+              } else {
+                // fall back to analyzer
+                tstream = createAnalyzerTStream(schema, fieldName, docTexts[j]);
+              }
+            }
+          } catch (IllegalArgumentException e) {
+            tstream = createAnalyzerTStream(schema, fieldName, docTexts[j]);
+          }
+
+          Highlighter highlighter;
+          if (Boolean.valueOf(req.getParams().get(HighlightParams.USE_PHRASE_HIGHLIGHTER, "true"))) {
+            tstream = new CachingTokenFilter(tstream);
+            highlighter = getPhraseHighlighter(query, fieldName, req, (CachingTokenFilter) tstream);
+            tstream.reset();
+          } else {
+            highlighter = getHighlighter(query, fieldName, req);
+          }
+          
+          int maxCharsToAnalyze = params.getFieldInt(fieldName,
+              HighlightParams.MAX_CHARS, Highlighter.DEFAULT_MAX_CHARS_TO_ANALYZE);
+          if (maxCharsToAnalyze < 0) {
+            highlighter.setMaxDocCharsToAnalyze(docTexts[j].length());
+          } else {
+            highlighter.setMaxDocCharsToAnalyze(maxCharsToAnalyze);
+          }
+
+          try {
+            int index = fieldName.indexOf("_no_mark");
+//            System.out.println("==== > "+ fieldName +" : "+ index);
+            if(index > 0) {
+              fieldKey  = fieldName.substring(0, index);
+              highlightValue = realData.get(fieldKey);
+//              System.out.println(" ta duoc cai nay "+ highlightValue);
+            } 
+            
+            TextFragment[] bestTextFragments = highlighter.getBestTextFragments(
+                tstream, highlightValue, mergeContiguousFragments, numFragments);
+//            System.out.println("buoc dau tien " + bestTextFragments.length);
+            
+            for (int k = 0; k < bestTextFragments.length; k++) {
+              if ((bestTextFragments[k] == null) /*|| (bestTextFragments[k].getScore() < 1)*/) continue;
+//              System.out.println(bestTextFragments[k]+ " ===  >"+ bestTextFragments[k].getScore());
+              frags.add(bestTextFragments[k]);
+            }
+          } catch (InvalidTokenOffsetsException e) {
+//            System.err.println("=================>"+fieldName);
+            LogService.getInstance().setThrowable(SolrException.ErrorCode.SERVER_ERROR, e);
+          }
+        }
+        // sort such that the fragments with the highest score come first
+        Collections.sort(frags, new Comparator<TextFragment>() {
+          public int compare(TextFragment arg0, TextFragment arg1) {
+            return Math.round(arg1.getScore() - arg0.getScore());
+          }
+        });
+
+        // convert fragments back into text
+        // TODO: we can include score and position information in output as snippet attributes
+        if (frags.size() > 0) {
+          ArrayList<String> fragTexts = new ArrayList<String>();
+          for (TextFragment fragment: frags) {
+            if ((fragment != null) && (fragment.getScore() > 0)) {
+              fragTexts.add(fragment.toString());
+            }
+            if (fragTexts.size() >= numFragments) break;
+          }
+          
+          summaries = fragTexts.toArray(new String[0]);
+          if (summaries.length > 0) docSummaries.add(fieldKey, summaries); 
+//            docSummaries.add(fieldName, summaries);
+            
+        } 
+//        else {
+//          System.out.println(" thay cai "+doc.getField("id")+ " : "+frags.size() + " : "+ fieldName);
+//        }
+        
+        // no summeries made, copy text from alternate field
+        if (summaries == null || summaries.length == 0) {
+          String alternateField = req.getParams().getFieldParam(fieldName, HighlightParams.ALTERNATE_FIELD);
+          if (alternateField != null && alternateField.length() > 0) {
+            String[] altTexts = doc.getValues(alternateField);
+            if (altTexts != null && altTexts.length > 0){
+              int alternateFieldLen = req.getParams().getFieldInt(
+                  fieldName, HighlightParams.ALTERNATE_FIELD_LENGTH, 0);
+              if( alternateFieldLen <= 0 ) {
+//                docSummaries.add(fieldName, altTexts);
+                docSummaries.add(fieldKey, altTexts);
+              } else{
+                List<String> altList = new ArrayList<String>();
+                int len = 0;
+                for( String altText: altTexts ){
+                  altList.add( len + altText.length() > alternateFieldLen ?
+                      new String(altText.substring( 0, alternateFieldLen - len )) : altText );
+                  len += altText.length();
+                  if( len >= alternateFieldLen ) break;
+                }
+//                docSummaries.add(fieldName, altList);
+                docSummaries.add(fieldKey, altList);
+              }
+            }
+          }
+        }
+
+      }
+      String printId = schema.printableUniqueKey(doc);
+      fragments.add(printId == null ? null : printId, docSummaries);
+    }
+    
+    return fragments;
+  }
+
+  private TokenStream createAnalyzerTStream(IndexSchema schema, String fieldName, String docText) throws IOException {
+    TokenStream tstream;
+    TokenStream ts = schema.getAnalyzer().reusableTokenStream(fieldName, new StringReader(docText));
+    ts.reset();
+    tstream = new TokenOrderingFilter(ts, 10);
+    return tstream;
+  }
+}
+

@@ -1,0 +1,85 @@
+<project>
+	<parent>
+		<groupId>org.vietspider</groupId>
+		<artifactId>vietspider</artifactId>
+		<version>3.x</version>
+		<relativePath>../</relativePath>
+	</parent>
+
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>org.vietspider.startup</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0</version>
+	<name>org.vietspider.startup</name>
+	<url>http://binhgiang.sourceforge.net/</url>
+	<description>Startup component</description>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.httpserver2</artifactId>
+			<version>1.0</version>
+		</dependency>
+
+		<!-- <dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.solr</artifactId>
+			<version>1.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.solr-indexing</artifactId>
+			<version>1.0</version>
+		</dependency> -->
+
+		
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.solr3</artifactId>
+			<version>3.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.solr3-searcher</artifactId>
+			<version>1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.embededb</artifactId>
+			<version>1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.gui</artifactId>
+			<version>1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+
+		<!--
+			<dependency> <groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.dictionary</artifactId>
+			<version>1.0</version> </dependency>
+		-->
+
+	</dependencies>
+
+	<build>
+		<testResources>
+			<testResource>
+				<directory>src/test/java</directory>
+				<includes>
+					<include>**/*.zip</include>
+				</includes>
+			</testResource>
+		</testResources>
+	</build>
+</project>

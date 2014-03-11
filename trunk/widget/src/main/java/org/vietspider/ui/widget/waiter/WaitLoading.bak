@@ -1,0 +1,276 @@
+package org.vietspider.ui.widget.waiter;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Layout;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Shell;
+import org.pushingpixels.trident.Timeline;
+import org.pushingpixels.trident.Timeline.RepeatBehavior;
+import org.pushingpixels.trident.Timeline.TimelineState;
+import org.pushingpixels.trident.callback.UIThreadTimelineCallbackAdapter;
+import org.pushingpixels.trident.swt.SWTRepaintCallback;
+import org.vietspider.common.util.Worker;
+import org.vietspider.notifier.cache.ColorCache;
+
+public class WaitLoading {
+
+  private Shell shell;
+
+  private Worker worker;
+
+  private Control control;
+
+//  private CloseButton  button;
+//  private ProgressBarIndicator progress;
+
+  Timeline loadingBarLoopTimeline;
+  Timeline loadingBarFadeTimeline;
+
+//  private Color       _titleFgColor = ColorCache.getColor(40, 73, 97);
+  // text foreground color
+//  private Color       _fgColor      = _titleFgColor;
+
+  // shell gradient background color - top
+//  private Color       _bgFgGradient = ColorCache.getColor(226, 239, 249);
+  // shell gradient background color - bottom    
+//  public Color       _bgBgGradient = ColorCache.getColor(177, 211, 243);
+  // shell border color
+  private Color       _borderColor  = ColorCache.getColor(240, 240, 240);
+
+
+  public WaitLoading(Control control, Worker excutor_) {
+    this(control, excutor_, SWT.APPLICATION_MODAL);
+  }
+
+  public WaitLoading(Control control, Worker excutor_, int style) {
+    this.worker = excutor_;
+    this.control = control;
+    shell = new Shell(control.getShell(), style | SWT.NO_TRIM);
+    shell.setAlpha(200);
+    //    shell.setLayout(new GridLayout(2, true));
+
+    //    shell.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_INFO_BACKGROUND));
+
+    shell.setLayout(new Layout() {
+      @SuppressWarnings("unused")
+      protected void layout(Composite composite, boolean flushCache) {
+        int width = composite.getBounds().width;
+        int height = composite.getBounds().height;
+        shell.setBounds(0, 0, width, height);
+        int closeButtonDim = 30;
+        button.setBounds(width - closeButtonDim - 3, 3, closeButtonDim, closeButtonDim);
+        progress.setBounds(5, 37, width - 10, height - 45);
+      }
+
+      @SuppressWarnings("unused")
+      protected Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache) {
+        return new Point(wHint, hHint);
+      }
+    });
+
+    progress = new ProgressBarIndicator(shell);
+
+    this.loadingBarLoopTimeline = new Timeline(this.progress);
+    this.loadingBarLoopTimeline.addPropertyToInterpolate("loadingBarLoopPosition", 0.0f, 1.0f);
+    this.loadingBarLoopTimeline.addCallback(new SWTRepaintCallback(shell));
+    this.loadingBarLoopTimeline.setDuration(750);
+
+    // create the fade timeline
+    this.loadingBarFadeTimeline = new Timeline(this.progress);
+    this.loadingBarFadeTimeline.addPropertyToInterpolate("loadingBarAlpha", 0, 255);
+    this.loadingBarFadeTimeline.addCallback(new UIThreadTimelineCallbackAdapter() {
+      @SuppressWarnings("unused")
+      public void onTimelineStateChanged(TimelineState oldState,
+          TimelineState newState, float durationFraction, float timelinePosition) {
+        if (oldState == TimelineState.PLAYING_REVERSE
+            && newState == TimelineState.DONE) {
+          loadingBarLoopTimeline.cancel();
+          if (!progress.isDisposed()) progress.setVisible(false);
+        }
+      }
+    });
+    this.loadingBarFadeTimeline.setDuration(500);
+    this.loadingBarFadeTimeline.play();
+    this.loadingBarLoopTimeline.playLoop(RepeatBehavior.LOOP);
+
+    /*ImageSequencer seqB = new ImageSequencer(shell, SWT.NONE,
+        new Image[]{ 
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_1),
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_2),
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_3),
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_4),
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_5),
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_6),
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_7),
+        getImage(ToolBoxImageRegistry.IMG_INDICATOR_B_8),				
+    },
+    250,true);*/
+
+    //    seqB.setLayoutData(new GridData(SWT.BEGINNING, SWT.BEGINNING,false,false));
+    //    seqB.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_WHITE));
+
+    button = new CloseButton(shell);
+    button.moveAbove(shell);
+    button.addMouseListener(new MouseAdapter() {
+      @SuppressWarnings("unused")
+      public void mouseUp(MouseEvent e) {
+        worker.abortTask();
+        GraniteUtils.fadeOutAndDispose(shell, 500);
+        shell.dispose();
+      }
+    });
+
+    //    Button button = new Button(shell, SWT.PUSH);
+    //    button.setText("Abort");
+    //    button.addSelectionListener(new SelectionAdapter(){
+    //      @SuppressWarnings("unused")
+    //      public void widgetSelected(SelectionEvent e) {
+    //        excutor.abortTask();
+    //        shell.dispose();
+    //      }
+    //    });
+
+    //    Region region = new Region();
+    //    region.add(new int[] {0, 100, 50, 100});
+    //    //define the shape of the shell using setRegion
+    //    shell.setRegion(region);
+    //    Rectangle size = region.getBounds();
+
+    shell.addListener(SWT.Resize, new Listener() {
+      @SuppressWarnings("unused")
+      public void handleEvent(Event e) {
+        Rectangle rect = shell.getClientArea();
+        // create a new image with that size
+        Image newImage = new Image(Display.getDefault(), Math.max(1, rect.width), rect.height);
+        // create a GC object we can use to draw with
+        GC gc = new GC(newImage);
+
+        // fill background
+//        gc.setForeground(_bgFgGradient);
+//        gc.setBackground(_bgBgGradient);
+        int round = 5;
+        gc.fillRoundRectangle(rect.x, rect.y, rect.width, rect.height, round, round);
+
+        // draw shell edge
+        gc.setLineWidth(2);
+        gc.setForeground(_borderColor);
+        gc.drawRoundRectangle(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2, round, round);
+        // remember to dipose the GC object!
+        gc.dispose();
+
+        // now set the background image on the shell
+        shell.setBackgroundImage(newImage);
+      }
+    });
+    
+    shell.setSize(250, 70);
+    
+    //    System.out.println(parent.getLocation().x + " , "+parent.getLocation().y);
+//    int x = parent.getLocation().x + parent.getSize().x ;
+//    int y = parent.getLocation().y + parent.getSize().y;
+//    shell.setLocation(x/2 - shell.getSize().x /2, y/2 - (shell.getSize().y/2));
+    
+    Shell parent  = control.getShell();
+    Point point = parent.getLocation();
+    Point size = parent.getSize();
+    
+    int x = (point.x + size.x) / 2 + shell.getSize().x/2;
+    int y = (point.y + size.y) / 2 + shell.getSize().y + shell.getSize().y/2;
+    shell.setLocation(x, y);
+  }
+
+
+
+  public void open() {
+//    XPWidgetTheme.setWin32Theme(shell);
+    shell.open();
+    Thread thread = new Thread () {
+      public void run () {
+        shell.getDisplay().syncExec(new Runnable () {
+          public void run () {
+            worker.executeBefore();
+            new Thread(new Runnable() {
+              public void run () {
+                worker.executeTask();
+              }
+            }).start();
+
+            while(worker.isRunning()) {
+              if(control.isDisposed() || shell.isDisposed()) return;
+              if (!shell.getDisplay().readAndDispatch()) shell.getDisplay().sleep();
+            }
+
+            worker.after();
+            Worker [] plugins = worker.getPlugins();
+            if(plugins != null) {
+              for(int i = 0; i < plugins.length; i++) {
+                if(plugins[i] == null) continue;
+                new WaitLoading(control, plugins[i]).open();
+              }
+            }
+            shell.dispose();
+          }
+        });
+      }
+    };
+    thread.start ();
+  }
+
+  public Shell getWindow() { return shell; }
+
+  public static void main(String[] args) {
+    final Display display = new Display();
+    final Shell shell = new Shell(display);
+    shell.setText("Progress indicators");
+    shell.setLayout(new GridLayout(1,false));	
+    shell.setBounds(10, 50, 250, 200);		
+
+    Worker excutor = new Worker() {
+
+      public void abort() {
+      }
+
+      public void before() {
+      }
+
+      public void execute() {
+        try {
+          Thread.sleep(5*1000);
+        } catch (Exception e) {
+        }
+      }
+
+      public void after() {
+        System.exit(0);
+      }
+    };
+
+    WaitLoading loading =	new WaitLoading(shell, excutor);
+//    Rectangle displayRect = UIDATA.DISPLAY.getBounds();
+//    int x = (displayRect.width - 125) / 2;
+//    int y = (displayRect.height - 100)/ 2;
+//    loading.getShell().setLocation(x, y);
+    loading.open();
+
+    shell.open();
+    while (!shell.isDisposed()) {
+      if (!display.readAndDispatch()){
+        display.sleep();
+      }
+    }
+
+    display.dispose();
+  }
+}

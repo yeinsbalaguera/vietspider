@@ -1,0 +1,159 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.widget.waiter;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.LineAttributes;
+import org.eclipse.swt.graphics.Path;
+import org.eclipse.swt.graphics.Pattern;
+import org.eclipse.swt.graphics.Region;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Composite;
+/**
+ * The basis of the album scroller container. Provides the functionality of:
+ * 
+ * <ul>
+ * <li>Fading in once it becomes a part of the host window hierarchy</li>
+ * <li>Dragging the host window with the mouse</li>
+ * <li>Painting a rounded translucent background</li>
+ * </ul>
+ * 
+ * @author Kirill Grouchnikov
+ */
+public class ProgressBarIndicator extends Canvas {
+  
+  float loadingBarLoopPosition;
+
+  int loadingBarAlpha;
+
+  public ProgressBarIndicator(Composite composite) {
+    super(composite, SWT.TRANSPARENT | SWT.DOUBLE_BUFFERED | SWT.NO_BACKGROUND);
+    this.loadingBarAlpha = 0;
+
+    this.addPaintListener(new PaintListener() {
+      @Override
+      public void paintControl(PaintEvent e) {
+        if (loadingBarAlpha > 0) {
+          int width = getBounds().width;
+          int height = getBounds().height;
+
+          GC gc = e.gc;
+          gc.setAntialias(SWT.ON);
+          gc.setAlpha(loadingBarAlpha);
+
+          Region clipping = new Region(e.display);
+          gc.getClipping(clipping);
+
+          int contourRadius = 8;
+
+          // create a round rectangle clip to paint the inner part
+          // of the progress indicator
+          Path clipPath = new GraniteUtils.RoundRectangle(
+              e.display, 0, 0, width, height, contourRadius);
+
+          gc.setClipping(clipPath);
+
+          Color fill1 = new Color(e.display, 156, 208, 221);
+          Color fill2 = new Color(e.display, 101, 183, 243);
+          Pattern pFill1 = new Pattern(e.display, 0, 0, 0,
+              height / 2.0f, fill1, loadingBarAlpha, fill2, loadingBarAlpha);
+          gc.setBackgroundPattern(pFill1);
+          gc.fillRectangle(0, 0, width, height / 2);
+          fill1.dispose();
+          fill2.dispose();
+          pFill1.dispose();
+
+          Color fill3 = new Color(e.display, 67, 169, 241);
+          Color fill4 = new Color(e.display, 138, 201, 247);
+          Pattern pFill2 = new Pattern(e.display, 0,
+              height / 2.0f, 0, height, fill3,
+              loadingBarAlpha, fill4, loadingBarAlpha);
+          gc.setBackgroundPattern(pFill2);
+          gc.fillRectangle(0, height / 2, width, height / 2);
+          fill3.dispose();
+          fill4.dispose();
+          pFill2.dispose();
+
+          int stripeCellWidth = 25;
+          Color stripe1 = new Color(e.display, 36, 155, 239);
+          Color stripe2 = new Color(e.display, 17, 145, 238);
+          Pattern pStripe1 = new Pattern(e.display, 0, 0, 0,
+              height / 2.0f, stripe1, loadingBarAlpha, stripe2, loadingBarAlpha);
+          Color stripe3 = new Color(e.display, 15, 56, 200);
+          Color stripe4 = new Color(e.display, 3, 133, 219);
+          Pattern pStripe2 = new Pattern(e.display, 0, 0, 0,
+              height / 2.0f, stripe3, loadingBarAlpha, stripe4, loadingBarAlpha);
+
+          int stripeWidth = 10;
+          gc.setLineAttributes(new LineAttributes(9.0f));
+          for (int stripeX = (int) (loadingBarLoopPosition * stripeCellWidth); stripeX < width
+              + height; stripeX += stripeCellWidth) {
+            gc.setBackgroundPattern(pStripe1);
+            gc.fillPolygon(new int[] {
+                stripeX - stripeWidth / 2,
+                0,
+                stripeX + stripeWidth / 2,
+                0,
+                stripeX - stripeCellWidth / 2 + stripeWidth
+                    / 2,
+                height / 2,
+                stripeX - stripeCellWidth / 2 - stripeWidth
+                    / 2, height / 2 });
+            gc.setBackgroundPattern(pStripe2);
+            gc
+                .fillPolygon(new int[] {
+                    stripeX - stripeCellWidth / 2
+                        - stripeWidth / 2,
+                    height / 2,
+                    stripeX - stripeCellWidth / 2
+                        + stripeWidth / 2,
+                    height / 2,
+                    stripeX - stripeCellWidth
+                        + stripeWidth / 2,
+                    height,
+                    stripeX - stripeCellWidth
+                        - stripeWidth / 2, height });
+          }
+          stripe1.dispose();
+          stripe2.dispose();
+          stripe3.dispose();
+          stripe4.dispose();
+          pStripe1.dispose();
+          pStripe2.dispose();
+
+          // restore the original clipping to paint the contour
+          gc.setClipping(clipping);
+          clipping.dispose();
+
+          gc.setForeground(e.display
+              .getSystemColor(SWT.COLOR_GRAY));
+          float lineWeight = 1.6f;
+          gc.setLineAttributes(new LineAttributes(lineWeight));
+
+          Path outline = new GraniteUtils.RoundRectangle(
+              e.display, lineWeight / 2.0f - 1,
+              lineWeight / 2.0f - 1, width - 1 - lineWeight
+                  + 2, height - 1 - lineWeight + 2,
+              contourRadius - lineWeight / 2);
+
+          gc.drawPath(outline);
+
+          outline.dispose();
+        }
+      }
+    });
+  }
+
+  public void setLoadingBarAlpha(int loadingBarAlpha) {
+    this.loadingBarAlpha = loadingBarAlpha;
+  }
+
+  public void setLoadingBarLoopPosition(float loadingBarLoopPosition) {
+    this.loadingBarLoopPosition = loadingBarLoopPosition;
+  }
+}

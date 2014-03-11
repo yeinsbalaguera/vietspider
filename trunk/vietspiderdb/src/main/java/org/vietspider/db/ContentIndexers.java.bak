@@ -1,0 +1,82 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.db;
+
+import org.vietspider.common.Application;
+import org.vietspider.db.sync.SyncContentIndex;
+import org.vietspider.db.sync.SyncService;
+import org.vietspider.index.CoreDbIndexers;
+import org.vietspider.index.MergeIndexFile;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 30, 2009  
+ */
+public class ContentIndexers extends Thread {
+
+  private static volatile ContentIndexers INSTANCE;
+
+  public synchronized static ContentIndexers getInstance() {
+    if(INSTANCE == null) INSTANCE  = new ContentIndexers();
+    return INSTANCE; 
+  }
+
+  private volatile boolean execute = true;
+
+  
+  protected CoreDbIndexers dbIndexers;
+  protected MergeIndexFile mergeIndex;
+  
+  public ContentIndexers() {
+    Application.addShutdown(new Application.IShutdown() {
+      
+      public String getMessage() { return "Close Topic Content Indexing";}
+      
+      public void execute() {
+        execute = false;
+        
+        dbIndexers.commitIndexedContents();
+        dbIndexers.closeIndexers();
+      }
+    });
+    
+    String remote = SystemProperties.getInstance().getValue("sync.content.index.server");
+    dbIndexers = new CoreDbIndexers(remote != null && !remote.trim().isEmpty());
+    
+    this.start();
+  }
+
+  public void run() {
+    mergeIndex = new MergeIndexFile();
+    
+    long sleep = 30*1000l + 15*1000L;
+    while(execute) {
+      
+      if(mergeIndex.isMerge())  mergeIndex.merge();
+      
+      
+      dbIndexers.commitIndexedContents();
+      
+      dbIndexers.closeExpires();
+      
+      try {
+        Thread.sleep(sleep);
+      } catch (Exception e) {
+      }
+    }
+  }
+  
+  public void index(ContentIndex contentIndex) {
+    if(contentIndex == null) return;
+    if(dbIndexers.isSync()) {
+      SyncService.getInstance().sync(SyncContentIndex.class, contentIndex);
+    } else {
+      dbIndexers.index(contentIndex);
+    }
+  }
+  
+  public CoreDbIndexers getDbIndexers() { return dbIndexers;  }
+  
+}

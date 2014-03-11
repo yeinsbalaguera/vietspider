@@ -1,0 +1,28 @@
+/*******************************************************************************
+ * Copyright (c) Emil Crumhorn - Hexapixel.com - emil.crumhorn@gmail.com
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    emil.crumhorn@gmail.com - initial API and implementation
+ *******************************************************************************/ 
+
+package com.hexapixel.widgets.ribbon;
+
+public class RibbonCheckbox extends AbstractRibbonGroupItem {
+
+	private RibbonButtonGroup mParent;
+	
+	public RibbonCheckbox(RibbonButtonGroup parent, String labelText, int style) {
+		super(parent.getParent(), labelText, null, style);
+		mParent = parent;
+		parent.addButton(this);
+	}
+	
+	public void dispose() {
+		mParent.dispose(this);
+	}
+	
+}

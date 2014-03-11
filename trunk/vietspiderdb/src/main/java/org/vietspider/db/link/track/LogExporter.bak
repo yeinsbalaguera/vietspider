@@ -1,0 +1,172 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.db.link.track;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.List;
+
+import jdbm.SecondaryTreeMap;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.NameConverter;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Nov 21, 2010  
+ */
+public class LogExporter {
+
+  private LinkLogStorage storage;
+
+  public LogExporter(LinkLogStorage storage) {
+    this.storage = storage;
+  }
+
+  public void export(File file, String...names) {
+    SecondaryTreeMap<String, Long, LinkLog> channelIndex = storage.getChannelIndex();
+    FileOutputStream output = null;
+    FileChannel channel = null;
+    try {
+      if(file.exists()) file.delete();
+      file.createNewFile();
+
+      output = new FileOutputStream(file, true);
+      channel = output.getChannel();
+
+
+      for(String name : names) {
+        StringBuilder builder = new StringBuilder(100);
+        for(LinkLog log : channelIndex.getPrimaryValues(name)) {
+          builder.append(log.toString()).append('\n');
+          if(builder.length() < 1000) continue;
+          byte [] data = builder.toString().getBytes(Application.CHARSET);
+          builder.setLength(0);
+          ByteBuffer buff = ByteBuffer.allocateDirect(data.length);
+          buff.put(data);
+          buff.rewind();
+          if(channel.isOpen()) channel.write(buff);
+          buff.clear(); 
+          storage.setLastAccess();
+        }
+
+        builder.append("\n\n");
+        byte [] data = builder.toString().getBytes(Application.CHARSET);
+        ByteBuffer buff = ByteBuffer.allocateDirect(data.length);
+        buff.put(data);
+        buff.rewind();
+        if(channel.isOpen()) channel.write(buff);
+        buff.clear(); 
+      }
+
+
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    } finally {
+      try {
+        if(channel != null) channel.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+
+      try {
+        if(output != null) output.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+    }
+  }
+  
+  public void exportChannel(File folder) {
+    List<String> channels = storage.getChannels();
+    exportChannel(folder, channels.toArray(new String[0]));
+  }
+
+  public void exportChannel(File folder, String...names) {
+    SecondaryTreeMap<String, Long, LinkLog> channelIndex = storage.getChannelIndex();
+    UtilFile.deleteFolder(folder, false);
+    
+    File logFile = new File(folder, "temp.lck");
+    if(logFile.exists()) {
+      LogService.getInstance().setMessage(null, "Log storage is exporting...");
+      return;
+    }
+    try {
+      logFile.createNewFile();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    
+    LogSummary summary = new LogSummary(folder);
+
+    for(String name : names) {
+      FileOutputStream output = null;
+      FileChannel channel = null;
+      String fullName = null;
+      File file = null;
+      try {
+        file = new File(folder, "temp");
+        if(file.exists()) file.delete();
+        file.createNewFile();
+
+        output = new FileOutputStream(file, true);
+        channel = output.getChannel();
+
+        StringBuilder builder = new StringBuilder(100);
+        for(LinkLog log : channelIndex.getPrimaryValues(name)) {
+          summary.add(log);
+          if(fullName == null) fullName = log.getChannel();
+          builder.append(log.toShortString()).append('\n');
+          if(builder.length() < 1000) continue;
+          byte [] data = builder.toString().getBytes(Application.CHARSET);
+          builder.setLength(0);
+          ByteBuffer buff = ByteBuffer.allocateDirect(data.length);
+          buff.put(data);
+          buff.rewind();
+          if(channel.isOpen()) channel.write(buff);
+          buff.clear(); 
+          storage.setLastAccess();
+        }
+
+        builder.append("\n\n");
+        byte [] data = builder.toString().getBytes(Application.CHARSET);
+        ByteBuffer buff = ByteBuffer.allocateDirect(data.length);
+        buff.put(data);
+        buff.rewind();
+        if(channel.isOpen()) channel.write(buff);
+        buff.clear(); 
+
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      } finally {
+        logFile.delete();
+        try {
+          if(channel != null) channel.close();
+        } catch (Exception e) {
+          LogService.getInstance().setThrowable(e);
+        }
+
+        try {
+          if(output != null) output.close();
+        } catch (Exception e) {
+          LogService.getInstance().setThrowable(e);
+        }
+        
+        if(fullName != null) {
+          String fileName = NameConverter.encode(fullName)+".log";
+          file.renameTo(new File(folder, fileName));
+        }
+        file.delete();
+        
+      }
+    }
+    summary.setExecute(false);
+
+  }
+}

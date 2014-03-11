@@ -1,0 +1,802 @@
+<table align="center" border="0" cellpadding="0" cellspacing="0"  >
+													
+				<tr>					
+										
+					<td align="left" valign="top">
+												
+						<div align="left">
+							<table border="0" cellpadding="0" cellspacing="0" valign="top">
+								<tbody>
+									<tr><td height="10"></td></tr>							
+									<tr>
+										<td valign="top" align="left">
+									 		<h4>GPS thiết bị định vị quản lý ô tô, xe máy</h4><p>PT 300 THIẾT BỊ ĐỊNH VỊ KIỂM SOÁT TÀI SẢN Ô TÔ</p><table>
+<tr>
+<TD valign="top" padding-top="0px; padding-bottom" padding-top="0px; padding-bottom">
+<DIV padding-right="10px; padding-bottom" padding-right="10px; padding-bottom" padding-right="10px; padding-bottom" padding-right="10px; padding-bottom">
+<IMG src="http://www.ketviet.com/modules/d_raovat/imgs/newsads/1243243605_1243006332_a1.jpg" width="250" height="250" border="0">
+</DIV>
+<div jquery1252295202781="508">
+<b>
+<!--font size="6"-->
+<div jquery1252295202781="529">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="530">
+<span jquery1252295202781="531">
+<SPAN jquery1252295202781="532" font-size=" small;">
+<!--font size="2"-->
+<!--strong jquery1252295202781="533"-->
+<SPAN jquery1252295202781="534" font-weight=" normal;">
+Thiết bị định vị
+</SPAN>
+<SPAN jquery1252295202781="536" font-weight=" normal;">
+PT300
+</SPAN>
+<!--strong jquery1252295202781="535"-->
+<SPAN jquery1252295202781="538" font-weight=" normal;">
+hoạt động dựa trên sự kết hợp của sóng không dây GSM ( mạng viễn thông của Tổng công ty Viettel) và sóng vệ tinh GPS ( vệ tinh trên không gian ) Kết hợp với bản đồ số Vietmap , Googlemap .
+</SPAN>
+<!--strong jquery1252295202781="537"-->
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="554">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="555" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="556">
+<SPAN jquery1252295202781="557" text-decoration=" underline;">
+<span jquery1252295202781="558">
+<SPAN jquery1252295202781="559" color=" rgb(0, 0, 255);">
+Ứng dụng:
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="563">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="564" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="565">
+<span jquery1252295202781="566">
+<span jquery1252295202781="567">
+<span jquery1252295202781="568">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="569">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="570">
+<!--strong jquery1252295202781="571"-->
+<SPAN jquery1252295202781="572" font-weight=" normal;">
+<span jquery1252295202781="573">
+Chống trộm trong thuê xe tự lái, quản lý phương tiện vận tải
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="577">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="578" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="579">
+<span jquery1252295202781="580">
+<span jquery1252295202781="581">
+<span jquery1252295202781="582">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="583">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="584">
+<span jquery1252295202781="585">
+<!--strong jquery1252295202781="586"-->
+<SPAN jquery1252295202781="587" font-weight=" normal;">
+Kiểm soát thời gian dừng, thời gian đi của phương tiện
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="590">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="591" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="592">
+<span jquery1252295202781="593">
+<span jquery1252295202781="594">
+<span jquery1252295202781="595">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="596">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="597">
+<!--strong jquery1252295202781="598"-->
+<SPAN jquery1252295202781="599" font-weight=" normal;">
+<span jquery1252295202781="600">
+Quản lý và định mức xăng xe, nhiên liệu
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="604">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="605" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="606">
+<span jquery1252295202781="607">
+<span jquery1252295202781="608">
+<span jquery1252295202781="609">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="610">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="611">
+<span jquery1252295202781="612">
+<!--strong jquery1252295202781="613"-->
+<SPAN jquery1252295202781="614" font-weight=" normal;">
+Ghi lại lộ trình cho các chuyến đi xa không kiểm soát được
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="617">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="618" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="619">
+<span jquery1252295202781="620">
+<span jquery1252295202781="621">
+<span jquery1252295202781="622">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="623">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="624">
+<!--strong jquery1252295202781="625"-->
+<SPAN jquery1252295202781="626" font-weight=" normal;">
+<span jquery1252295202781="627">
+Quản lý trực tiếp qua trang
+<SPAN jquery1252295202781="628" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip">
+Web
+</SPAN>
+riêng (
+<A rel="nofollow" target="_blank" jquery1252295202781="9" href="http://livegps.vn/">
+<!--font color="#3c5a9a"-->
+LIVEGPS.VN
+</A>
+), có thể kiểm tra lại theo lộ trình giờ, ngày, tháng cụ thể mà không mất nhiều thời gian
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="639">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="640">
+<span jquery1252295202781="641">
+<SPAN jquery1252295202781="642" font-size=" small;">
+<SPAN jquery1252295202781="643" color=" rgb(0, 0, 255);">
+<!--font size="2"-->
+<!--strong jquery1252295202781="644"-->
+<SPAN jquery1252295202781="645" text-decoration=" underline;">
+<span jquery1252295202781="646">
+Tính năng
+</SPAN>
+</SPAN>
+<SPAN jquery1252295202781="648" text-decoration=" underline;">
+<span jquery1252295202781="649">
+:
+</SPAN>
+</SPAN>
+<!--strong jquery1252295202781="647"-->
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="650">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="651" font-size=" small;">
+<!--strong jquery1252295202781="652"-->
+<!--font size="2"-->
+<SPAN jquery1252295202781="653" font-weight=" normal;">
+<span jquery1252295202781="654">
+<span jquery1252295202781="655">
+<span jquery1252295202781="656">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="657">
+</SPAN>
+</SPAN>
+</SPAN>
+<SPAN jquery1252295202781="658" font-weight=" normal;">
+<span jquery1252295202781="659">
+<span jquery1252295202781="660">
+Xác định được ngay vị trí cần tìm kiếm
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="662">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="663" font-size=" small;">
+<!--strong jquery1252295202781="664"-->
+<!--font size="2"-->
+<SPAN jquery1252295202781="665" font-weight=" normal;">
+<span jquery1252295202781="666">
+<span jquery1252295202781="667">
+<span jquery1252295202781="668">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="669">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="670">
+<span jquery1252295202781="671">
+<span jquery1252295202781="672">
+Kiểm soát được tốc độ và hướng di chuyển của xe
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="673">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="674" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="675">
+<span jquery1252295202781="676">
+<span jquery1252295202781="677">
+<span jquery1252295202781="678">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="679">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="680">
+<SPAN jquery1252295202781="681" font-weight=" normal;">
+<span jquery1252295202781="682">
+<!--strong jquery1252295202781="683"-->
+Chức năng nghe lén.
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="684">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="685" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="686">
+<span jquery1252295202781="687">
+<span jquery1252295202781="688">
+<span jquery1252295202781="689">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="690">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="691">
+<span jquery1252295202781="692">
+<span jquery1252295202781="693">
+Nút tình trạng khẩn
+<SPAN jquery1252295202781="694" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip">
+cấp SOS
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="695">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="696" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="697">
+<span jquery1252295202781="698">
+<span jquery1252295202781="699">
+<span jquery1252295202781="700">
+·
+</SPAN>
+</SPAN>
+<span jquery1252295202781="701">
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="702">
+<span jquery1252295202781="703">
+<span jquery1252295202781="704">
+Đặc biệt có tính năng tắt mở máy ô tô: khi có trộm cắp hoặc muốn bảo vệ tài sản
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="705">
+<span jquery1252295202781="706">
+<span jquery1252295202781="707">
+Tất cả thông những thông tin về vị trí, tốc độ, thời gian, hướng di chuyển sẽ được thiết bị cập nhật liên tục, chính xác và không mất nhiều thời gian, giảm thiểu tối đa chi phí quản lý.
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="731">
+<b>
+<!--font size="6"-->
+<em jquery1252295202781="709">
+<SPAN jquery1252295202781="710" text-decoration=" underline;">
+<span jquery1252295202781="711">
+<span jquery1252295202781="712">
+<SPAN jquery1252295202781="713" color=" rgb(0, 0, 255); font-size" color=" rgb(0, 0, 255); font-size">
+<!--font size="2"-->
+Lợi ích GPS Tracking PT300 mang lại:
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</EM>
+<span jquery1252295202781="714">
+<br jquery1252295202781="715" />
+</SPAN>
+<span jquery1252295202781="716">
+<span jquery1252295202781="717">
+<SPAN jquery1252295202781="718" font-size=" small;">
+<!--font size="2"-->
+-Giảm chi phí quản lý, chi phí vận hành, nhiên liệu cho Doanh nghiệp.
+<br jquery1252295202781="719" />
+-Điều phối một cách tối ưu (theo thời gian, khỏang cách, chi phí,..), Ứng dụng quản lý vào việc Giám sát và Điều hành các Phương tiện, Tài sản
+<br jquery1252295202781="720" />
+-Hỗ trợ kịp thời trong các trường hợp: Tai nạn, Mất cắp, Bắt cóc, Đi lạc,…..
+<br jquery1252295202781="721" />
+</SPAN>
+</SPAN>
+</SPAN>
+<SPAN jquery1252295202781="732" text-decoration=" underline;">
+<span jquery1252295202781="733">
+<span jquery1252295202781="734">
+<SPAN jquery1252295202781="735" color=" rgb(0, 0, 255); font-size" color=" rgb(0, 0, 255); font-size">
+<!--font size="2"-->
+Giá thiết bị:
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="736">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="737">
+<span jquery1252295202781="738">
+<span jquery1252295202781="739">
+<SPAN jquery1252295202781="740" font-size=" small;">
+<!--font size="2"-->
++
+<SPAN jquery1252295202781="742" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight">
+Thiết bị định vị PT 300 giá
+</SPAN>
+270 USD / 1 cái
+<!--strong jquery1252295202781="741"-->
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="743">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="744">
+<span jquery1252295202781="745">
+<SPAN jquery1252295202781="746" font-size=" small;">
+<!--font size="2"-->
+<!--strong jquery1252295202781="747"-->
+<SPAN jquery1252295202781="748" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color">
++ Phí dịch vụ
+</SPAN>
+<SPAN jquery1252295202781="750" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color">
+50 USD
+</SPAN>
+<!--strong jquery1252295202781="749"-->
+<SPAN jquery1252295202781="752" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color">
+/ năm
+<br />
+</SPAN>
+<!--strong jquery1252295202781="751"-->
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+<SPAN font-size=" large;">
+<SPAN color=" rgb(255, 0, 0);">
+<i>
+<SPAN background-color=" rgb(255, 0, 0);">
+<span jquery1252295202781="744">
+<span jquery1252295202781="745">
+<span jquery1252295202781="746">
+<!--strong jquery1252295202781="751"-->
+<SPAN jquery1252295202781="752" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight" background=" white none repeat scroll 0% 0%; font-weight">
+Khuyến mại đặc biệt từ 1/10 đến hết ngày 30/10/2009 Tất cả khách hàng lắp đặt thiết bị định vị PT300 Được miễn phí 1 năm sử dụng dịch vụ.
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</I>
+</SPAN>
+</SPAN>
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="744">
+<span jquery1252295202781="745">
+<SPAN jquery1252295202781="746" font-size=" small;">
+<!--font size="2"-->
+<!--strong jquery1252295202781="751"-->
+<SPAN jquery1252295202781="752" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color">
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="758">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="759" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="760">
+<!--strong jquery1252295202781="761"-->
+<SPAN jquery1252295202781="762" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color" background=" white none repeat scroll 0% 0%; color">
+<span jquery1252295202781="763">
++ Phí viễn thông: 25. 000đ/ 1 tháng: duy trì hoạt động mạng viễn thông
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="767">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="768">
+<span jquery1252295202781="769">
+<span jquery1252295202781="770">
+<SPAN jquery1252295202781="771" font-size=" small;">
+<!--font size="2"-->
+Bảo hành : 12 tháng
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="772">
+<b>
+<!--font size="6"-->
+<SPAN jquery1252295202781="773" font-size=" small;">
+<!--font size="2"-->
+<span jquery1252295202781="774">
+<span jquery1252295202781="775">
+<span jquery1252295202781="776">
+<SPAN jquery1252295202781="777" color=" rgb(0, 0, 255);">
+Mọi chi tiết vui lòng liên hệ: 0976 294 868
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+<span jquery1252295202781="778">
+<span jquery1252295202781="779">
+<SPAN color=" rgb(0, 0, 255);">
+( A. Khanh )
+</SPAN>
+<br />
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="781">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="782">
+<span jquery1252295202781="783">
+<SPAN jquery1252295202781="784" color=" rgb(255, 0, 0);">
+<span jquery1252295202781="785">
+<SPAN jquery1252295202781="786" font-size=" small;">
+<!--font size="2"-->
+CÔNG TY
+<SPAN jquery1252295202781="787" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip">
+TNHH
+</SPAN>
+TRUYỀN THÔNG VIỆT TOÀN CẦU
+<SPAN jquery1252295202781="788" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip">
+(VIETGLOBAL)
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="789">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="790">
+<span jquery1252295202781="791">
+<SPAN jquery1252295202781="792" font-size=" small;">
+<!--font size="2"-->
+Số 4, Ngõ 46/1, Phạm Ngọc Thạch, Đống Đa, Hà Nội
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="793">
+<b>
+<!--font size="6"-->
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="799">
+<span jquery1252295202781="800">
+<span jquery1252295202781="801">
+<SPAN jquery1252295202781="802" font-size=" small;">
+<!--font size="2"-->
+Hotline:
+<SPAN jquery1252295202781="803" color=" rgb(0, 0, 0);">
+0976 294 868
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</B>
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="794">
+<span jquery1252295202781="795">
+<SPAN jquery1252295202781="796" font-size=" small;">
+<!--font size="2"-->
+/
+<SPAN jquery1252295202781="797" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip">
+Fax
+</SPAN>
+: 04.35738909
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="798">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="799">
+<span jquery1252295202781="800">
+<span jquery1252295202781="801">
+<SPAN jquery1252295202781="802" font-size=" small;">
+<!--font size="2"-->
+<br />
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+<div jquery1252295202781="804">
+<b>
+<!--font size="6"-->
+<span jquery1252295202781="805">
+<span jquery1252295202781="806">
+<SPAN jquery1252295202781="807" font-size=" small;">
+<!--font size="2"-->
+<SPAN jquery1252295202781="808" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip" background=" white none repeat scroll 0% 0%; -moz-background-clip">
+Website
+</SPAN>
+<span jquery1252295202781="809">
+:
+<A rel="nofollow" target="_blank" jquery1252295202781="10" href="http://www.vgl.com.vn/">
+<!--font color="#3c5a9a"-->
+http://www.vgl.com.vn
+</A>
+</SPAN>
+</SPAN>
+</SPAN>
+</SPAN>
+</B>
+</DIV>
+</B>
+</DIV>
+</TD>
+</TR>
+</TABLE>
+<table>
+<tr>
+<TD bgcolor="#E9F4FF" padding-top="5px; padding-bottom" padding-top="5px; padding-bottom">
+<table border="0" cellspacing="0" cellpadding="3" align="center">
+<TBODY>
+<tr>
+<td width="9">
+<SPAN margin="0px">
+</SPAN>
+</TD>
+<td width="9">
+<SPAN margin="0px">
+</SPAN>
+</TD>
+<td>
+Nơi rao:
+</TD>
+<TD padding-right="50px">
+<A href="http://www.ketviet.com/raovat/tinraovat/n-a/n-a/18/">
+<!--strong-->
+Hà Nội
+</A>
+</TD>
+</TR>
+<tr>
+<td width="9">
+<SPAN margin="0px">
+</SPAN>
+</TD>
+<td width="9">
+<SPAN margin="0px">
+</SPAN>
+</TD>
+<td>
+Thời hạn:
+</TD>
+<td>
+<!--strong-->
+26/05/2009 ~ 24/08/2009
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</TD>
+</TR>
+</TABLE>
+<table>
+<TBODY>
+<tr>
+<TD align="center" border-right="none">
+Thông tin người đăng
+</TD>
+</TR>
+<tr>
+<TD valign="top" bgcolor="#E9F4FF" padding="3px">
+<TABLE width="100%" border="1" cellspacing="0" cellpadding="3" border-collapse="collapse; border-style" border-collapse="collapse; border-style" border-collapse="collapse; border-style" border-collapse="collapse; border-style">
+<TBODY>
+<tr>
+<TD valign="top">
+<ul>
+<li>
+<nobr>
+Họ và tên
+</NOBR>
+</LI>
+</UL>
+</TD>
+<TD valign="top" align="right">
+<!--strong-->
+Nguyễn Văn Khanh
+</TD>
+</TR>
+<tr>
+<TD valign="top">
+<ul>
+<li>
+<nobr>
+Điện thoại
+</NOBR>
+</LI>
+</UL>
+</TD>
+<TD valign="top" align="right">
+<!--strong-->
+0982283175
+</TD>
+</TR>
+<tr>
+<TD valign="top">
+<ul>
+<li>
+<nobr>
+Địa chỉ
+</NOBR>
+</LI>
+</UL>
+</TD>
+<TD valign="top" align="right">
+<!--strong-->
+Nhà số 4 - Ngõ 46/1 - Phạm Ngọc Thạch - Ðống Ða - Hà Nội.
+</TD>
+</TR>
+<tr>
+<TD colspan="2">
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<TBODY>
+<tr>
+<td align="center">
+<A href="http://www.ketviet.com/raovat/tinraovat/22321/ymsgr:sendim?caivinnguyen">
+<IMG alt="Chat Yahoo Messenger với 'caivinnguyen'" title="Chat Yahoo Messenger với 'caivinnguyen'" src="http://mail.opi.yahoo.com/online?u=caivinnguyen&m=g&t=2" width="125" height="25" border="0">
+</A>
+</TD>
+<td>
+
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</TD>
+</TR>
+</TBODY>
+</TABLE><table width="100%" align="left"  border=0><tr><td align="right" valign=top>&nbsp;<span class="updated_time_local">(www.ketviet.com:&nbsp;30/10/2009 17:16:01)&nbsp;&nbsp;&nbsp;&nbsp;<a class="othernews_title" href="/vietspider/EDIT/200910061716010082" style="text-decoration: none;">[Sửa nội dung]</a> &nbsp;&nbsp;&nbsp;<a class="othernews_title" href="http://www.ketviet.com/raovat/tinraovat/22321/gps-thiet-bi-dinh-vi-quan-ly-o-to-xe-may.html" style="text-decoration: none;">[Xem tin tại nguồn]</a>&nbsp;&nbsp;&nbsp;<a class="othernews_title" href="JavaScript:history.go(-1) ">[Back]</a></td></tr></table>
+										</td>
+									</tr> 																
+								</tbody>
+							</table>						 	
+						</div>
+						<div width="100%" align="right">
+               				<a href="JavaScript:history.go(-1);" class="othernews_date">[<b>Back</b>]</a>
+               			</div>
+					</td>
+										
+				</tr>

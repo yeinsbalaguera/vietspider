@@ -1,0 +1,42 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.solr2.search;
+
+import org.vietspider.db.solr.query.TimeQuery;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jan 19, 2010  
+ */
+public class TimeScore  implements Comparable<TimeScore> {
+  
+  final static int EXPANSE = 7;
+
+  float score;
+  long time;
+
+  TimeScore(float score, long time) {
+    this.score = score;
+    this.time = time;
+  }
+
+  public int compareTo(TimeScore ts) {
+    
+    if(score >= 2.0f && TimeQuery.getInstance(null).isCurrentDate(time)) return -1;
+    if(ts.score >= 2.0f && TimeQuery.getInstance(null).isCurrentDate(ts.time)) return 1;
+    
+    if(score == ts.score || (score >= 4.0f && ts.score >= 4.0f)) {
+      long rate = ts.time - time;
+      if(rate > 0) return 1;
+      if(rate < 0) return -1;
+    }
+    
+    float rate = ts.score - score;
+    if(rate > 0) return 1;
+    if(rate < 0) return -1;
+    return 0;
+  }
+}

@@ -1,0 +1,119 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.headvances.vietspider.log.user;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.headvances.vietspider.storage.v1.AutoCommitThread;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.CalendarUtils;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 29, 2008  
+ */
+public class UserLogDbService extends AutoCommitThread {
+  
+  private static UserLogDbService INSTANCE;
+  
+  public static UserLogDbService getService() {
+    if(INSTANCE == null) {
+      INSTANCE  = new UserLogDbService();
+    }
+    return INSTANCE;    
+  }
+  
+  protected volatile Queue<DataLog> waitData;
+  
+  protected UserLogDbService()  {
+    waitData = new ConcurrentLinkedQueue<DataLog>();
+    this.start();
+  }
+  
+  public void commit()  {
+    while(!waitData.isEmpty()) {
+      DataLog dataLog = waitData.poll();
+      UserLogDB db = getUserLogDb(dataLog.articleId, true);
+      if(db == null || db.isRepair()) continue;
+      db.write(dataLog.articleId, dataLog.user, dataLog.action);
+      db.setLastAccessTime(System.currentTimeMillis());
+    }
+
+    try {
+      super.commit();
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(e);
+    }
+  }
+  
+  public synchronized void write(String articleId, String user, int action) {
+    waitData.add(new DataLog(articleId, user, action));
+  }
+  
+  public synchronized UserLogDB getUserLogDb(String id, boolean create) {
+    if(id.length() < 10) return null;
+    id = id.substring(0, 8);
+    
+    UserLogDB db = null;
+    String dateValue =  null;
+    File folder = null;
+    try {
+      Date date = new SimpleDateFormat("yyyyMMdd").parse(id);
+      dateValue = CalendarUtils.getFolderFormat().format(date);
+      if(create) {
+        folder = UtilFile.getFolder("track/article/"+dateValue+"/");
+      } else {
+        folder = new File(UtilFile.getFolder("track/article/"), dateValue+"/");
+        if(!folder.exists()) return null;
+      }
+      
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable("USER_LOG_TRACKER", e);
+      return null;
+    }
+    
+    String location = folder.getAbsolutePath();
+    db = (UserLogDB) holder.get(location);
+    
+    try {
+      if(db == null) {
+        db = new UserLogDB(dateValue, location);
+        setAutoCommit(db, 1, 1*1000);
+      } else if(db.getDatabase().hasError()) {
+        db.repair(true);
+        return null;
+      } else if(db.getDatabase().isClose()) {
+        db = new UserLogDB(dateValue, location);
+        setAutoCommit(db, 1, 1*1000);
+      }
+      /*if(db == null || db.getDatabase().isClose()) {
+        db = new UserLogDB(dateValue, location);
+        setAutoCommit(db, 1, 1*1000);
+      }*/
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable("USER_LOG_TRACKER", e);
+    }
+    return db;
+  }
+  
+  private class DataLog {
+    
+    private String articleId;
+    private String user;
+    private int action;
+    
+    private DataLog(String articleId, String user, int action) {
+      this.articleId = articleId;
+      this.user = user;
+      this.action = action;
+    }
+  }
+  
+}

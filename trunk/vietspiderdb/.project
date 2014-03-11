@@ -1,0 +1,18 @@
+<projectDescription>
+  <name>org.vietspider.vietspiderdb</name>
+  <comment>Vietspider DB Component. NO_M2ECLIPSE_SUPPORT: Project files created with the maven-eclipse-plugin are not supported in M2Eclipse.</comment>
+  <projects>
+    <project>org.vietspider.common</project>
+    <project>org.vietspider.htmlparser</project>
+    <project>org.vietspider.model</project>
+    <project>org.vietspider.offices</project>
+  </projects>
+  <buildSpec>
+    <buildCommand>
+      <name>org.eclipse.jdt.core.javabuilder</name>
+    </buildCommand>
+  </buildSpec>
+  <natures>
+    <nature>org.eclipse.jdt.core.javanature</nature>
+  </natures>
+</projectDescription>

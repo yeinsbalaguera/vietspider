@@ -1,0 +1,53 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.startup;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 3, 2008  
+ */
+import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+
+/**
+  * Microsoft SQL Server JDBC test program
+  */
+public class TestH2Database {
+  
+  public TestH2Database() throws Exception {
+    Class<?> clazz = Class.forName("org.vietspider.startup.StartServer");
+    
+    File file = new File(clazz.getResource("/").toURI());
+    String path = file.getCanonicalPath()+File.separator+".."+File.separator+"..";
+    path += File.separator+"src"+File.separator+"test"+File.separator+"data";
+    file  = new File(path);
+    
+    System.setProperty("vietspider.data.path", file.getCanonicalPath());
+    System.setProperty("vietspider.test", "true");
+    
+    // Get connection
+    Class.forName("org.h2.Driver");
+    String url = "jdbc:h2:$vietspider$/vsdb/vsdb;create=true";
+    if(url.indexOf("$vietspider$") > -1){
+//      File f = UtilFile.getFolder("content"); 
+//      url = url.replace("$vietspider$", f.getAbsolutePath());
+    }
+    Connection connection = DriverManager.getConnection(url, "", "");
+    
+    Statement stat = connection.createStatement();
+    ResultSet rs = stat.executeQuery("SELECT count(*) from CONTENT;");
+    while (rs.next())
+    {
+       System.out.println(rs.getString(1));
+    }
+
+  } // Test
+  public static void main (String args[]) throws Exception {
+    TestH2Database test = new TestH2Database();
+  }
+}

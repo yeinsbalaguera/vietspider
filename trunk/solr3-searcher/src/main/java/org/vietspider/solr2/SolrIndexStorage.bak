@@ -1,0 +1,264 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.solr2;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.vietspider.bean.Article;
+import org.vietspider.bean.Domain;
+import org.vietspider.bean.Image;
+import org.vietspider.bean.Meta;
+import org.vietspider.bean.MetaRelation;
+import org.vietspider.bean.Relation;
+import org.vietspider.bean.Relations;
+import org.vietspider.bean.SolrIndex;
+import org.vietspider.common.io.LogService;
+import org.vietspider.db.content.ArticleDatabases;
+import org.vietspider.db.database.DatabaseService;
+import org.vietspider.db.database.MetaList;
+import org.vietspider.index.CommonSearchQuery;
+import org.vietspider.index.SearchResponse;
+import org.vietspider.index.SearchResultCollection;
+import org.vietspider.solr2.index.AutoIndexing;
+import org.vietspider.solr2.rel.RelService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Feb 10, 2011  
+ */
+public class SolrIndexStorage extends SolrStorage {
+
+  private SolrDataIO solr;
+  private SolrNlpComputor2 nlpComputor;
+
+  protected volatile java.util.Queue<Article> tempArticles = new ConcurrentLinkedQueue<Article>();
+  protected volatile java.util.Queue<Image> tempImages = new ConcurrentLinkedQueue<Image>();
+
+  public SolrIndexStorage() throws Exception {
+    super();
+
+    databases = new ArticleDatabases(false) {
+      public Article searchTempArticle(String id) {
+        Article article = searchTempArticle2(id);
+        if(article != null) return article;
+        Iterator<Article> iterator = tempArticles.iterator();
+        while(iterator.hasNext()) {
+          article = iterator.next();
+          if(id.equals(article.getId())) return article;
+        }
+        return null;
+      }
+    };
+    solr = new SolrDataIO(this);
+
+    DatabaseService.setMode(DatabaseService.SEARCH);
+
+    nlpComputor = new SolrNlpComputor2(this);
+
+    new AutoIndexing().start();
+
+    this.start();
+  }
+
+  public SolrDataIO getSolr() { return solr; }
+
+  public ArticleDatabases getDatabases() {
+    return databases;
+  }
+
+  public void deleteByQuery(SolrQuery query) throws Exception {
+  }
+
+  public Article searchTempArticle2(String id) {
+    Iterator<Article> iterator = tempArticles.iterator();
+    while(iterator.hasNext()) {
+      Article article = iterator.next();
+      if(id.equals(article.getId())) return article;
+    }
+    return null;
+  }
+
+  public void commit() {
+    try {
+      while(!tempArticles.isEmpty()) {
+        Article article = tempArticles.poll();
+
+        String duplicate = nlpComputor.search(article);
+        //      databases.save(article);
+
+        if(duplicate == null) {
+          try{
+            SolrIndex index = solr.createSolrIndex(article);
+            solr.getWriter().save(index);
+          } catch (Exception e) {
+            LogService.getInstance().setThrowable(e);
+          }
+          continue;
+        }
+
+        LogService.getInstance().setMessage(null,
+            "Duplicate: " + duplicate + " : " + article.getId());
+        
+        RelService.getInstance().save(duplicate, article.getId());
+      }
+
+      while(!tempImages.isEmpty()) {
+        Image image = tempImages.poll();
+        databases.save(image);
+      }
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    //    System.out.println(" temp "+ tempArticles.size() + " : "+ tempImages.size());
+  }
+
+  public void exit() {
+    solr.close();
+  }
+
+  public boolean contains(long id) { return false; }
+  public void delete(long id) { }
+  public boolean isDeleting(long id) { return false; }
+  public boolean isDelete(long id) throws Throwable {
+    return false;
+  }
+
+  public Article loadArticle(String metaId) {
+    Article article = databases.loadArticle(metaId);
+    if(article != null) return article;
+    if(rsolrDatabase != null) {
+      article = rsolrDatabase.loadArticle(metaId);
+      if(article != null) return article;
+    }
+    return loadArticleFromCrawler(metaId);
+  }
+
+  public Domain loadDomain(String id) { return rsolrDatabase.loadDomain(id); }
+  public Domain loadDomain(long id) { return databases.loadDomain(String.valueOf(id)); }
+  public Image loadImage(String id) { return databases.loadImage(id); }
+
+  public Meta loadMeta(String metaId) {
+    Meta meta = databases.loadMeta(metaId);
+    if(meta != null) return meta;
+
+    if(rsolrDatabase != null)  {
+      return rsolrDatabase.loadMeta(metaId);
+    }
+    return null; 
+  }
+
+  public List<MetaRelation> loadMetaRelation(long id) throws Throwable {
+    Article article = databases.loadArticle(String.valueOf(id));
+    if(article != null) {
+      Relations relations = new Relations(article.getId());
+      relations.setRelations(article.getRelations());
+      return toMetaRelations(relations);
+    }
+    if(rsolrDatabase != null)  {
+      return rsolrDatabase.loadMetaRelations(String.valueOf(id)).getMetaRelations();
+    }
+    return new ArrayList<MetaRelation>();
+  }
+
+  public Meta loadRelMeta(long relId)  {
+    Meta meta = databases.loadMeta(String.valueOf(relId));
+    if(meta != null) return meta;
+    if(rsolrDatabase != null)  {
+      return rsolrDatabase.loadMeta(String.valueOf(relId));
+    }
+    return null;
+  }
+
+  @Override
+  public Relations loadRelations(String metaId) throws Throwable {
+    Article article = databases.loadArticle(metaId);
+    if(article == null) return null;
+
+    Relations relations = new Relations(metaId);
+    relations.setRelations(article.getRelations());
+    return relations;
+  }
+
+  public void save(List<Relation> relations) {
+    if(relations.size() < 1) return;
+    Relation relation = relations.get(0);
+    Article article = databases.loadArticle(relation.getMeta());
+    if(article == null && rsolrDatabase == null) {
+      article = rsolrDatabase.loadArticle(relation.getMeta());
+    }
+    if(article == null) return;
+
+    article.setRelations(relations);
+  }
+
+  public String loadIdByURL(String url) { return databases.loadIdByURL(url); }
+
+  //main search
+  public void search(MetaList metas, CommonSearchQuery query) {
+    int loadPage  = metas.getCurrentPage();
+    int pageSize = metas.getPageSize();
+
+    //    System.out.println("==== >"+query.getPattern());
+
+    int start = (loadPage - 1)*pageSize;
+
+    SearchResponse searcher = new SearchResponse();
+    searcher.setSize(metas.getPageSize());
+    searcher.setQuery(query);
+    searcher.setStart(start);
+
+    String pattern = query.getPattern();
+    //    System.out.println(" ===  >"+ pattern +  " : "+ pattern.startsWith("field:phone:"));
+    if(pattern.startsWith("field:phone:")) {
+      nlpComputor.searchMobile(searcher);
+    } else {
+      searcher = solr.getReader().search(searcher);
+    }
+
+    query.setTime(searcher.getTime());
+
+    long total  = searcher.getTotal();
+    metas.setTotalData(total);
+    if(total%metas.getPageSize() == 0) {
+      metas.setTotalPage((int)total/metas.getPageSize());
+    } else {
+      metas.setTotalPage((int)total/metas.getPageSize() + 1);
+    }
+
+    metas.getData().addAll(searcher.getArticles());
+  }
+
+  public QueryResponse search(SolrQuery query) {
+    return null;
+  }
+
+  public SearchResponse search(SearchResponse searchResponse) {
+    return null;
+  }
+
+  public String searchForCached(SearchResponse searchResponse) {
+    return null;
+  }
+
+  public String loadArticleForSearch(SearchResultCollection collection) {
+    return null;
+  }
+
+  public void save(Article article) {
+    if(article == null) return;
+    tempArticles.add(article);
+  }
+
+  public void save(Image image) {  
+    if(image == null) return;
+    tempImages.add(image); 
+  }
+
+}

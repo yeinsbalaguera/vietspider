@@ -1,0 +1,211 @@
+package org.vietspider.db.link.track;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
+import jdbm.PrimaryStoreMap;
+import jdbm.RecordManager;
+import jdbm.RecordManagerFactory;
+import jdbm.SecondaryKeyExtractor;
+import jdbm.SecondaryTreeMap;
+
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+
+//http://code.google.com/p/jdbm2/
+
+public class LinkLogStorage {
+
+  private final static int MAX_RECORD = 100;
+  private RecordManager recman;
+  private PrimaryStoreMap<Long, LinkLog> main;
+
+  private SecondaryTreeMap<String, Long, LinkLog> channelIndex;
+  private SecondaryTreeMap<Integer, Long, LinkLog> urlCodeIndex;
+  private SecondaryTreeMap<Integer, Long, LinkLog> idIndex;
+
+  private long lastAccess;
+
+  private int counter;
+
+  public LinkLogStorage(String dateFolder) throws Exception {
+    this(new File(UtilFile.getFolder("track/link_log/" + dateFolder), "data"));
+  }
+
+  public LinkLogStorage(File file) throws Exception {
+    recman = RecordManagerFactory.createRecordManager(file.getAbsolutePath());
+    main = recman.storeMap("linklogs");
+    channelIndex = main.secondaryTreeMap("channelIndex",
+        new SecondaryKeyExtractor<String, Long, LinkLog>() {
+      @SuppressWarnings("unused")
+      public String extractSecondaryKey(Long key, LinkLog value) {
+        return value.getChannel();
+      }					
+    });
+
+    urlCodeIndex = main.secondaryTreeMap("urlCodeIndex",
+        new SecondaryKeyExtractor<Integer, Long, LinkLog>() {
+      @SuppressWarnings("unused")
+      public Integer extractSecondaryKey(Long key, LinkLog value) {
+        return value.getUrlCode();
+      }         
+    });
+
+    idIndex = main.secondaryTreeMap("idIndex",
+        new SecondaryKeyExtractor<Integer, Long, LinkLog>() {
+      @SuppressWarnings("unused")
+      public Integer extractSecondaryKey(Long key, LinkLog value) {
+        return value.getId();
+      }         
+    });
+    //		System.out.println(main.size());
+  }
+  
+  public SecondaryTreeMap<String, Long, LinkLog> getChannelIndex() {
+    return channelIndex;
+  }
+
+  public SecondaryTreeMap<Integer, Long, LinkLog> getUrlCodeIndex() {
+    return urlCodeIndex;
+  }
+
+  public SecondaryTreeMap<Integer, Long, LinkLog> getIdIndex() {
+    return idIndex;
+  }
+  
+  public void setLastAccess() {
+    lastAccess = System.currentTimeMillis();
+  }
+
+  synchronized void save(LinkLog log) {
+    lastAccess = System.currentTimeMillis();
+    main.putValue(log);  
+    counter++;
+    if(counter < MAX_RECORD) return;
+    counter = 0; 
+    try {
+      recman.commit();
+    } catch (Exception e) {
+      LogService.getInstance().setMessage(e, e.toString());
+    }
+  }
+
+
+  public Collection<LinkLog> get() {
+    lastAccess = System.currentTimeMillis();
+    return main.values();
+  }
+
+  public List<String> getChannels() {
+    lastAccess = System.currentTimeMillis();
+    List<String> list = new ArrayList<String>();
+    Iterator<String> iterator = channelIndex.keySet().iterator();
+    while(iterator.hasNext()) {
+      list.add(iterator.next());
+    }
+    return list;
+  }
+
+  public List<LinkLog> get(String channel) {
+    lastAccess = System.currentTimeMillis();
+    List<LinkLog> list = new ArrayList<LinkLog>();
+    for(LinkLog log : channelIndex.getPrimaryValues(channel)){
+      list.add(log);
+    } 
+
+    return list;
+  }
+
+  public List<LinkLog> get(String channel, int type) {
+    lastAccess = System.currentTimeMillis();
+    List<LinkLog> list = new ArrayList<LinkLog>();
+    for(LinkLog log : channelIndex.getPrimaryValues(channel)){
+      if(log.getType() != type) continue;
+      list.add(log);
+    }	
+    return list;
+  }
+
+  boolean isTimeout() {
+    if(System.currentTimeMillis() - lastAccess >= 15*60*1000) return true;
+    return false;
+  }
+
+  /*public List<LinkLog> get(final String channel, final int type) {
+		List<LinkLog> list = new ArrayList<LinkLog>();
+		SecondaryTreeMap<Boolean, Long, LinkLog> index = main.secondaryTreeMap("index",
+				new SecondaryKeyExtractor<Boolean, Long, LinkLog>() {
+			public Boolean extractSecondaryKey(Long key, LinkLog value) {
+				if(!value.getChannel().equals(channel)) return false;
+				if(value.getType() != type) return false;
+				return true;
+			}					
+		});
+
+		for(LinkLog log : index.getPrimaryValues(true)){
+			list.add(log);
+			if(list.size() >= MAX_RECORD) break;
+		}	
+
+		return list;
+	}
+
+	public List<LinkLog> get(final String channel, final int type, final int status) {
+		List<LinkLog> list = new ArrayList<LinkLog>();
+		SecondaryTreeMap<Boolean, Long, LinkLog> index = main.secondaryTreeMap("index",
+				new SecondaryKeyExtractor<Boolean, Long, LinkLog>() {
+			public Boolean extractSecondaryKey(Long key, LinkLog value) {
+				if(!value.getChannel().equals(channel)) return false;
+				if(value.getType() != type) return false;
+				if(value.getStatus() != status) return false;
+				return true;
+			}					
+		});
+
+		for(LinkLog log : index.getPrimaryValues(true)){
+			list.add(log);
+			if(list.size() >= MAX_RECORD) break;
+		}	
+
+		return list;
+	}
+
+	public List<LinkLog> get(final String channel, 
+			final int type, final int status, final int error) {
+		List<LinkLog> list = new ArrayList<LinkLog>();
+		SecondaryTreeMap<Boolean, Long, LinkLog> index = main.secondaryTreeMap("index",
+				new SecondaryKeyExtractor<Boolean, Long, LinkLog>() {
+			public Boolean extractSecondaryKey(Long key, LinkLog value) {
+				if(!value.getChannel().equals(channel)) return false;
+				if(value.getType() != type) return false;
+				if(value.getStatus() != status) return false;
+				if(value.getError() != error) return false;
+				return true;
+			}					
+		});
+
+		for(LinkLog log : index.getPrimaryValues(true)){
+			list.add(log);
+			if(list.size() >= MAX_RECORD) break;
+		}	
+
+		return list;
+	}*/
+
+  public void close() {
+    try {
+      recman.commit();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    try {
+      recman.close();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+  }
+
+}

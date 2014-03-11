@@ -1,0 +1,122 @@
+<project>
+	<parent>
+		<groupId>org.vietspider</groupId>
+		<artifactId>vietspider</artifactId>
+		<version>3.x</version>
+		<relativePath>../</relativePath>
+	</parent>
+	
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>org.vietspider.widget</artifactId>
+	<name>org.vietspider.widget</name>
+	<version>1.0</version>
+	<description>Crawler Component</description>
+	<url>http://binhgiang.sourceforge.net/</url>
+	<build>
+		<resources>
+			<resource>
+				<directory>src/main/java</directory>
+				<includes>
+					<include>**/*.properties</include>
+					<include>**/*.xml</include>
+					<include>**/*.png</include>
+					<include>**/*.gif</include>
+					<include>**/*.ico</include>
+					<include>**/*.dll</include>
+				</includes>
+			</resource>
+		</resources>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>org.vietspider.common</artifactId>
+			<version>1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>swt</artifactId>
+			<version>3.7.0</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>mozilla-interfaces</artifactId>
+			<version>1.0</version>
+			<scope>compile</scope>
+		</dependency>
+		
+		<!--<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-ui-browser</artifactId>
+			<version>3.3.100</version>
+			<scope>compile</scope>
+		</dependency>-->
+		
+		<!--<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-equinox-registry</artifactId>
+			<version>3.5.101</version>
+			<scope>compile</scope>
+		</dependency>-->
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>jface</artifactId>
+			<version>3.7.0</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-core-commands</artifactId>
+			<version>3.6.0</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-equinox-common</artifactId>
+			<version>3.6.0</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-ui-forms</artifactId>
+			<version>3.5.2</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-ui-workbench</artifactId>
+			<version>3.7.1</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-osgi</artifactId>
+			<version>3.7.1</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>ibm-icu</artifactId>
+			<version>4.2.2</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>swt</groupId>
+			<artifactId>eclipse-ui-workbench-texteditor</artifactId>
+			<version>3.7.0</version>
+			<scope>compile</scope>
+		</dependency>
+	</dependencies>
+</project>
+

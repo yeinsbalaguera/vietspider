@@ -1,0 +1,372 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+/***************************************************************************
+ * //{"chung cư cao cấp", "1,4"},  {"cccc", "1,4"},
+{"bàn giao căn hộ", "1,4"},  {"căn hộ", "giao nhà", "1,4"}, 
+//{"căn hộ cao cấp", "1,4"}, {"dự án cao ốc căn hộ", "1,4"}, {"quy hoạch", "dự án căn hộ", "1,4"},
+//{"căn hộ giá", "1,4"}, {"thanh toán", "căn hộ", "1,4"}, 
+//{"dự án", "chung cư", "1,4"}, 
+//{"căn hộ", "giá rẻ", "1,4"}, {"căn hộ", "giá sốc", "1,4"},  {"căn hộ", "giá gốc", "1,4"},
+{"ch cao cấp", "1,4"}, 
+ **************************************************************************/
+package org.vietspider.nlp.impl;
+
+import static org.vietspider.bean.NLPData.*;
+import static org.vietspider.bean.NLPData.ACTION_TRAINING;
+import static org.vietspider.bean.NLPData.OBJECT_BUSINESS;
+import static org.vietspider.bean.NLPData.OBJECT_OTHER;
+import static org.vietspider.nlp.impl.ActionObjectData.ACTION_LABELS;
+import static org.vietspider.nlp.impl.ActionObjectData.ACTION_VALUES;
+import static org.vietspider.nlp.impl.ActionObjectData.APARTMENT;
+import static org.vietspider.nlp.impl.ActionObjectData.BUSINESS_LABEL;
+import static org.vietspider.nlp.impl.ActionObjectData.DOUBLE_LABELS;
+import static org.vietspider.nlp.impl.ActionObjectData.DOUBLE_WEAK;
+import static org.vietspider.nlp.impl.ActionObjectData.OBJECT_LABELS;
+import static org.vietspider.nlp.impl.ActionObjectData.OBJECT_VALUES;
+import static org.vietspider.nlp.impl.ActionObjectData.*;
+
+import static org.vietspider.nlp.impl.ActionObjectTextProcessor.*;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import org.vietspider.bean.NLPData;
+import org.vietspider.nlp.INlpExtractor;
+import org.vietspider.nlp.TextElement;
+import org.vietspider.nlp.TextElement.Point;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Dec 18, 2010  
+ */
+public class ActionObjectExtractor2 implements INlpExtractor<String> {
+
+  @SuppressWarnings("unchecked")
+  public void extract(Collection<?> values, TextElement element) {
+    String lower = element.getLower();
+    //    System.out.println(lower);
+    ArrayList<String> list = (ArrayList<String>) values;
+
+    if(list.size() == 1 && list.get(0).charAt(0) == '>') return;
+    
+    String intro = "giới thiệu dự án";
+    if(lower.startsWith(intro)) {
+      list.clear();
+      list.add(">9,7");
+      putPoint(element, 0, intro.length());
+      return;
+    }
+
+    for(int i = 0; i < APARTMENT.length; i++) {
+      String [] keys = APARTMENT[i];
+      for(int j = 0; j < keys.length-1; j++) {
+        int index = indexOf(lower, keys[j]);
+        if(index < 0) continue;
+        //      System.out.println(APARTMENT[i]);
+        //      System.out.println(lower);
+        
+        putPoint(element, index, keys[j].length());
+        
+        for(int k = 0; k < ACTION_LABELS.length; k++) {
+          index = indexOf(lower, ACTION_LABELS[k]);
+          if(index < 0) continue;
+          short action = ACTION_VALUES[k];
+//          System.out.println("===> "+ACTION_LABELS[k]);
+          if(action == ACTION_ASSIGNMENT) action = ACTION_SELL;
+          add(list, element.getValue(), String.valueOf(action) + ",4");
+          putPoint(element, index, ACTION_LABELS[k].length());
+          return;
+        }
+        
+        add(list, element.getValue(), keys[keys.length - 1]);
+        return;
+      }
+    }
+
+    int size = list.size();
+    for(int i = 0; i < ACTION_LABELS.length; i++) {
+      int index = indexOf(lower, ACTION_LABELS[i]);
+      if(index < 0) continue;
+      
+//      if(ACTION_VALUES[i] == ACTION_FOR_RENT) {
+//        System.out.println(lower);
+//        System.out.println(ACTION_LABELS[i] + " : "+ index);
+//      }
+      
+      if(ACTION_VALUES[i] == ACTION_LOAN) {
+        //        System.out.println(lower);
+        add(list, element.getValue(), "8,0");
+        putPoint(element, index, ACTION_LABELS[i].length());
+        continue;
+      }
+      
+      boolean extracted = extractObject(list, element, index, ACTION_LABELS[i], ACTION_VALUES[i]);
+      if(extracted) putPoint(element, index, ACTION_LABELS[i].length());
+    }
+    
+    for(int i = 0; i < START_ACTION_LABELS.length; i++) {
+      if(!lower.startsWith(START_ACTION_LABELS[i])) continue;
+      
+      
+      if(START_ACTION_VALUES[i] == ACTION_LOAN) {
+        add(list, element.getValue(), "8,0");
+        putPoint(element, 0, START_ACTION_LABELS[i].length());
+        continue;
+      }
+      
+      boolean extracted = extractObject(list, element, 0,
+          START_ACTION_LABELS[i], START_ACTION_VALUES[i]);
+      if(extracted) putPoint(element, 0, START_ACTION_LABELS[i].length());
+    }
+
+    if(list.size() != size) return;
+
+    for(int i = 0; i < DOUBLE_LABELS.length; i++) {
+      List<Point> points = exist(lower, i); 
+      if(points == null) continue;
+      // for test
+//      for(int k = 0; k < DOUBLE_LABELS[i].length; k++) {
+//        System.out.print(DOUBLE_LABELS[i][k] + " , ");
+//      }
+//      System.out.println();
+      
+      add(list, element.getValue(), DOUBLE_LABELS[i][DOUBLE_LABELS[i].length - 1]);
+      for(Point p : points) element.putPoint(NLPData.ACTION_OBJECT, p);
+    }
+
+    if(list.size() > 0) return; 
+    
+    for(int i = 0; i < WEAK.length; i++) {
+      String [] keys = WEAK[i];
+      for(int j = 0; j < keys.length - 1; j++) {
+        int idx = indexOf(lower, keys[j], 0);
+        if(idx < 0) continue;
+        add(list, element.getValue(), keys[keys.length -1]);
+        putPoint(element, idx, keys[j].length());
+        return;
+      }
+    }
+    
+    for(int i = 0; i < DOUBLE_WEAK.length; i += 3) {
+      String [] keys = DOUBLE_WEAK[i];
+      Point point1 = null;
+      for(int j = 0; j < keys.length ; j++) {
+        int idx = lower.indexOf(keys[j]);
+        if(idx < 0) continue;
+        point1 = new Point(-1, idx, idx + keys[j].length());
+        break;
+      }
+      if(point1 == null) continue;
+      
+      keys = DOUBLE_WEAK[i+1];
+      Point point2 = null;
+      for(int j = 0; j < keys.length; j++) {
+        int idx = lower.indexOf(keys[j]);
+        if(idx < 0) continue;
+        point2 = new Point(-1, idx, idx + keys[j].length());
+        break;
+      }
+      if(point2 == null) continue;
+      
+      add(list, element.getValue(), DOUBLE_WEAK[i+2][0]);
+      element.putPoint(NLPData.ACTION_OBJECT, point1);
+      element.putPoint(NLPData.ACTION_OBJECT, point2);
+      return;
+    }
+    
+    int index = lower.indexOf("giá");
+    if(index > -1) {
+      List<Point> points = new ArrayList<Point>();
+      createPoint(points, index, 3);
+      short object = searchObject(points, lower, index, 3);
+//      System.out.println(object);
+      if(object > -1) {
+        StringBuilder builder = new StringBuilder();
+        builder.append('<').append('1').append(',').append(object);
+        //          System.out.println(lower);
+        //            System.out.println(builder);
+        add(list, element.getValue(), builder.toString());
+        for(Point p : points) {
+          element.putPoint(NLPData.ACTION_OBJECT, p);
+        }
+      }
+    }
+    
+  }
+  
+  private boolean extractObject(ArrayList<String> list,
+      TextElement element, int index, String actionLabel, short action) {
+    String lower = element.getLower();
+//    System.out.println(" lower "+ lower);
+    List<Point> points = new ArrayList<Point>();
+    short object = searchObject(points, lower, index, actionLabel.length());
+//    System.out.println(/*lower +*/  "  : " + action + " : " + object);
+//          System.out.println(" ===  >"+object + " : "+((action != ACTION_TRAINING 
+//              && object == OBJECT_OTHER)
+//              ));
+    if(object < 0) {
+//      System.out.println(lower);
+//      System.out.println(" hihi "+ ACTION_LABELS[i]);
+//      System.out.println(NLPData.action(ACTION_VALUES[i]));
+      int from = index + actionLabel.length();
+      for(int j = 0; j < BUSINESS_LABEL.length; j++) {
+//        System.out.println(BUSINESS_LABEL[j] + " : "+ (indexOf(lower, BUSINESS_LABEL[j])));
+        int index2 = indexOf(lower, BUSINESS_LABEL[j], from);
+        if(index2 < 0) continue;
+        
+//        if(!lower.startsWith(BUSINESS_LABEL[j])) continue;
+        object = OBJECT_BUSINESS;
+        createPoint(points, index2, BUSINESS_LABEL[j].length());
+        break;
+      }
+    }
+    
+//    System.out.println(lower);
+//    System.out.println("hihihi " + action + " : "+ object);
+    
+    if(object < 0) return false;
+    
+    if(action == ACTION_TRAINING 
+        && object != OBJECT_OTHER) return false;
+    
+    for(Point p : points) {
+      element.putPoint(NLPData.ACTION_OBJECT, p);
+    }
+
+    //      System.out.println(" object "+ object);
+    StringBuilder builder = new StringBuilder();
+    builder.append(action).append(',').append(object);
+    add(list, element.getValue(), builder.toString());
+    
+    return true;
+  }
+
+  private List<Point> exist(String text, int i) {
+    List<Point> points = new ArrayList<Point>();
+    for(int j = 0; j < DOUBLE_LABELS[i].length-1; j++) {
+      int idx = indexOf(text, DOUBLE_LABELS[i][j]);
+      if(idx < 0) return null;
+      createPoint(points, idx, DOUBLE_LABELS[i][j].length());
+    }
+    return points;
+  }
+
+  
+ 
+  private short searchObject(List<Point> points,
+      String text, int start, int length) {
+    //    System.out.println(text);
+    int from = start + length;
+    int end = searchEnd(text, from);
+    //    System.out.println(from + " : "+ end);
+    String value = text.substring(from, end);
+//        System.out.println("\n\nafter: "+value);
+    int order = -1;
+    int index = -1;
+    int len = -1;
+    for(int i = 0; i < OBJECT_LABELS.length; i++) {
+      int idx = indexOf(value, OBJECT_LABELS[i]);
+      if(idx < 0) continue;
+      
+//      System.out.println("=======================");
+//      System.out.println(text);
+//      System.out.println(OBJECT_LABELS[i] + " thay co "+ next);
+      
+//            System.out.println(OBJECT_LABELS[i] + " : "+ idx 
+//                +  " : " +index+ " : " +(index > 0 && idx >= index));
+      if(index > 0 && idx >= index) continue;
+      order = i;
+      index = idx;
+      len = OBJECT_LABELS[i].length();
+      //      System.out.println(OBJECT_LABELS[i]);
+      //      System.out.println(order);
+      //      return OBJECT_VALUES[i];
+    }
+    
+    if(order > -1) {
+      createPoint(points, from + index, len);
+      return OBJECT_VALUES[order];
+    }
+
+    value = text.substring(0, start).trim();
+//        System.out.println("\n\nprevious: "+value);
+    for(int i = 0; i < OBJECT_LABELS.length; i++) {
+//            System.out.println(OBJECT_LABELS[i] + " = " + value.equals(OBJECT_LABELS[i]));
+      if(!value.startsWith(OBJECT_LABELS[i])) continue;
+//            System.out.println(ACTION_LABELS[i] + " : "+ index);
+//            System.out.println(OBJECT_LABELS[i]);
+      createPoint(points, 0, OBJECT_LABELS[i].length());
+      return OBJECT_VALUES[i];
+    }
+
+    return -1;
+  }
+  
+  public boolean isExtract(TextElement element) {
+    if(element.getLower().startsWith("tag:")) return false;
+    return element.getValue().length() > 0;
+    //    return element.getPoint(type()) != null;
+  }
+
+  public short type() { return NLPData.ACTION_OBJECT; }
+
+  public Collection<String> createCollection() { 
+    return new ArrayList<String>();
+  }
+
+  @SuppressWarnings("unchecked")
+  public void closeCollection(Collection<?> collection) {
+    List<String> list = (List<String>) collection;
+
+    boolean remove = false;
+    for (int i = 0; i < list.size(); i++) {
+      if("9,7".equals(list.get(i)) 
+          || list.get(i).charAt(0) == '<') continue;
+      remove = true;
+      break;
+    }
+
+    if(!remove) {
+      cleanItem(list);
+      return;
+    }
+
+    List<String> removes = new ArrayList<String>();
+
+    for (int i = 0; i < list.size(); i++) {
+      if("9,7".equals(list.get(i))
+          || list.get(i).charAt(0) == '<') removes.add(list.get(i));
+    }
+
+    for(int i = 0; i < removes.size(); i++) {
+      list.remove(removes.get(i));
+    }
+
+    cleanItem(list);
+
+  }
+
+  private void cleanItem(List<String> list) {
+    for (int i = 0; i < list.size(); i++) {
+      String value = list.get(i);
+      char c = value.charAt(0);
+      //      System.out.println(value + " : "+ c);
+      if(Character.isLetterOrDigit(c)) continue;
+      value = value.substring(1);
+      list.set(i, value);
+    }
+  }
+
+ /* private String cleanItem(String value) {
+    char c = value.charAt(0);
+    //      System.out.println(value + " : "+ c);
+    if(Character.isLetterOrDigit(c)) return value;
+    return value.substring(1);
+  }*/
+  
+ 
+
+}

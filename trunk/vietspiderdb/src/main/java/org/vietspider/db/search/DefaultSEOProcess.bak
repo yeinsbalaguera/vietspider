@@ -1,0 +1,260 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.db.search;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
+
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.DataReader;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.common.text.CalendarUtils;
+import org.vietspider.db.search.MailSender.NoSessionException;
+import org.vietspider.db.search.SEODatabase.IProcess;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Feb 10, 2010  
+ */
+public class DefaultSEOProcess implements IProcess, Runnable {
+  
+  private final static DefaultSEOProcess seoProcess = new DefaultSEOProcess();
+  
+  public static final DefaultSEOProcess getInstance()  { return seoProcess; }
+
+  private final static long EXPIRE = 2*30*24*60*60*1000L;
+  private final static int MAX_SEND = 5;
+
+  private MailSender mailSender;
+  private String mailTitle;
+  private String mailContent;
+  private int mailDate;
+  private int mailHour = 0;
+
+  private List<String> tempList;
+  private Set<Integer> sentMail = new TreeSet<Integer>() ;
+  
+  private SEODataExportor exportor;
+
+  private DefaultSEOProcess() {
+    exportor = new SEODataExportor();
+    mailSender = new MailSender();
+    
+    Properties properties =  MailSender.loadConfig();
+    try {
+      mailHour = Integer.parseInt(properties.getProperty("mail.send.hour"));
+    } catch (Exception e) {
+      mailHour = 10;
+    }
+    
+    tempList = new ArrayList<String>();
+    
+    mailSender.createSession();
+    File file  = UtilFile.getFile("system", "mail.content.txt");
+    try {
+      String text = new String(new DataReader().load(file), Application.CHARSET);
+      int index = text.indexOf('\n');
+      mailTitle = "no title";
+      if(index > 0) {
+        mailTitle = text.substring(0, index);
+        mailContent = text.substring(index+1);
+      }
+      //      System.out.println(mailTitle);
+      //      System.out.println(mailContent);
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    
+    new Thread(this).start();
+  }
+
+  public void run() {
+    while(true) {
+      try {
+        Calendar calendar = Calendar.getInstance();
+        exportor.export(calendar);
+//                System.out.println("mail hour "+mailSender.getHour());
+//        active(calendar);
+//        test(null);
+
+        Thread.sleep(1*1000l);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable("SEO_PROCESS", e);
+      }
+    }
+  }
+  
+//  private void active(Calendar calendar) {
+//    if(calendar.get(Calendar.HOUR_OF_DAY) != mailHour) return ;
+//    int d = calendar.get(Calendar.DATE);
+//    if(mailDate == d) return ;
+//    mailDate = d;
+//    sentMail.clear();
+//    SEODatabase.getInstance().active(this);
+//
+//    //            try {
+//    //              sendYesterdayMail();
+//    //            } catch (AddressException e) {
+//    //              LogService.getInstance().setMessage(e, e.toString());
+//    //            }
+//  }
+
+  public void export(SEOData data) {
+    exportor.add(data);
+  }
+
+//  public void startHandle() {
+//    mailSender.createSession();
+//    File file  = UtilFile.getFile("system", "mail.content.txt");
+//    try {
+//      String text = new String(new DataReader().load(file), Application.CHARSET);
+//      int index = text.indexOf('\n');
+//      mailTitle = "no title";
+//      if(index > 0) {
+//        mailTitle = text.substring(0, index);
+//        mailContent = text.substring(index+1);
+//      }
+//      //      System.out.println(mailTitle);
+//      //      System.out.println(mailContent);
+//    } catch (Exception e) {
+//      LogService.getInstance().setThrowable(e);
+//    }
+//  }
+
+  public void handle(SEOData data) throws Exception {
+    if(data.getType() != SEOData.EMAIL) return;
+    int code = data.getData().toLowerCase().hashCode();
+    if(sentMail.contains(code) || !data.isNeedProcess()) return;
+    
+    try {
+      InternetAddress.parse(data.getData());  
+    } catch (Exception e) {
+      data.setType(SEOData.DELETE);
+      SEODatabase.getInstance().save(null, data);
+      return;
+    }
+    
+    sentMail.add(code);
+    tempList.add(data.getData());
+//    System.out.println(data.getData()+ " : " + tempList.size());
+    if(tempList.size() < MAX_SEND) return;
+    
+    String [] addresses = tempList.toArray(new String[0]);
+    tempList.clear();
+
+    //    System.out.println(data.getData());
+
+    try {
+      mailSender.send(mailTitle, mailContent, addresses);
+      for(int i = 0; i < addresses.length; i++) {
+        LogService.getInstance().setMessage("SEO_MAIL", null, addresses[i]);
+      }
+    } catch (NoSessionException e) {
+      throw e;
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+      //tempList = new ArrayList<String>();
+    }
+    
+//    if(tempList == null) return;
+    //    System.out.println(" chua.n bi == >"+ data.getData());
+//    tempList.add(data.getData());
+
+//    if(tempList.size() >= MAX_SEND) {
+//      YahooMailSender yahooSender = new YahooMailSender();
+//      String [] addresses = tempList.toArray(new String[0]);
+//      tempList.clear();
+//      try {
+//        yahooSender.send(mailTitle, mailContent, addresses);
+//        for(int i = 0; i < addresses.length; i++) {
+//          sentMail.add(addresses[i].toLowerCase());
+//        }
+//      } catch (AddressException e) {
+//        data.setType(SEOData.DELETE);
+//        SEODatabase.getInstance().save(null, data);
+//      }
+//      LogService.getInstance().setMessage("SEO_MAIL",null, data.getData());
+//    }
+  }
+
+//  public void finishHandle() {
+//    tempList.clear();
+//    mailSender.close();
+//  }
+
+  public boolean isExpireData(SEOData data) {
+    return System.currentTimeMillis() - data.getUpdate() >= EXPIRE;
+  }
+
+  public void sendYesterdayMail() throws Exception {
+    Calendar calendar = Calendar.getInstance();
+    calendar.set(Calendar.DATE, calendar.get(Calendar.DATE) - 1);
+    String name  = CalendarUtils.getFolderFormat().format(calendar.getTime());
+    File file = UtilFile.getFile("content/seo/mail/", name+".txt");
+    byte [] bytes = new DataReader().load(file);
+    String mail = new String(bytes, Application.CHARSET);
+    String [] elements = mail.split("\n");
+    for(String ele : elements) {
+      if(ele.trim().isEmpty()) continue;
+      try {
+        mailSender.send(mailTitle, mailContent, ele);
+      } catch (AddressException e) {
+        LogService.getInstance().setMessage(e, e.toString());
+      } catch (Exception e) {
+        LogService.getInstance().setMessage(e, e.toString());
+        return ;
+      }
+      LogService.getInstance().setMessage("SEO_MAIL",null, ele);
+    }
+  }
+  
+  //only for test() 
+//  private void test(File folder) throws Exception {
+////    System.out.println(" vao day roi");
+//    if(folder == null) {
+//      folder = UtilFile.getFolder("system/mail");
+//    }
+//    if(!folder.exists()) return;
+////    System.out.println(folder.getAbsolutePath());
+//    File [] files = folder.listFiles();
+////    System.out.println(" vao day roi "+ files.length);
+//    if(files == null || files.length < 1) return;
+//    DataReader reader = new DataReader();
+//    startHandle();
+//    int counter = 0;
+//    for(int i = 0; i < files.length; i++) {
+//      String text = new String(reader.load(files[i]), Application.CHARSET);
+//      files[i].delete();
+//      String [] elements = text.split("\n");
+//      for(String ele : elements) {
+//        if(ele.trim().isEmpty()) continue;
+//        handle(new SEOData(ele, SEOData.EMAIL));
+//        counter++;
+//      }
+//    }
+//    folder.delete();
+////    System.out.println(" = ====   >"+ counter);
+//    finishHandle();
+//  }
+  
+//  public static void main(String[] args) throws Exception {
+//    File file = new File("D:\\java\\vietspider\\startup\\src\\test\\data2\\");
+//    System.setProperty("save.link.download", "true");
+//    System.setProperty("vietspider.data.path", file.getCanonicalPath());
+//    System.setProperty("vietspider.test", "true");
+//    file  = new File(file, "system\\mail\\");
+//    DefaultSEOProcess.getInstance().test(file);
+//  }
+
+}

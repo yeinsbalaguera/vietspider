@@ -1,0 +1,220 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.nlp.place;
+
+import org.vietspider.nlp.TextElement;
+import org.vietspider.nlp.TextElement.Point;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jan 12, 2011  
+ */
+public class BakAddressFilter1Plugin  {
+
+  private final static String [] KEYS_0 = {"cần bán", "bán nhà", "cho thuê", "khu đất", 
+    "khu đô thị", "bán chung cư", "bán căn hộ"};
+  private final static String [] KEYS_1 = {"địa điểm", "tọa lạc", "toạ lạc",
+    "nằm gần", "nằm trên", "nằm trong"
+    /*"địa chỉ nhà/đất"*/
+    
+    };
+  private final static int [] INITIAL_SCORES_0 = {0, 0, 0, 0, 
+    0, 0, 0};
+  private final static int [] INITIAL_SCORES_1 = {1, 1, 1, 
+    1, 1, 1
+    };
+  private final static String [] BREAK_WORDS = {"cách"};
+
+  Point filter(TextElement element, short type) {
+    Point point = filter(element, type, KEYS_1, INITIAL_SCORES_1);
+    if(point != null && point.getScore() > 0) return point;
+    point = filter(element, type, KEYS_0, INITIAL_SCORES_0);
+    return point;
+  }
+  
+  Point filter(TextElement element, short type,
+      String [] keys, int [] initial_scores) {
+    String lower = element.getLower();
+    String upper = element.getValue();
+
+
+    int[] starts = indexOf(lower, keys, initial_scores);
+    
+//    System.out.println(" === > "+ starts);
+
+    if(starts == null) return null;
+    Point point = null;
+    int  index = starts[0] + starts[1];
+    BakAddressWord word = null;
+    int score = starts[2];
+
+          System.out.println(upper);
+    while(index < upper.length()) {
+      char c = upper.charAt(index);
+
+      if( (c == '.')
+          && index < upper.length() - 1) { 
+//        char c1 = upper.charAt(index+1);
+        //          System.out.println(c+  " : |"+ c1 + "|" +(Character.isWhitespace(c1) 
+        //              || Character.isSpaceChar(c1)));
+//        if(Character.isWhitespace(c1) 
+//            || Character.isSpaceChar(c1) || c1 == '.') {
+        if(isBreakDot(upper, index)) {
+          if(word != null && word.previous != null) {
+            Point p = createPoint(lower, score, word);
+            if(point == null) {
+              element.putPoint(type, p);
+            } else {
+              point.setNext(p);
+            }
+
+            point = p;
+          }
+          word = null;
+          score = 0;
+        }
+        index++;
+        continue;
+      }
+
+      if(!Character.isLetterOrDigit(c)) {
+        index++;
+        continue;
+      }
+      
+
+      BakAddressWord temp = BakAddressWord.next(upper, lower, index);
+//      System.out.println(" value "+ lower.substring(temp.start, temp.end)  
+//          + " : " + isBreakWord(lower.substring(temp.start, temp.end)));
+      if(temp == null) {
+        index++;
+        continue;
+      }
+      
+      String value = lower.substring(temp.start, temp.end);
+      if(isBreakWord(value)) break;
+
+      score += temp.score;
+
+//      System.out.println("==== >"+upper.substring(temp.start, temp.end) + " : level="+ temp.level);
+//      System.out.println(upper);
+
+      if(temp.level > 0) {
+        if(word == null) {
+          word = temp;
+          word.root = temp;
+        } else {
+          word.next = temp;
+          temp.previous = word;
+          temp.root = word.root;
+          word = temp;
+        }
+        index = word.end;
+        continue;
+      } 
+
+      if(word != null && word.previous != null) {
+        Point p = createPoint(lower, score, word);
+//        System.out.println(element.getValue());
+        if(point == null) {
+          element.putPoint(type, p);
+        } else {
+          point.setNext(p);
+        }
+
+        point = p;
+      }
+      word = null;
+      score = 0;
+      index = temp.end;
+    }
+
+    if(word != null && word.previous != null) {
+      Point p = createPoint(lower, score, word);
+      if(point == null) {
+        element.putPoint(type, p);
+      } else {
+        point.setNext(p);
+      }
+
+      point = p;
+    }
+
+    return point;
+  }
+  
+  private Point createPoint(String text, int score, BakAddressWord word) {
+    while(word != null 
+        && word.level != BakAddressWord.UPPER_LEVEL
+        && word.level != BakAddressWord.DIGIT_LEVEL) {
+      word = word.previous;
+    }
+    if(word == null) return null;
+    if(word.level == BakAddressWord.UPPER_LEVEL  && word.previous != null) {
+      int start = word.previous.end+1;
+      int end  = word.start;
+      while(start < end) {
+        char c = text.charAt(start);
+        if(c == '.' 
+          || c == ';' 
+            || c == ','
+              || c == '(') {
+          String value = text.substring(word.start, word.end);
+//          if(isBreakWord(value)) return null;
+          if(BakAddressWord.isKey(value)) {
+            word = word.previous;
+            break;
+          }
+        }
+        start++;
+      }
+    }
+    if(word == null) return null;
+    if(word == word.root) return null;
+//    System.out.println(text.substring(word.root.start, word.end) + " : " + word +  " : "+ word.root);
+    System.out.println("XXXXXX ===== > "+text.substring(word.root.start, word.end));
+    System.out.println(text);
+    return new Point(score, word.root.start, word.end);
+  }
+  
+  private boolean isBreakWord(String value) {
+    for(int i = 0; i < BREAK_WORDS.length; i++) {
+      if(value.equals(BREAK_WORDS[i])) return true;
+    }
+    return false;
+  }
+  
+  private boolean isBreakDot(String upper, int index) {
+    char c1 = upper.charAt(index+1);
+//    if(!Character.isLetterOrDigit(c1)) return true;
+    if(Character.isDigit(c1) || Character.isUpperCase(c1)) {
+      if(index+2 >= upper.length()) return false;
+      char c2 = upper.charAt(index+2);
+      if(Character.isDigit(c2) && Character.isUpperCase(c2)) return false;
+    }
+   
+    return true;
+  }
+
+  private int[] indexOf(String text, String [] keys, int [] initial_scores) {
+//    System.out.println(text);
+    for(int i = 0; i < keys.length; i++) {
+      int index =  text.indexOf(keys[i]);
+//      System.out.println(" ===  > " + keys[i] +  "="+ index);
+      if(index < 0)  continue;
+      return new int[]{index, keys[i].length(), initial_scores[i]};
+    }
+    
+//    for(int i = 0; i < KEYS_0.length; i++) {
+//      int index =  text.indexOf(KEYS_0[i]);
+//      System.out.println(" ===  > " + KEYS_0[i] +  "="+ index);
+//      if(index < 0)  continue;
+//      return new int[]{index, KEYS_0[i].length(), INITIAL_SCORES_0[i]};
+//    }
+    return null;
+  }
+
+
+}
