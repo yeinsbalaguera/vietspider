@@ -1,0 +1,353 @@
+
+
+/**
+ * Created by VietSpider Studio
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 20, 2006
+ */
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.internal.win32.NONCLIENTMETRICS;
+import org.eclipse.swt.internal.win32.NONCLIENTMETRICSA;
+import org.eclipse.swt.internal.win32.NONCLIENTMETRICSW;
+import org.eclipse.swt.internal.win32.OS;
+import org.eclipse.swt.internal.win32.RECT;
+import org.eclipse.swt.internal.win32.TCHAR;
+
+//Referenced classes of package org.eclipse.swt.widgets:
+//Item, ExpandBar, Control
+
+public class ExpandItem extends Item {
+
+  private ExpandBar parent;
+  Control control;
+  boolean expanded;
+  boolean hover;
+  int x;
+  int y;
+  int width;
+  int height;
+  private Font font;  
+  
+//  private static final int TEXT_INSET = 6;
+//  private static final int BORDER = 1;
+  
+  public ExpandItem(ExpandBar parent, int style) {
+    this(parent, style, checkNull(parent).getItemCount());
+  }
+
+  public ExpandItem(ExpandBar parent, int style, int index){
+    super(parent, style);
+    this.parent = parent;
+    font = parent.getFont();
+    parent.createItem(this, style, index);
+  }
+
+  static ExpandBar checkNull(ExpandBar control) {
+    if(control == null) SWT.error(4);
+    return control;
+  }
+
+  private void drawChevron(int hDC, RECT rect) {
+    rect.left += 4;
+    rect.top += 4;
+    rect.right -= 4;
+    rect.bottom -= 4;
+    int blackPen = OS.CreatePen(0, 1, 0);
+    int oldPen = OS.SelectObject(hDC, blackPen);
+    int polyline1[];
+    int polyline2[];
+    if(expanded)  {
+      int px = rect.left + 5;
+      int py = rect.top + 7;
+      polyline1 = (new int[] {
+          px, py, px + 1, py, px + 1, py - 1, px + 2, py - 1, px + 2, py - 2, 
+          px + 3, py - 2, px + 3, py - 3, px + 3, py - 2, px + 4, py - 2, px + 4, py - 1, 
+          px + 5, py - 1, px + 5, py, px + 7, py
+      });
+      py += 4;
+      polyline2 = (new int[] {
+          px, py, px + 1, py, px + 1, py - 1, px + 2, py - 1, px + 2, py - 2, 
+          px + 3, py - 2, px + 3, py - 3, px + 3, py - 2, px + 4, py - 2, px + 4, py - 1, 
+          px + 5, py - 1, px + 5, py, px + 7, py
+      });
+    } else  {
+      int px = rect.left + 5;
+      int py = rect.top + 4;
+      polyline1 = (new int[] {
+          px, py, px + 1, py, px + 1, py + 1, px + 2, py + 1, px + 2, py + 2, 
+          px + 3, py + 2, px + 3, py + 3, px + 3, py + 2, px + 4, py + 2, px + 4, py + 1, 
+          px + 5, py + 1, px + 5, py, px + 7, py
+      });
+      py += 4;
+      polyline2 = (new int[] {
+          px, py, px + 1, py, px + 1, py + 1, px + 2, py + 1, px + 2, py + 2, 
+          px + 3, py + 2, px + 3, py + 3, px + 3, py + 2, px + 4, py + 2, px + 4, py + 1, 
+          px + 5, py + 1, px + 5, py, px + 7, py
+      });
+    }
+    int darkGrayPen = OS.CreatePen(0, 1, OS.GetSysColor(OS.COLOR_3DSHADOW));
+    if(hover)
+      OS.SelectObject(hDC, blackPen);
+    else
+      OS.SelectObject(hDC, darkGrayPen);
+    OS.Polyline(hDC, polyline1, polyline1.length / 2);
+    OS.Polyline(hDC, polyline2, polyline2.length / 2);
+    if(hover) {
+      int whitePen = OS.CreatePen(0, 1, OS.GetSysColor(OS.COLOR_3DHILIGHT));
+      OS.SelectObject(hDC, whitePen);
+      OS.MoveToEx(hDC, rect.left, rect.bottom, 0);
+      OS.LineTo(hDC, rect.left, rect.top);
+      OS.LineTo(hDC, rect.right, rect.top);
+      OS.SelectObject(hDC, darkGrayPen);
+      OS.LineTo(hDC, rect.right, rect.bottom);
+      OS.LineTo(hDC, rect.left, rect.bottom);
+      OS.SelectObject(hDC, oldPen);
+      OS.DeleteObject(whitePen);
+    } else {
+      OS.SelectObject(hDC, oldPen);
+    }
+    OS.DeleteObject(blackPen);
+    OS.DeleteObject(darkGrayPen);
+  }
+
+  void drawBackground(int hDC, int hTheme, RECT clipRect, RECT rect, int headerHeight){
+    OS.SetRect(rect, x, y, x + width, y + headerHeight);
+    if(hTheme != 0){
+      OS.DrawThemeBackground(hTheme, hDC, 8, 0, rect, clipRect);
+    } else {
+      Color color = parent.getBackground();
+      OS.SetBkColor(hDC, color.handle);
+      int newBrush = OS.CreateSolidBrush(color.handle);
+      OS.SelectObject(hDC, newBrush);
+      OS.PatBlt(hDC, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, 0xf00021);
+      OS.SelectObject(hDC, newBrush);
+      OS.DeleteObject(newBrush);
+    }
+  }
+
+  void drawItem(GC gc, int hTheme, RECT clipRect, boolean drawFocus) {
+    int hDC = gc.handle;
+    int headerHeight = 24;
+    RECT rect = new RECT();
+    drawBackground(hDC, hTheme, clipRect, rect, headerHeight);
+    if(image != null) {
+      rect.left += 6;
+      Rectangle bounds = image.getBounds();
+      if(bounds.height > headerHeight)
+        gc.drawImage(image, 0, 0, bounds.width, bounds.height, rect.left, rect.top, bounds.width, headerHeight);
+      else
+        gc.drawImage(image, rect.left, rect.top + (headerHeight - bounds.height) / 2);
+      rect.left += bounds.width;
+    }
+    if(text.length() > 0) {
+      rect.left += 6;
+      TCHAR buffer = new TCHAR(parent.getCodePage(), text, false);
+      if(hTheme != 0)  {
+        OS.DrawThemeText(hTheme, hDC, 8, 0, buffer.chars, buffer.length(), 36, 0, rect);
+      } else {
+        NONCLIENTMETRICS info = ((OS.IsUnicode ? ((NONCLIENTMETRICS) (new NONCLIENTMETRICSW())) : ((NONCLIENTMETRICS) (new NONCLIENTMETRICSA()))));
+        info.cbSize = NONCLIENTMETRICS.sizeof;
+        int hFont = 0;
+        int oldFont = 0;
+        if(OS.SystemParametersInfo(41, 0, info, 0)) {
+          org.eclipse.swt.internal.win32.LOGFONT logFont;
+          if(font == null)
+            logFont = ((OS.IsUnicode ? ((org.eclipse.swt.internal.win32.LOGFONT) (((NONCLIENTMETRICSW)info).lfCaptionFont)) : ((org.eclipse.swt.internal.win32.LOGFONT) (((NONCLIENTMETRICSA)info).lfCaptionFont))));
+          else
+            logFont = font.getFontData()[0].data;
+          hFont = OS.CreateFontIndirect(logFont);
+          oldFont = OS.SelectObject(hDC, hFont);
+        }
+        int oldBkMode = OS.SetBkMode(hDC, 1);
+        OS.DrawText(hDC, buffer, buffer.length(), rect, 36);
+        OS.SetBkMode(hDC, oldBkMode);
+        if(hFont != 0) {
+          OS.SelectObject(hDC, oldFont);
+          OS.DeleteObject(hFont);
+        }
+      }
+    }
+    rect.left = rect.right - headerHeight;
+    if(hTheme != 0) {
+      int partID = expanded ? 6 : 7;
+      int stateID = hover ? 2 : 1;
+      OS.DrawThemeBackground(hTheme, hDC, partID, stateID, rect, clipRect);
+    } else {
+      drawChevron(hDC, rect);
+    }
+    if(drawFocus) {
+      OS.SetRect(rect, x + 1, y + 1, (x + width) - 2, (y + headerHeight) - 2);
+      OS.DrawFocusRect(hDC, rect);
+    }
+  }
+
+  void destroyWidget() {
+    parent.destroyItem(this);
+    releaseHandle();
+  }
+
+  public Control getControl(){
+    checkWidget();
+    return control;
+  }
+
+  public boolean getExpanded(){
+    checkWidget();
+    return expanded;
+  }
+
+  public int getHeight() {
+    checkWidget();
+    return height;
+  }
+
+  public ExpandBar getParent(){
+    checkWidget();
+    return parent;
+  }
+
+  int getPreferredWidth(int hTheme, int hDC){
+    int w = 36;
+    if(image != null)
+      w = (w += 6) + image.getBounds().width;
+    if(text.length() > 0)   {
+      RECT rect = new RECT();
+      TCHAR buffer = new TCHAR(parent.getCodePage(), text, false);
+      if(hTheme != 0) {
+        OS.GetThemeTextExtent(hTheme, hDC, 8, 0, buffer.chars, buffer.length(), 32, null, rect);
+      } else
+      {
+        NONCLIENTMETRICS info = ( (OS.IsUnicode ? ((NONCLIENTMETRICS) (new NONCLIENTMETRICSW())) : ((NONCLIENTMETRICS) (new NONCLIENTMETRICSA()))));
+        info.cbSize = NONCLIENTMETRICS.sizeof;
+        int hFont = 0;
+        int oldFont = 0;
+        if(OS.SystemParametersInfo(41, 0, info, 0)) {
+          org.eclipse.swt.internal.win32.LOGFONT logFont;
+          if(font == null)
+            logFont = ((OS.IsUnicode ? ((org.eclipse.swt.internal.win32.LOGFONT) (((NONCLIENTMETRICSW)info).lfCaptionFont)) : ((org.eclipse.swt.internal.win32.LOGFONT) (((NONCLIENTMETRICSA)info).lfCaptionFont))));
+          else
+            logFont = font.getFontData()[0].data;
+          hFont = OS.CreateFontIndirect(logFont);
+          oldFont = OS.SelectObject(hDC, hFont);
+        }
+        OS.DrawText(hDC, buffer, buffer.length(), rect, 1024);
+        if(hFont != 0) {
+          OS.SelectObject(hDC, oldFont);
+          OS.DeleteObject(hFont);
+        }
+      }
+      w += rect.right - rect.left;
+    }
+    return w;
+  }
+
+  void redraw(boolean all) {
+    int parentHandle = parent.handle;
+    RECT rect = new RECT();
+    int left = all ? x : (x + width) - 24;
+    OS.SetRect(rect, left, y, x + width, y + 24);
+    OS.InvalidateRect(parentHandle, rect, true);
+    if(OS.COMCTL32_MAJOR < 6 || !OS.IsAppThemed()) {
+      OS.SetRect(rect, x, y + 24, x + width, y + 24 + height + 1);
+      OS.InvalidateRect(parentHandle, rect, true);
+    }
+  }
+
+  void releaseHandle() {
+    super.releaseHandle();
+    parent = null;
+  }
+
+  void releaseWidget(){
+    super.releaseWidget();
+    control = null;
+  }
+
+  void setBounds(int x, int y, int width, int height, boolean move, boolean size) {
+    redraw(true);
+    int flags = 55;
+    if(move) {
+      this.x = x;
+      this.y = y;
+      flags &= -3;
+      redraw(true);
+    }
+    if(size) {
+      this.width = width;
+      this.height = height;
+      flags &= -2;
+      redraw(true);
+    }
+    if(control != null && !control.isDisposed()) {
+      int hwnd = control.handle;
+      if(OS.COMCTL32_MAJOR < 6 || !OS.IsAppThemed()) {
+        x++;
+        width = Math.max(0, width - 2);
+        height = Math.max(0, height - 1);
+      }
+      SetWindowPos(hwnd, 0, x, y + 24, width, height, flags);
+    }
+  }
+
+  public void setControl(Control control){
+    checkWidget();
+    if(control != null) {
+      if(control.isDisposed())
+        error(5);
+      if(control.parent != parent)
+        error(32);
+    }
+    this.control = control;
+    if(control != null){
+      int hwnd = control.handle;
+      OS.ShowWindow(hwnd, expanded ? 5 : 0);
+      int flags = 52;
+      if(OS.COMCTL32_MAJOR < 6 || !OS.IsAppThemed()){
+        x++;
+        width = Math.max(0, width - 2);
+        height = Math.max(0, height - 1);
+      }
+      SetWindowPos(hwnd, 0, x, y + 24, width, height, flags);
+    }
+  }
+
+  public void setExpanded(boolean expanded){
+    checkWidget();
+    this.expanded = expanded;
+    parent.showItem(parent.indexOf(this));
+  }
+
+  public void setHeight(int height) {
+    checkWidget();
+    if(height < 0)
+      return;
+    setBounds(0, 0, width, height, false, true);
+    if(expanded)
+      parent.layoutItems(parent.indexOf(this) + 1, true);
+  }
+
+  public void setImage(Image image){
+    super.setImage(image);
+    redraw(true);
+  }
+
+  public void setText(String string) {
+    super.setText(string);
+    redraw(true);
+  }
+
+  public void setFont(Font f) {
+    font = f;
+  }
+
+  public Font getFont() {
+    return font;
+  } 
+}

@@ -1,0 +1,33 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.user;
+
+import java.io.File;
+
+import org.vietspider.common.io.UtilFile;
+import org.vietspider.db.content.ArticleDatabases;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 11, 2011  
+ */
+public class UserDatabases extends ArticleDatabases {
+  
+  private static UserDatabases INSTANCE;
+  
+  public final static UserDatabases getInstance() {
+    if(INSTANCE == null) INSTANCE = new UserDatabases();
+    return INSTANCE;
+  }
+  
+  public UserDatabases() {
+    super(true);
+  }
+  
+  public File getRoot() {
+    return UtilFile.getFolder("content/user/post/");
+  }
+
+}

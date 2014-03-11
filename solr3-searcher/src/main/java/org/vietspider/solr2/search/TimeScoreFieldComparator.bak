@@ -1,0 +1,78 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.solr2.search;
+
+import java.io.IOException;
+
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.search.FieldCache;
+import org.apache.lucene.search.FieldComparator;
+import org.apache.lucene.search.Scorer;
+
+class TimeScoreFieldComparator extends FieldComparator {
+
+  private final TimeScore [] data;
+  private TimeScore bottom;
+  private float minScore = -1;
+
+  private Long [] times;
+  private Scorer scorer;
+
+  TimeScoreFieldComparator(final int numHits) {
+    data = new TimeScore[numHits];
+  }
+
+  public void setScorer(Scorer scorer) {
+    this.scorer = scorer;
+  }
+
+  @Override
+  public int compare(final int slot1, final int slot2) {
+//    new Exception().printStackTrace();
+    return data[slot1].compareTo(data[slot2]);
+    //        System.out.println(values[slot1]+ " : "+ value(slot2));
+    //    System.out.println(score1 + " : "+ score2);
+  }
+
+  public int compareBottom(final int doc) {
+    //    return bottom.compareTo(data[doc]);
+    try {
+      float score = scorer.score();
+      return bottom.score > score ? -1 : (bottom.score < score ? 1 : 0);
+    } catch (Exception e) {
+      return 0;
+    }
+  }
+
+  public void copy(final int slot, final int doc) { 
+    try {
+      float score = scorer.score();
+      if(minScore > -1) {
+        //      System.out.println(" thay co minscore "+ minScore+ " : "+ score);
+        if(score < minScore) score = -1;
+      }
+      data[slot] = new TimeScore(score, times[doc]);
+    }catch (Exception e) {
+      data[slot] = new TimeScore(0, times[doc]);
+    }
+  }
+
+  public void setNextReader(final IndexReader reader, final int docBase) throws IOException {
+    long [] temp = FieldCache.DEFAULT.getLongs(reader, "time");
+    times = new Long[temp.length];
+    for(int i = 0; i < temp.length; i++) {
+      times[i] = temp[i];
+    }
+  }
+
+  public void setBottom(final int bot) { this.bottom = data[bot]; }
+
+  public void setMinScore(float score) { minScore = score;}
+
+  public Comparable<TimeScore> value(final int slot) {
+    return data[slot]; 
+  }
+
+}
+

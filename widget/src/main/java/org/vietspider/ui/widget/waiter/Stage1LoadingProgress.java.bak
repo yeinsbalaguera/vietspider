@@ -1,0 +1,124 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.ui.widget.waiter;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.LineAttributes;
+import org.eclipse.swt.graphics.Path;
+import org.eclipse.swt.graphics.Pattern;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Region;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Layout;
+import org.pushingpixels.trident.Timeline;
+import org.pushingpixels.trident.Timeline.RepeatBehavior;
+import org.pushingpixels.trident.Timeline.TimelineState;
+import org.pushingpixels.trident.callback.UIThreadTimelineCallbackAdapter;
+import org.pushingpixels.trident.swt.SWTRepaintCallback;
+
+/**
+ * Adds the following functionality to the album scroller container:
+ * 
+ * <ul>
+ * <li>Overlaying an indefinite load progress indicator on top of the container
+ * children</li>
+ * <li>Changes in load progress indicator visibility are animated to fade in and
+ * fade out</li>
+ * </ul>
+ * 
+ * @author Kirill Grouchnikov
+ */
+public class Stage1LoadingProgress extends Stage0Base {
+  /**
+   * The looping timeline to animate the indefinite load progress. When
+   * {@link #setLoading(boolean)} is called with <code>true</code>, this
+   * timeline is started. When {@link #setLoading(boolean)} is called with
+   * <code>false</code>, this timeline is cancelled at the end of the
+   * {@link #loadingBarFadeTimeline}.
+   */
+  Timeline loadingBarLoopTimeline;
+
+  /**
+   * The timeline for showing and hiding the loading progress bar. When
+   * {@link #setLoading(boolean)} is called with <code>true</code>, this
+   * timeline is started. When {@link #setLoading(boolean)} is called with
+   * <code>false</code>, this timeline is started in reverse.
+   */
+  Timeline loadingBarFadeTimeline;
+
+  /**
+   * The pixel width of the load progress visuals.
+   */
+  static final int PROGRESS_WIDTH = 100;
+
+  /**
+   * The pixel height of the load progress visuals.
+   */
+  static final int PROGRESS_HEIGHT = 40;
+
+  protected ProgressBarIndicator progressIndicator;
+
+  public Stage1LoadingProgress(Composite composite) {
+    super(composite);
+
+    this.progressIndicator = new ProgressBarIndicator(this);
+    this.setLayout(new Layout() {
+      @Override
+      protected void layout(Composite composite, boolean flushCache) {
+        int w = composite.getBounds().width;
+        int h = composite.getBounds().height;
+        // put the progress indication in the center
+        progressIndicator.setBounds((w - PROGRESS_WIDTH) / 2, 
+            (h - PROGRESS_HEIGHT) / 2, PROGRESS_WIDTH, PROGRESS_HEIGHT);
+      }
+
+      @Override
+      protected Point computeSize(Composite composite, int wHint,
+          int hHint, boolean flushCache) {
+        return new Point(wHint, hHint);
+      }
+    });
+
+    this.loadingBarLoopTimeline = new Timeline(this.progressIndicator);
+    this.loadingBarLoopTimeline.addPropertyToInterpolate("loadingBarLoopPosition", 0.0f, 1.0f);
+    this.loadingBarLoopTimeline.addCallback(new SWTRepaintCallback(this));
+    this.loadingBarLoopTimeline.setDuration(750);
+
+    // create the fade timeline
+    this.loadingBarFadeTimeline = new Timeline(this.progressIndicator);
+    this.loadingBarFadeTimeline.addPropertyToInterpolate("loadingBarAlpha",
+        0, 255);
+    this.loadingBarFadeTimeline
+        .addCallback(new UIThreadTimelineCallbackAdapter() {
+          @Override
+          public void onTimelineStateChanged(TimelineState oldState,
+              TimelineState newState, float durationFraction,
+              float timelinePosition) {
+            if (oldState == TimelineState.PLAYING_REVERSE
+                && newState == TimelineState.DONE) {
+              // after the loading progress is faded out, stop the
+              // loading animation
+              loadingBarLoopTimeline.cancel();
+              if (!progressIndicator.isDisposed())
+                progressIndicator.setVisible(false);
+            }
+          }
+        });
+    this.loadingBarFadeTimeline.setDuration(500);
+  }
+
+  public void setLoading(boolean isLoading) {
+    if (isLoading) {
+      this.loadingBarFadeTimeline.play();
+      this.loadingBarLoopTimeline.playLoop(RepeatBehavior.LOOP);
+    } else {
+      this.loadingBarFadeTimeline.playReverse();
+    }
+  }
+}

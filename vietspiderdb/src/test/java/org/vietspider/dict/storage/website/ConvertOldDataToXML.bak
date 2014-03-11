@@ -1,0 +1,48 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.headvances.vietspider.dict.storage.website;
+
+import org.headvances.storage.v3.SequencePageStorableIterator;
+import org.headvances.vietspider.storage.website.WebsiteStorage;
+import org.headvances.vietspider.website.WebsiteDatabases;
+import org.vietspider.bean.website.Website;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jul 31, 2009  
+ */
+public class ConvertOldDataToXML {
+  
+  public static void main(String[] args) throws Exception  {
+    /*System.setProperty("vietspider.data.path", "D:\\java\\headvances3\\trunk\\vietspider\\startup\\src\\test\\data\\");
+    WebsiteStorageDbService service = new WebsiteStorageDbService();
+    
+    org.headvances.storage.v3.Storage<WebsiteStorage> storage = service.getDb().getDatabase().getStorage();
+    SequencePageStorableIterator<WebsiteStorage> iterator = 
+      new SequencePageStorableIterator<WebsiteStorage>(storage, 100);
+
+    WebsiteDatabases databases = new WebsiteDatabases();
+//    int counter = 0;
+    while(iterator.hasNext()) {
+      WebsiteStorage [] ws = iterator.next();
+      for(int i = 0; i < ws.length; i++) {
+        Website website = ws[i].getWebsiteInstance();
+        if(website.getStatus() == Website.UNAVAILABLE) {
+          System.out.println(website.getAddress());
+        }
+        databases.save(website);
+//        if(counter >= 500) return;
+      }
+      try {
+        Thread.sleep(500);
+      } catch (Exception e) {
+      }
+    }
+    System.out.println(" da cap nhat xong roi");
+    System.exit(0);*/
+  }
+  
+}

@@ -1,0 +1,189 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.solr2;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.common.SolrDocument;
+import org.apache.solr.common.SolrDocumentList;
+import org.vietspider.bean.Article;
+import org.vietspider.bean.NLPData;
+import org.vietspider.bean.NLPRecord;
+import org.vietspider.tpt.NlpTptModel;
+import org.vietspider.tpt.NlpTptService;
+
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Mar 3, 2011  
+ */
+class SolrNlpComputor2 {
+
+//  private SolrIndexingReader reader;
+//  private TempIndexs indexes;
+  
+  private SolrIndexStorage storage;
+
+  public SolrNlpComputor2(SolrIndexStorage storage) {
+    this.storage = storage;
+  }
+
+  public String search(Article article) {
+    NLPRecord record = article.getNlpRecord();
+    if(record == null) return null;
+    
+    List<String> ids = new ArrayList<String>();
+    
+    NlpTptModel tpt = NlpTptService.getInstance().createModel(article);
+    if(tpt.isEmpty()) return null;
+    
+    List<String> telephones = record.getData(NLPData.TELEPHONE);
+    if(telephones != null && telephones.size() > 0) {
+      storage.getSolr().getWriter().tempIndexs.searchByPhone(ids, telephones);
+      search(ids, "field:phone:", telephones);
+//      if(ids.size() >= 100) {
+//        LogService.getInstance().setMessage(null, 
+//            article.getId() + " found " + ids.size() + " by telephones");
+//      }
+      String duplicate = searchDuplicate(ids, tpt);
+      if(duplicate == null) NlpTptService.getInstance().save(tpt);
+      return duplicate;
+    }
+    
+    List<String> mobiles = record.getData(NLPData.MOBILE);
+    if(mobiles != null && mobiles.size() > 0) {
+      storage.getSolr().getWriter().tempIndexs.searchByPhone(ids, mobiles);
+      search(ids, "field:phone:", mobiles);
+//      if(ids.size() >= 100) {
+//        LogService.getInstance().setMessage(null, 
+//            article.getId() + " found " + ids.size() + " by mobiles");
+//      }
+      String duplicate = searchDuplicate(ids, tpt);
+      if(duplicate == null) NlpTptService.getInstance().save(tpt);
+      return duplicate;
+    }
+    
+    List<String> emails = record.getData(NLPData.EMAIL);
+    if(emails != null && emails.size() > 0) {
+      storage.getSolr().getWriter().tempIndexs.searchByEmail(ids, emails);
+      search(ids, "field:email:", emails);
+//      if(ids.size() >= 100) {
+//        LogService.getInstance().setMessage(null, 
+//            article.getId() + " found " + ids.size() + " by emails");
+//      }
+      String duplicate = searchDuplicate(ids, tpt);
+      if(duplicate == null) NlpTptService.getInstance().save(tpt);
+      return duplicate;
+    }
+    
+    return null;
+  }
+  
+  private String searchDuplicate(List<String> ids, NlpTptModel tpt) {
+    for(String id : ids) {
+      if(id.equals(tpt.getId())) continue;
+      NlpTptModel tpt2 = NlpTptService.getInstance().getStorage().getById(id);
+//      System.out.println(metaId + " : "+ tpt2);
+      if(tpt2 == null || !equals(tpt, tpt2)) continue;
+      return id;
+    }
+    return null;
+  }
+
+  private void search(Collection<String> ids, String field, List<String> list) {
+    if(list == null) return;
+    StringBuilder builder = new StringBuilder();
+    for(String ele : list) {
+      if(builder.length() > 0) builder.append(" ");
+      builder.append(ele);
+    }
+    String pattern = builder.toString().trim();
+    search(ids, field, pattern);
+  }
+  
+  private void search(Collection<String> ids, String field, String pattern) {
+    if(pattern.length() < 1) return;
+    SolrQuery query = new SolrQuery();
+    query = query.setQuery(field + pattern);
+    query = query.setFields("id");
+    //    query = query.addSortField("id", SolrQuery.ORDER.desc);
+    query = query.setFacetMinCount(1);
+    query = query.setHighlight(false);
+    query = query.setQueryType("vshandler");
+
+    int counter = 0;
+    long max = 500;
+    while(counter < max) {
+      query = query.setFacetLimit(2).setStart(counter);
+      QueryResponse response = storage.getSolr().getReader().search(query);
+      SolrDocumentList results = response.getResults();
+      if(results.getNumFound() < max) {
+        max = results.getNumFound();
+      }
+      //    System.out.println(field + "==== >" + builder);
+      Iterator<SolrDocument> iter = results.iterator();
+      while (iter.hasNext()) {
+        SolrDocument resultDoc = iter.next();
+        String metaId = (String)resultDoc.getFieldValue("id");
+        if(metaId == null || ids.contains(metaId)) continue;
+//        System.out.println(pattern + " : " + metaId);
+        ids.add(metaId);
+      }
+      counter += 10;
+    }
+  }
+  
+  public boolean equals(NlpTptModel model1, NlpTptModel model2) {
+    if(model1.getArea() != null) {
+      if(!model1.getArea().equals(model2.getArea())) return false;
+    } else if(model2.getArea() != null) return false;
+    
+    if(model1.getPrice() != null) { 
+        if(!model1.getPrice().equals(model2.getPrice())) return false;
+    } else if(model2.getPrice() != null) return false;
+    
+    if(model1.getAction_object() != null) { 
+      if(!model1.getAction_object().equals(model2.getAction_object())) return false;
+    } else if(model2.getAction_object() != null) return false;
+    
+    if(model1.getAddress() != null) { 
+        if(!model1.getAddress().equals(model2.getAddress())) return false;
+    } else if(model2.getAddress() != null) return false;
+    
+    return true;
+  }
+  
+  /*void searchMobile(SearchResponse searcher) {
+    CommonSearchQuery searchQuery = searcher.getQuery();
+    String pattern = searchQuery.getPattern();
+    String phone = pattern.substring(12);
+    
+    List<String> ids = new ArrayList<String>();
+    
+    long start = System.currentTimeMillis();
+    storage.getSolr().getWriter().tempIndexs.searchByPhone(ids, phone);
+    search(ids, "field:phone:", phone);
+    
+    searcher.setTime(System.currentTimeMillis() - start);
+    
+    searcher.setTotal(ids.size());
+    searcher.setTime(System.currentTimeMillis() - start);
+    
+    List<String> list = new ArrayList<String>();
+    for(int i = searcher.getStart(); i < ids.size(); i++) {
+      list.add(ids.get(i));
+    }
+    
+    List<Article> articles = storage.loadArticles(list);
+    for(Article article : articles) {
+      searcher.addArticle(article);
+    }
+  }*/
+}

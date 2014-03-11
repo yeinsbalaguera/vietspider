@@ -1,0 +1,128 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.db.link.track;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.LogService;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Nov 23, 2010  
+ */
+public class LogSummary extends Thread {
+
+  private List<SourceTracker>  list = new ArrayList<SourceTracker>();
+  protected volatile Queue<LinkLog> waitData = new ConcurrentLinkedQueue<LinkLog>();
+  private boolean execute = true;
+  private File file;
+
+  public LogSummary(File folder) {
+    file  = new File(folder, "summary");
+    try {
+      if(file.exists()) file.delete();
+      file.createNewFile();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    this.start();
+  }
+
+  public void add(LinkLog log) {
+//    System.out.println("add " + log.getChannel());
+    waitData.add(log);
+  }
+
+  public void run() {
+    while(execute) {
+      add1();
+      try {
+        Thread.sleep(1000l);
+      } catch (Exception e) {
+      }
+    }
+    add1();
+    export();
+  }
+
+  public void setExecute(boolean end) {
+    this.execute = end;
+  }
+
+  private void add1() {
+    while(!waitData.isEmpty()) {
+      add1(waitData.poll());
+    }
+  }
+  
+  private void add1(LinkLog log) {
+    String fullname = log.getChannel();
+//    System.out.println("==== >" + fullname);
+    for(int i = 0; i < list.size(); i++) {
+      if(list.get(i).getFullName().equals(fullname)) {
+        list.get(i).add(log);
+        return ;
+      }
+    }
+    list.add(new SourceTracker(log));
+  }
+
+  private void export() {
+    if(!file.exists()) return;
+    FileOutputStream output = null;
+    FileChannel channel = null;
+    try {
+      output = new FileOutputStream(file, true);
+      channel = output.getChannel();
+
+      StringBuilder builder = new StringBuilder(100);
+//      System.out.println(" === > "+list.size());
+      for(SourceTracker tracker : list) {
+        builder.append(tracker.toString()).append('\n');
+        if(builder.length() < 1000) continue;
+        byte [] data = builder.toString().getBytes(Application.CHARSET);
+        builder.setLength(0);
+        ByteBuffer buff = ByteBuffer.allocateDirect(data.length);
+        buff.put(data);
+        buff.rewind();
+        if(channel.isOpen()) channel.write(buff);
+        buff.clear(); 
+      }
+
+      builder.append("\n\n");
+      byte [] data = builder.toString().getBytes(Application.CHARSET);
+      ByteBuffer buff = ByteBuffer.allocateDirect(data.length);
+      buff.put(data);
+      buff.rewind();
+      if(channel.isOpen()) channel.write(buff);
+      buff.clear(); 
+
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    } finally {
+      try {
+        if(channel != null) channel.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+
+      try {
+        if(output != null) output.close();
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+      
+    }
+  }
+   
+}

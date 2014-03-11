@@ -1,0 +1,199 @@
+package org.vietspider.ui.widget.waiter;
+
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
+
+/**
+ * The <code>ImageSequencer</code> is a canvas that allows a user to specify an image sequence
+ * that will be displayed one image from the sequence at a fixed rate.<br><br>
+ * The image sequence can either wrap or move backwards after the last image has been displayed.<br><br>
+ * 
+ * 
+ * <br><br>
+ * Demo of <code>ImageSequencer</code> is provided in the samples package.
+ * <br><br>
+ * 
+ * @author Code Crofter <br>
+ * On behalf Polymorph Systems <br>
+ *
+ * @since RCP Toolbox v0.1 <br>
+ */
+public class ImageSequencer extends Canvas{
+	/** The image array that will be used to contain the images that will be displayed.  */
+	private final List<Image> imageSequence = new ArrayList<Image>();
+	/** A timer*/
+	private final Timer timer = new Timer();
+	/** A timer task that will draw the images from the sequence*/
+	private TimerTask imageSequenceTask;
+	/** The current position in the image sequence*/
+	private int imgIndex = 0;
+	/** The period in milliseconds between redraws*/
+	private int period;
+	/** The flag indicating that wrap style is being used. */
+	private boolean wrap;
+	/** The flag indicating in what direction the images are being displayed if wrap is not used.*/
+	private boolean forward = true;
+	/** The flag telling the timer task that the widget has been disposed*/
+	private boolean disposed = false;
+	
+	/**
+	 *  Constructs an image sequencer based on the following parameters.
+	 *  
+	 * @param parent
+	 * @param style - this will only really effect the style of the image squencer's base class (canvas)
+	 * @param imageSequence - each element in the sequence will be displayed in index sequence (starting from 0) every N x length of image array
+	 * where N = <code>periodMS<code>
+	 * @param periodMS - the period in milliseconds between image changes.
+	 * @param wrap - If wrap is FALSE then the image array will be displayed from the first to last image and from last to first image.
+	 * if the wrap is set to TRUE then the image array will be displayed from the first to the last image repeatively.
+	 */
+	public ImageSequencer(Composite parent, int style, Image[] imageSequence, int periodMS, boolean wrap) {
+		super(parent, style|SWT.DOUBLE_BUFFERED);
+		if(imageSequence == null || imageSequence.length < 2){
+			throw new IllegalArgumentException("A valid image sequence of atleast 2 images has to be specified");
+		}
+		if(periodMS <= 0){
+			throw new IllegalArgumentException("A valid positive period in milliseconds must be specified.");
+		}
+		this.imageSequence.addAll(Arrays.asList(imageSequence));
+		period = periodMS;
+		this.wrap = wrap;
+		addPaintListener(new PaintListener(){
+			public void paintControl(PaintEvent e) {
+				if(ImageSequencer.this.imageSequence.get(imgIndex) != null){
+					e.gc.drawImage(ImageSequencer.this.imageSequence.get(imgIndex),0,0);
+				}
+			}
+		});
+		
+		addDisposeListener(new DisposeListener(){
+		  @SuppressWarnings("unused")
+			public void widgetDisposed(DisposeEvent evt) {
+				stopSequence();				
+				disposed = true;			
+			}
+		});
+		startSequence();
+	}
+	
+	/** Set the interval in milliseconds between consecutive images for the image sequencer*/
+	public void setPeriod(int milliseconds){
+		checkWidget();
+		if(milliseconds <= 0){
+			throw new IllegalArgumentException("A valid positive period in milliseconds must be specified.");
+		}
+		period = milliseconds;
+	}
+	
+	/**
+	 * Set the deciding factor of what image will displayed first after the last image has been displayed.
+	 * @param wrap
+	 */
+	public void setWrap(boolean wrap){
+		checkWidget();
+		this.wrap = wrap;
+	}
+	
+	/**
+	 * Start the sequencer at the position that it was previously stopped at.
+	 */
+	public void startSequence(){
+		checkWidget();
+		if(imageSequenceTask!=null){
+			imageSequenceTask.cancel();
+			timer.purge();			
+		}
+		imageSequenceTask = new ImageSequenceTask();
+		timer.schedule(imageSequenceTask,0,period);
+	}
+	
+	/**
+	 * Stop the sequencer at its current position.
+	 */
+	public void stopSequence(){
+		checkWidget();
+		if(imageSequenceTask!=null){
+			imageSequenceTask.cancel();
+			timer.purge();			
+		}
+	}
+	
+	/**
+	 * Reset the sequencer to its start position.
+	 */
+	public void resetSequence(){
+		checkWidget();
+		if(imageSequenceTask!=null){
+			imageSequenceTask.cancel();
+			timer.purge();			
+		}
+		imgIndex = 0;
+		forward = true;
+		redraw();
+	}
+	
+	@Override
+	@SuppressWarnings("unused")
+	public Point computeSize(int wHint, int hHint, boolean changed) {
+		checkWidget();
+		int width = 0, height = 0;
+		if(imageSequence.get(0) != null && !imageSequence.get(0).isDisposed()){
+			final Rectangle bounds = imageSequence.get(0).getBounds();
+			width = bounds.width;
+			height = bounds.height;
+		}		    
+	    if (wHint != SWT.DEFAULT) width = wHint;
+	    if (hHint != SWT.DEFAULT) height = hHint; 
+		return new Point(width, height);    
+	}
+	
+	private class ImageSequenceTask extends TimerTask{
+		@Override
+		public void run() {
+			final int len = imageSequence.size();
+			Display.getDefault().syncExec(new Runnable(){
+				public void run() {
+					if(disposed)return;
+					redraw();		
+					update();					
+				}
+			});		
+			if(wrap){
+				imgIndex++;
+				if(imgIndex >= len){				
+					imgIndex = 0;				
+				}
+			}else{
+				if(forward){
+					imgIndex++;
+					if(imgIndex > len-1){				
+						imgIndex = len-2;	
+						forward = false;
+					}
+				}else{
+					imgIndex--;
+					if(imgIndex < 0){				
+						imgIndex = 1;	
+						forward = true;
+					}
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,19 @@
+<projectDescription>
+  <name>org.vietspider.startup</name>
+  <comment>Startup component. NO_M2ECLIPSE_SUPPORT: Project files created with the maven-eclipse-plugin are not supported in M2Eclipse.</comment>
+  <projects>
+    <project>org.vietspider.client-plugin</project>
+    <project>org.vietspider.gui</project>
+    <project>org.vietspider.htmlexplorer</project>
+    <project>org.vietspider.server-plugin</project>
+    <project>org.vietspider.widget</project>
+  </projects>
+  <buildSpec>
+    <buildCommand>
+      <name>org.eclipse.jdt.core.javabuilder</name>
+    </buildCommand>
+  </buildSpec>
+  <natures>
+    <nature>org.eclipse.jdt.core.javanature</nature>
+  </natures>
+</projectDescription>

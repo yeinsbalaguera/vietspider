@@ -1,0 +1,89 @@
+/***************************************************************************
+ * Copyright 2001-2010 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.solr2.search;
+
+import java.io.IOException;
+
+import org.apache.lucene.search.Query;
+import org.apache.solr.common.SolrException;
+import org.apache.solr.common.params.CommonParams;
+import org.apache.solr.common.params.HighlightParams;
+import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.common.util.NamedList;
+import org.apache.solr.core.PluginInfo;
+import org.apache.solr.core.SolrConfig;
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.handler.component.HighlightComponent;
+import org.apache.solr.handler.component.ResponseBuilder;
+import org.apache.solr.highlight.SolrHighlighter;
+import org.apache.solr.request.SolrQueryRequest;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jan 12, 2010  
+ */
+public class ArticleHighlightComponent extends HighlightComponent {
+  
+  private  SolrHighlighter highlighter;
+  
+  @Override
+  public void prepare(ResponseBuilder rb) throws IOException {
+    highlighter = new ArticleHighlighter();
+    SolrConfig  solrConfig = SolrCore.getSolrCore().getSolrConfig();
+    PluginInfo pluginInfo = solrConfig.getPluginInfo(SolrHighlighter.class.getName());
+    highlighter.initalize(solrConfig);
+    rb.doHighlights = highlighter.isHighlightingEnabled(rb.req.getParams());
+  }
+  
+  @Override
+  public void process(ResponseBuilder rb) throws IOException {
+    SolrQueryRequest req = rb.req;
+    if (rb.doHighlights) {
+      SolrParams params = req.getParams();
+
+      String[] defaultHighlightFields;  //TODO: get from builder by default?
+
+      if (rb.getQparser() != null) {
+        defaultHighlightFields = rb.getQparser().getDefaultHighlightFields();
+      } else {
+        defaultHighlightFields = params.getParams(CommonParams.DF);
+      }
+      
+      Query highlightQuery = rb.getHighlightQuery();
+      if(highlightQuery==null) {
+        if (rb.getQparser() != null) {
+          try {
+            highlightQuery = rb.getQparser().getHighlightQuery();
+            rb.setHighlightQuery( highlightQuery );
+          } catch (Exception e) {
+            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
+          }
+        } else {
+          highlightQuery = rb.getQuery();
+          rb.setHighlightQuery( highlightQuery );
+        }
+      }
+      
+      if(highlightQuery != null) {
+        boolean rewrite = !(Boolean.valueOf(req.getParams().get(HighlightParams.USE_PHRASE_HIGHLIGHTER, "true")) && Boolean.valueOf(req.getParams().get(HighlightParams.HIGHLIGHT_MULTI_TERM, "true")));
+        highlightQuery = rewrite ?  highlightQuery.rewrite(req.getSearcher().getReader()) : highlightQuery;
+      }
+      
+      // No highlighting if there is no query -- consider q.alt="*:*
+      if( highlightQuery != null ) {
+        NamedList sumData = highlighter.doHighlighting(
+                rb.getResults().docList,
+                highlightQuery,
+                req, defaultHighlightFields );
+        
+        if(sumData != null) {
+          // TODO ???? add this directly to the response?
+          rb.rsp.add("highlighting", sumData);
+        }
+      }
+    }
+  }
+
+}

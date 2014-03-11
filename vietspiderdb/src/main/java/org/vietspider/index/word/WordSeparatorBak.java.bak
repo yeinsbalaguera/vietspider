@@ -1,0 +1,84 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.index.word;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.vietspider.common.text.vn.VNComparator;
+import org.vietspider.locale.vn.VietnameseFullWords;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 5, 2009  
+ */
+public class WordSeparatorBak extends VietnameseFullWords {
+  
+  public WordSeparatorBak(VNComparator comparator) {
+    super(comparator);
+  }
+  
+  public String[] split(String pattern) {
+    List<String> list = new ArrayList<String>();
+    String [] elements = pattern.split(" ");
+    LinkedList<String> stack = new LinkedList<String>();
+    for(int i = 0; i < elements.length; i++) {
+      stack.add(trim(elements[i]));
+    }
+
+    String word = stack.poll();
+    while(!stack.isEmpty()) {
+      List<String> values = searchStartWith(word);
+      
+      if(values.isEmpty()) {
+        if(stack.isEmpty()) break;
+        list.add(word);
+        word = stack.poll();
+        continue;
+      }
+      
+      String newWord = stack.poll();
+      while(true) {
+        String value = word + " " + newWord;
+        if(startsWith(values, value)) {
+          word = value;
+          if(stack.isEmpty()) break;
+          newWord = stack.poll();
+        } else {
+          list.add(word);
+          if(stack.isEmpty()) break;
+          word = newWord;
+          break;
+        }
+      }
+    }
+    
+    list.add(word);
+
+    return list.toArray(new String[list.size()]); 
+  }
+  
+  private List<String> searchStartWith(String prefix) {
+    int index = search(prefix);
+    List<String> list = new ArrayList<String>();
+    if(index < 0) return list;
+    for(int i = index; i < dict.length; i++) {
+      if(!startsWith(dict[i], prefix)) break;
+      if(dict[i].length() > prefix.length() 
+          && Character.isLetterOrDigit(dict[i].charAt(prefix.length()))) break;
+      list.add(dict[i]);
+    }
+    return list;
+  }
+  
+   boolean startsWith(List<String> values, String prefix) {
+    for(int i = 0; i < values.size(); i++) {
+      if(startsWith(values.get(i), prefix)) return true;
+    }
+    return false;
+  }
+  
+}

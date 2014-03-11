@@ -1,0 +1,97 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.headvances.vietspider.source.monitor;
+
+import java.io.File;
+import java.util.Properties;
+
+import org.headvances.storage.v3.SequencePageStorableIterator;
+import org.headvances.storage.v3.Storage;
+import org.headvances.vietspider.storage.log.source.SourceLog;
+import org.headvances.vietspider.storage.log.source.SourceLogDB;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.UtilFile;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Jun 9, 2009  
+ */
+class Version1Converter {
+  
+  private MonitorDataSaver saver;
+  
+  Version1Converter(MonitorDataSaver saver) {
+    this.saver = saver;
+  }
+  
+  public void export() {
+    File folder = null;
+    try {
+      folder = UtilFile.getFolder("content/summary");
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    
+    File [] files = folder.listFiles();
+    for(int i = 0; i < files.length; i++) {
+      String name = files[i].getName();
+      if(!name.endsWith("_mdb")) continue;
+      name = name.substring(0, 10);
+      try {
+        export(name);
+      } catch (Exception e) {
+        LogService.getInstance().setThrowable(e);
+      }
+      UtilFile.deleteFolder(files[i]);
+    }
+  }
+  
+  public void export(String name) throws Exception  {
+    String dbdir = getFolderData(name);
+    if(dbdir == null) return;
+    SourceLogDB db = null;
+    try {
+       db = new SourceLogDB(name, dbdir);
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    
+    if(db == null) return;
+    Storage<SourceLog> storage = db.getDatabase().getStorage();
+    SequencePageStorableIterator<SourceLog> iterator = 
+      new SequencePageStorableIterator(storage, 100);
+
+    while(iterator.hasNext()) {
+      SourceLog[] sourceLogs = iterator.next();
+      for(int i = 0; i < sourceLogs.length; i++) {
+        SourceLog sourceLog = sourceLogs[i];
+
+        String line = sourceLog.getName();
+        int visit = sourceLog.getCrawlTime();
+        int data = sourceLog.getTotalData();
+        int link = sourceLog.getTotalLink();
+        long downloaded = sourceLog.getTotalDownload();
+        long lastAccess = sourceLog.getLastAccess();
+       
+        saver.update(line, name, visit, link, data, downloaded, lastAccess, sourceLog.getDesc());
+      }
+    }
+    db.close();
+  }
+  
+  protected String getFolderData(String folderName) {
+    File folder = null;
+    try {
+      folder = new File(UtilFile.getFolder("content/summary/"), folderName+"_mdb"+"/");
+      if(folder.exists())  return folder.getAbsolutePath();
+    } catch (Exception e) {
+      LogService.getInstance().setThrowable(e);
+    }
+    return null;
+  }
+  
+  
+
+}
