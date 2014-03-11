@@ -1,0 +1,56 @@
+<project>
+  <parent>
+    <groupId>org.vietspider</groupId>
+    <artifactId>vietspider</artifactId>
+		<version>3.x</version>
+		<relativePath>../</relativePath>
+  </parent> 
+
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>org.vietspider.model</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0</version>
+  <name>org.vietspider.model</name>
+  <url>http://binhgiang.sourceforge.net/</url>
+  <description>Crawler Component</description>
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.properties</include>
+          <include>**/*.xml</include>
+          <include>**/*.cfg</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>  
+
+  <dependencies>
+   <dependency>
+      <groupId>org.vietspider</groupId>
+      <artifactId>org.vietspider.common</artifactId>
+      <version>1.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.vietspider</groupId>
+      <artifactId>org.vietspider.htmlparser</artifactId>
+      <version>1.0</version>
+    </dependency>   
+    
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>3.1.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.4</version>
+      <scope>test</scope>
+    </dependency>
+    
+  </dependencies>   
+</project>

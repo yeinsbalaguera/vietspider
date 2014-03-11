@@ -1,0 +1,66 @@
+/***************************************************************************
+ * Copyright 2001-2007 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.bean;
+
+import java.util.List;
+
+import org.vietspider.serialize.NodeMap;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Oct 5, 2007  
+ */
+@NodeMap("desc_article")
+public class DescArticle {
+  
+  public final static String  ID = "id";
+  public final static String  DATE = "date";
+  public final static String  TIME = "time";
+  public final static String  CATEGORY = "category";
+  public final static String  SOURCE_NAME = "sourceName";
+  public final static String  TOTAL_RELATION = "totalRelation";
+  
+  public final static String  DATA = "data";
+  public final static String  INDEX_CONTENT = "indexContent";
+  public final static String  INDEX_TITLE = "indexTitle";
+  
+  public final static int UPDATE = 2, DELETE = -1, INSERT = 1;
+  
+  
+  @NodeMap("meta")
+  private Meta meta;
+  
+  @NodeMap("relations")
+  private List<MetaRelation> metaRelations;
+  
+  @NodeMap("domain")
+  private Domain domain;
+  
+  private int type = INSERT;
+  
+  private Content content;
+  
+  public DescArticle(Domain domain, Meta meta, Content content) {
+    this.domain = domain;
+    this.meta = meta;
+    this.content = content;
+  }
+  
+  public Meta getMeta() { return meta; }
+  public void setMeta(Meta meta) { this.meta = meta; }
+  
+  public List<MetaRelation> getMetaRelation() { return metaRelations; }
+  public void setMetaRelation(List<MetaRelation> relations) { this.metaRelations = relations; }
+  
+  public Domain getDomain() { return domain; }
+  public void setDomain(Domain domain) { this.domain = domain; }
+  
+  public int getType() { return type; }
+  public void setType(int type) { this.type = type; }
+  
+  public Content getContent() { return content; }
+  public void setContent(Content content) { this.content = content; }
+  
+}

@@ -1,0 +1,29 @@
+/***************************************************************************
+ * Copyright 2001-2011 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.model;
+
+import java.io.File;
+
+import org.vietspider.common.Application;
+import org.vietspider.common.io.RWData;
+import org.vietspider.serialize.Object2XML;
+import org.vietspider.serialize.XML2Object;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * May 9, 2011  
+ */
+public class TestSourceXML {
+  public static void main(String[] args) throws Exception {
+    File file = new File("D:\\java\\test\\xml\\source1.xml");
+    String xml = new String(RWData.getInstance().load(file), Application.CHARSET);
+    Source source = XML2Object.getInstance().toObject(Source.class, xml);
+    
+    System.out.println(Object2XML.getInstance().toXMLDocument(source).getTextValue());
+    
+    System.exit(0);
+    
+  }
+}
