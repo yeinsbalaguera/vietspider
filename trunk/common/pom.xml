@@ -1,0 +1,69 @@
+<project>
+	<parent>
+		<groupId>org.vietspider</groupId>
+		<artifactId>vietspider</artifactId>
+    <version>3.x</version>
+		<relativePath>../</relativePath>
+	</parent>
+
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>org.vietspider.common</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0</version>
+	<name>org.vietspider.common</name>
+	<url>http://binhgiang.sourceforge.net/</url>
+	<description>Common Component</description>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>vietspider.httpcore</artifactId>
+			<version>4.1.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.vietspider</groupId>
+			<artifactId>vietspider.httpclient</artifactId>
+			<version>4.1.2</version>
+		</dependency>
+		
+		<dependency>
+    	<groupId>org.vietspider</groupId>
+    	<artifactId>vietspider.httpmime</artifactId>
+    	<version>4.1.2</version>
+    	<scope>compile</scope>
+  	</dependency>
+
+		<dependency>
+			<groupId>org.apache.james</groupId>
+			<artifactId>apache-mime4j</artifactId>
+			<version>0.6</version>
+		</dependency>
+
+		<!-- <dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.14</version>
+		</dependency> -->
+
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+
+		<!--
+			<dependency> <groupId>org.xlightweb</groupId>
+			<artifactId>xLightweb</artifactId> <version>2.0</version>
+			</dependency>
+		-->
+
+	</dependencies>
+</project>

@@ -1,0 +1,81 @@
+/***************************************************************************
+ * Copyright 2001-2009 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.net.apache;
+
+import java.lang.reflect.Field;
+import java.net.Socket;
+
+import org.apache.http.impl.conn.LoggingSessionInputBuffer;
+import org.apache.http.io.SessionInputBuffer;
+import org.vietspider.common.io.LogService;
+import org.vietspider.common.io.LogWebsite;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * May 7, 2009  
+ */
+class HeaderReaderTimer implements Runnable {
+
+  private int timeout = 60*1000;
+
+  protected volatile boolean live = true;
+
+  protected volatile int elapsed = 0;
+  protected SessionInputBuffer  buffer;
+
+  HeaderReaderTimer(SessionInputBuffer  buffer) {
+    this.buffer = buffer;
+  }
+
+  public void run() {
+    while(live){
+      try { 
+        Thread.sleep(500);
+      } catch (InterruptedException ioe) {
+      }
+
+      // Use 'synchronized' to prevent conflicts
+      synchronized (this) {
+        elapsed += 500;
+
+        // Check to see if the time has been exceeded
+        if (elapsed >= timeout) {
+          abort();
+          live = false;
+          //          System.out.println(" bi timeout roi "+ elapsed);
+          //          worker.abort();
+        } 
+      }
+    }
+  }
+
+  void abort() {
+    try {
+      Field field = LoggingSessionInputBuffer.class.getDeclaredField("in");
+      field.setAccessible(true);
+      Object obj = field.get(this.buffer);
+
+      field = obj.getClass().getDeclaredField("socket");
+      field.setAccessible(true);
+      Socket socket = (Socket)field.get(obj);
+      
+      LogWebsite.getInstance().setMessage(null, "Close socket "+socket+" by read header timer!!!");
+      
+//      System.out.println("thay co  "+ buffer.hashCode()+ socket+ " / "+ socket.getInputStream());
+//      System.out.println(" chuan bi kill no");
+      
+      socket.getInputStream().close();
+      socket.close();
+
+    } catch (Throwable e) {
+      LogService.getInstance().setThrowable(e);
+    }
+  }
+  
+  boolean isDead() { return !live; }
+
+  void closeTimer() { this.live = false; }
+
+}

@@ -1,0 +1,230 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.net.client;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
+
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.vietspider.common.io.LogWebsite;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Apr 15, 2008  
+ */
+public class HttpResponseReaderBak0 {
+
+  private static final long BIG_SIZE = 1024*1024l + 521*1024l; 
+  
+  public final static String CONTENT_LENGTH = "Content-Length";
+  
+//  private volatile static ConcurrentHashMap<InputStream, Integer> managers;
+
+  public HttpResponseReaderBak0() {
+//    managers = new ConcurrentHashMap<InputStream, Integer>();
+//    new TimeoutMonitor(120);
+    
+  }
+  
+  public byte[] readBody(HttpResponse httpResponse) throws Exception  {
+    HttpEntity entity = httpResponse.getEntity();
+    if(entity == null) return null;
+    Header header = httpResponse.getFirstHeader(CONTENT_LENGTH);
+    byte [] bytes = readBody(entity, header);
+    
+    if(bytes == null || bytes.length < 1) return bytes;
+    return decodeResponse(bytes, entity.getContentEncoding());
+  }
+  
+  public byte[] readBody(HttpEntity entity, Header header) throws Exception  {
+    if(header == null) return readBody(entity.getContent());
+    String value = header.getValue();
+    if(value == null) return readBody(entity.getContent());
+
+    long length = -1l;
+    try {
+      length = Long.parseLong(value.trim());
+    } catch (Exception e) {
+      length = -1;
+    }
+    if(length >= BIG_SIZE || length == 0) return null;
+    
+    if(length > 0) return readBody(entity.getContent(), length);
+
+    return readBody(entity.getContent()); 
+  }
+
+  private byte[] readBody(InputStream input, long bodySize) throws Exception {
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    try {
+      int read = 0;
+      byte [] bytes = new byte[8*1024];
+//      managers.put(input, 0);
+      while ((read = input.read(bytes)) > -1) {
+        output.write(bytes, 0, read);
+        if(output.size() >= bodySize) break ;
+      }
+      
+      if(output.size() >= BIG_SIZE) output.reset();
+
+      input.close();
+    } catch (IllegalStateException e) {
+      throw e;
+    } catch (IOException e) {
+      throw e;
+    } finally {
+      try {
+        if(input != null) input.close();
+      } catch (Exception e) {
+        LogWebsite.getInstance().setThrowable(e);
+      }
+
+      try {
+        output.close();
+      } catch (Exception e) {
+        LogWebsite.getInstance().setThrowable(e);
+      }
+    }
+
+    byte [] bytes  = output.toByteArray();
+    output.flush();
+    output.close();
+    return bytes;
+  }
+  
+  private byte[] readBody(InputStream input) throws Exception {
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    try {
+      int read = 0;
+      byte [] bytes = new byte[8*1024];
+//      managers.put(input, 0);
+      while ((read = input.read(bytes)) > -1) {
+        output.write(bytes, 0, read);
+      }
+      if(output.size() >= BIG_SIZE) output.reset();
+
+      input.close();
+    } catch (IllegalStateException e) {
+      throw e;
+    } catch (IOException e) {
+      throw e;
+    } finally {
+      try {
+        if(input != null) input.close();
+      } catch (Exception e) {
+        LogWebsite.getInstance().setThrowable(e);
+      }
+
+      try {
+        output.close();
+      } catch (Exception e) {
+        LogWebsite.getInstance().setThrowable(e);
+      }
+    }
+
+    byte [] bytes  = output.toByteArray();
+    output.flush();
+    output.close();
+    return bytes;
+  }
+  
+  public byte[] decodeResponse (final byte[] bytes, Header header) throws IOException {
+    if(header == null) return bytes;
+    String encoding = header.getValue();
+    if(encoding == null || (encoding = encoding.trim()).isEmpty()) return bytes;
+
+    InputStream encodedStream = null;
+
+    // GZIP
+    if (encoding.equals ("gzip")) {
+      encodedStream = new GZIPInputStream(new ByteArrayInputStream(bytes));
+    }
+
+    // DEFLATE
+    else if (encoding.equals ("deflate")) {
+      encodedStream = new InflaterInputStream(new ByteArrayInputStream (bytes), new Inflater(true));
+//    encodedStream = new ZipInputStream(new ByteArrayInputStream (responseBytes));
+    }
+
+    final ByteArrayOutputStream decodedStream = new ByteArrayOutputStream ();
+    final byte buffer[] = new byte[1024];
+
+    try {
+      for (int length; (length = encodedStream.read(buffer, 0, 1024)) != -1;) {
+        decodedStream.write(buffer, 0, length);
+      }
+    } catch (EOFException e) {
+      LogWebsite.getInstance().setMessage(e, "WebClient 130: ");
+    }catch (Exception e) {
+      LogWebsite.getInstance().setThrowable(e);
+    }
+
+    // closing
+    if(encodedStream != null) encodedStream.close ();
+    decodedStream.close ();
+
+    if(decodedStream.size() < 1) return bytes;
+    return decodedStream.toByteArray ();
+  }
+  
+  /*private class TimeoutMonitor extends Thread {
+
+    private volatile int timeout = 60;
+
+    private TimeoutMonitor(int time) {
+      if(time < 1) return;
+      this.timeout = time;
+      start();
+    }
+
+    public void run() {
+      while(managers != null) {
+        try {
+          Thread.sleep(1000);
+        } catch (Exception e) {
+        }
+        
+        Iterator<InputStream> iterator = managers.keySet().iterator();
+        List<InputStream> removes = new ArrayList<InputStream>();
+        while(iterator.hasNext()) {
+          InputStream input = iterator.next();
+          if(input == null) continue;
+          int value = timeout;
+          try {
+            Integer iValue = managers.get(input);
+            value = iValue == null ? timeout : iValue.intValue();
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+
+          if(value > timeout) {
+            try{
+              input.close();
+            } catch (Exception e) {
+            }
+            removes.add(input);
+          } else {
+            managers.put(input, value+1);
+          }
+          
+          for(int i = 0; i < removes.size(); i++) {
+            managers.remove(removes.get(i));
+          }
+          
+        }
+      }
+    }
+
+  }*/
+
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<article>
+  <meta>
+    <meta>
+      <list type="java.util.ArrayList">
+        <item>thuan</item>
+      </list>
+      <properties type="java.util.HashMap">
+        <property>
+          <key>key2</key>
+          <value>this is b</value>
+        </property>
+        <property>
+          <key>key1</key>
+          <value>this is a</value>
+        </property>
+      </properties>
+    </meta>
+  </meta>
+  <title>this is title</title>
+  <content>this is content</content>
+</article>
