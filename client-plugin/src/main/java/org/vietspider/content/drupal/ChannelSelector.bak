@@ -1,0 +1,125 @@
+/***************************************************************************
+ * Copyright 2001-2008 The VietSpider         All rights reserved.  		 *
+ **************************************************************************/
+package org.vietspider.content.drupal;
+
+import org.apache.http.Header;
+import org.apache.http.message.BasicHeader;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Shell;
+import org.vietspider.chars.refs.RefsDecoder;
+import org.vietspider.chars.refs.RefsEncoder;
+import org.vietspider.client.common.ClientConnector2;
+import org.vietspider.common.util.Worker;
+import org.vietspider.content.cms.CMSChannelSelector;
+import org.vietspider.content.cms.SyncManager;
+import org.vietspider.content.drupal.XMLDrupalConfig.Category;
+import org.vietspider.model.plugin.drupal.DrupalSyncData;
+import org.vietspider.net.server.URLPath;
+import org.vietspider.serialize.XML2Bean;
+import org.vietspider.ui.services.ClientLog;
+import org.vietspider.ui.widget.ShellGetter;
+import org.vietspider.ui.widget.UIDATA;
+import org.vietspider.ui.widget.waiter.ThreadExecutor;
+
+/** 
+ * Author : Nhu Dinh Thuan
+ *          nhudinhthuan@yahoo.com
+ * Aug 15, 2008  
+ */
+class ChannelSelector extends CMSChannelSelector {
+  
+  private Category [] categories;
+  
+  ChannelSelector(Shell parent) {
+    super(parent, "DrupalSyncArticle", "Drupal Categories Selector");
+  }
+  
+  public void sync() {
+    shell.setVisible(false); 
+    int index = getSelectedIndex();
+//    StringBuilder builder = new StringBuilder(metaId);
+    if(index < 0) index = 0;
+    if(index >= butChannels.length) {
+      ClientLog.getInstance().setMessage(shell, new Exception("No category"));
+      return;
+    }
+    
+    DrupalSyncData drupalSyncData = new DrupalSyncData();
+    drupalSyncData.setArticleId(metaId);
+    drupalSyncData.setCategoryId(categories[index].getCategoryId());
+    
+    String text = txtLinkToSource.getText();
+    RefsEncoder refsEncoder = new RefsEncoder();
+    drupalSyncData.setLinkToSource(new String(refsEncoder.encode(text.toCharArray())));
+    
+    try {
+      SyncManager.getInstance(shell).sync(drupalSyncData);
+    } catch (Exception e) {
+      ClientLog.getInstance().setException(shell, e);
+    }
+  }
+  
+  public void invokeSetup() {
+    new DrupalSetup(shell.getShell());
+  }
+  
+  public void loadCategries() {
+    Worker excutor = new Worker() {
+
+      private String error = null;
+      private XMLDrupalConfig config;
+
+      public void abort() {
+        ClientConnector2.currentInstance().abort();
+      }
+
+      public void before() {
+      }
+
+      public void execute() {
+        try {
+          Header [] headers = new Header[] {
+              new BasicHeader("action", "load.file"),
+              new BasicHeader("file", "system/plugin/drupal.config")
+          };
+          
+          ClientConnector2 connector = ClientConnector2.currentInstance();
+          byte [] bytes = connector.post(URLPath.FILE_HANDLER, new byte[0], headers);
+
+          config = XML2Bean.getInstance().toBean(XMLDrupalConfig.class, bytes);
+        } catch (Exception e) {
+          error = e.toString();
+        }
+      }
+
+      public void after() {
+        if(error != null && !error.isEmpty()) {
+          ClientLog.getInstance().setMessage(shell, new Exception(error));
+          return;
+        }
+        if(config == null) return;
+        categories = config.getCategories();
+        
+        String [] names = new String[categories.length];
+        for (int i = 0; i < categories.length; i++) {
+          names[i] = categories[i].getCategoryName() ;
+        }
+        createCategories(names);
+        
+        RefsDecoder decoder = new RefsDecoder();
+        String text = config.getLinkToSource();
+        text = new String(decoder.decode(text.toCharArray()));
+        txtLinkToSource.setText(text);
+        
+        Rectangle displayRect = UIDATA.DISPLAY.getBounds();
+        int x = (displayRect.width - 350) / 2;
+        int y = (displayRect.height - 300)/ 2;
+        new ShellGetter(ChannelSelector.class, shell, 550, 300, x, y);
+        shell.open();
+      }
+    };
+    new ThreadExecutor(excutor, table).start();
+  }
+
+}
